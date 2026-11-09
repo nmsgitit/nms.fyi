@@ -27,7 +27,16 @@ export const MONITOR = {
 MONITOR.total = MONITOR.descentStart + MONITOR.descentDur; // 5.6 s: starts ~2.5 s into the walk (at the door)
 MONITOR.desktopAt = MONITOR.total + 2.0; // "a couple seconds" after it is fully down, the boot gives way to the desktop
 
-const easeInOutCubic = (k) => (k < 0.5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2);
+// Raising back into the ceiling (F key). Seconds after raise().
+export const RAISE = {
+  ledOff: 0.35, // status LED goes out with the CRT collapse
+  levelStart: 0.3, levelDur: 0.7, // housing tilts back to level
+  ascentStart: 0.7, ascentDur: 3.4, // arm retracts (a bit quicker than the 5 s descent)
+  doorsStart: 4.15, doorsDur: 0.8, // doors swing shut behind it
+};
+RAISE.total = RAISE.doorsStart + RAISE.doorsDur; // 4.95 s
+
+const easeInOutCubic =(k) => (k < 0.5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2);
 const easeOutBack = (k, s = 1.25) => 1 + (s + 1) * Math.pow(k - 1, 3) + s * Math.pow(k - 1, 2);
 const clamp01 = (v) => Math.min(1, Math.max(0, v));
 
@@ -166,6 +175,20 @@ export class MonitorRig {
     this.apply(999);
   }
 
+  /**
+   * Raise the monitor back into the ceiling (F key, only after the visitor has exited the
+   * desktop). Timeline in RAISE: the screen shuts off (CRT collapse), the housing tilts level,
+   * the arm retracts, the doors close. Ends 'stowed', ready to start() again.
+   */
+  raise() {
+    if (this.state !== 'down') return false;
+    this.state = 'raising';
+    this.t = 0;
+    this.screen.shutdown();
+    this.emit('raise');
+    return true;
+  }
+
   update(dt) {
     if (this.state === 'running') {
       this.t += dt;
@@ -179,27 +202,49 @@ export class MonitorRig {
       }
       if (this.t > MONITOR.desktopAt + 0.5) this.state = 'down';
       this.apply(this.t);
+    } else if (this.state === 'raising') {
+      this.t += dt;
+      const R = RAISE;
+      if (this.t >= R.ledOff) this.ledMat.color.setRGB(0, 0, 0);
+      const tiltK = 1 - easeInOutCubic(clamp01((this.t - R.levelStart) / R.levelDur));
+      const d = 1 - easeInOutCubic(clamp01((this.t - R.ascentStart) / R.ascentDur));
+      const open = 1 - easeInOutCubic(clamp01((this.t - R.doorsStart) / R.doorsDur));
+      this.applyPose(open, d, tiltK, 0, 0);
+      if (this.t >= R.total) {
+        this.state = 'stowed';
+        this.t = 0;
+        this.screen.powerOff();
+        this.emit('stowed');
+      }
     }
     this.screen.update(dt);
   }
 
+  /** Pose for time t of the descent sequence (MONITOR timings). */
   apply(t) {
-    // Doors
     const dk = clamp01(t / MONITOR.doorsOpen);
     const open = t <= 0 ? 0 : easeOutBack(dk, 1.1);
-    for (const { pivot, s } of this.doors) pivot.rotation.z = s * open * THREE.MathUtils.degToRad(93);
-
-    // Descent with a small spring settle after arrival.
     const d = clamp01((t - MONITOR.descentStart) / MONITOR.descentDur);
-    let A = THREE.MathUtils.lerp(MONITOR.attachStored, MONITOR.attachFinal, easeInOutCubic(d));
+    // Small spring settle and sway after arrival.
     const after = t - MONITOR.total;
-    let sway = 0;
+    let bounce = 0, sway = 0;
     if (after > 0 && after < 3) {
-      A += -0.012 * Math.exp(-4 * after) * Math.sin(after * 14);
+      bounce = -0.012 * Math.exp(-4 * after) * Math.sin(after * 14);
       sway = 0.05 * Math.exp(-2.2 * after) * Math.sin(after * 6.5);
     }
-    this.holder.position.y = A;
+    // Housing tilt: level during the drop, then motors toward the viewer.
+    const tiltK = easeInOutCubic(clamp01((d - 0.6) / 0.4));
+    this.applyPose(open, easeInOutCubic(d), tiltK, sway, bounce);
+  }
 
+  /**
+   * open: doors 0..1 (may overshoot), down: 0 = stowed .. 1 = fully lowered (already eased),
+   * tiltK: 0 = level .. 1 = angled toward the viewer, sway (rad) and bounce (m): settle wobble.
+   */
+  applyPose(open, down, tiltK, sway, bounce) {
+    for (const { pivot, s } of this.doors) pivot.rotation.z = s * open * THREE.MathUtils.degToRad(93);
+    const A = THREE.MathUtils.lerp(MONITOR.attachStored, MONITOR.attachFinal, down) + bounce;
+    this.holder.position.y = A;
     // Telescoping stages.
     const sleeveBottom = MONITOR.anchor - this.sleeve.len;
     const midBottom = (sleeveBottom + A) / 2;
@@ -207,11 +252,6 @@ export class MonitorRig {
     this.inner.mesh.position.y = A + this.inner.len / 2;
     this.midCollar.position.y = midBottom + 0.01;
     this.innerCollar.position.y = A + 0.01;
-
-    // Housing tilt: level during the drop, then motors toward the viewer.
-    if (this.tiltNode) {
-      const tk = clamp01((d - 0.6) / 0.4);
-      this.tiltNode.rotation.x = MONITOR.tilt * easeInOutCubic(tk) + sway;
-    }
+    if (this.tiltNode) this.tiltNode.rotation.x = MONITOR.tilt * tiltK + sway;
   }
 }

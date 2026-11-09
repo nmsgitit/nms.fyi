@@ -296,4 +296,5 @@
   font: bold 13px/1 Tahoma, sans-serif;
   text-align: center;
 }
+#terminal-prompt .prompt-sep { display: inline-block; width: 1px; height: 1em; margin: 0 14px; vertical-align: middle; background: rgba(241, 234, 217, 0.35); }
 #terminal-prompt:focus-visible { outline: 2px solid #f1ead9; outline-offset: 3px; }

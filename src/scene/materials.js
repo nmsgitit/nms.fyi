@@ -98,6 +98,10 @@ export function createMaterials(maxAnisotropy = 4) {
   };
   m.keycap = std(0xe4dccb, 0.5); // alphanumeric caps: light beige
   m.keycapMod = std(0x9d9484, 0.5); // modifier/function caps: darker taupe-gray (Model M two-tone)
+  m.mouseBody = std(0xdcd8cf, 0.45); // pale warm gray, like late-80s mice
+  m.mouseButton = std(0xcfcac0, 0.4);
+  m.mousePad = std(0x3a3a40, 0.9);
+  m.cable = std(0x9c978d, 0.6);
   m.amberKey = std(0xd8893a, 0.45);
   m.cyanKey = std(0x6fb8c0, 0.45);
   // Small idle wall displays: faint phosphor glow.

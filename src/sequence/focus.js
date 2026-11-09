@@ -17,12 +17,13 @@ export class TerminalFocus {
     this.to = { p: new THREE.Vector3(), q: new THREE.Quaternion() };
     this.raycaster = new THREE.Raycaster();
 
-    const touch = matchMedia('(pointer: coarse)').matches;
+    this.touch = matchMedia('(pointer: coarse)').matches;
+    this.onLowerRequest = null; // set by main.js: lower the stowed monitor again
     const prompt = (this.prompt = document.createElement('button'));
     prompt.id = 'terminal-prompt';
     prompt.type = 'button';
-    prompt.innerHTML = touch ? 'Tap to use the terminal' : '<kbd>E</kbd>Use the terminal';
-    prompt.addEventListener('click', () => this.focusIn());
+    this.setPromptMode('ready');
+    prompt.addEventListener('click', () => (this.promptMode === 'stowed' ? this.onLowerRequest?.() : this.focusIn()));
     document.body.append(prompt);
 
     window.addEventListener('keydown', (e) => {
@@ -39,12 +40,32 @@ export class TerminalFocus {
 
   get paused3D() { return this.state === 'open'; }
 
+  /** 'ready': use it (and raise it, on keyboards); 'stowed': lower it again (F). */
+  setPromptMode(mode) {
+    this.promptMode = mode;
+    if (mode === 'stowed') this.prompt.innerHTML = '<kbd>F</kbd>Lower the terminal';
+    else this.prompt.innerHTML = this.touch
+      ? 'Tap to use the terminal'
+      : '<kbd>E</kbd>Use the terminal<span class="prompt-sep"></span><kbd>F</kbd>Raise it';
+  }
+
+  /** Show the on-screen prompt. Touch devices only: keyboards use the Tab controls panel instead. */
+  showPrompt() {
+    if (this.touch && this.promptMode === 'ready') this.prompt.classList.add('show');
+  }
+
+  /** The monitor is back in the ceiling (keyboards only reach this: there's no F on touch). */
+  showLowerPrompt() {
+    this.setPromptMode('stowed');
+  }
+
   /** The desktop is up on the monitor: allow focusing, and show the prompt after a beat. */
   enable() {
     if (this.state !== 'unavailable') return;
     this.state = 'ready';
+    this.setPromptMode('ready');
     clearTimeout(this._promptTimer);
-    this._promptTimer = setTimeout(() => { if (this.state === 'ready') this.prompt.classList.add('show'); }, 900);
+    this._promptTimer = setTimeout(() => { if (this.state === 'ready') this.showPrompt(); }, 900);
   }
 
   disable() {
@@ -112,7 +133,7 @@ export class TerminalFocus {
       } else {
         this.state = 'ready';
         this.walk.state = 'arrived';
-        this.prompt.classList.add('show');
+        this.showPrompt();
       }
     }
   }

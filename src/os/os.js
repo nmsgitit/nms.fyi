@@ -18,9 +18,13 @@ const el = (tag, cls, attrs = {}) => {
 };
 
 export class DesktopOS {
-  /** onExit: called when the visitor picks Exit in the launcher menu. */
-  constructor({ onExit }) {
+  /**
+   * onExit: called when the visitor picks Exit in the launcher menu.
+   * onClick(kind): 'press' / 'release' for every pointer click on the desktop (click sounds).
+   */
+  constructor({ onExit, onClick }) {
     this.onExit = onExit;
+    this.onClick = onClick;
     this.windows = new Map(); // id -> { win, task, app, minimized }
     this.zoom = 1;
     window.addEventListener("resize", () => { if (this.isOpen) this.applyScale(); });
@@ -92,6 +96,9 @@ export class DesktopOS {
     document.addEventListener('pointerdown', (e) => {
       if (!this.menu.hidden && !this.menu.contains(e.target) && !this.launchBtn.contains(e.target)) this.closeMenu();
     });
+    // Mouse click sound on every click anywhere on the desktop (press, then a lighter release).
+    root.addEventListener('pointerdown', (e) => { if (e.button === 0) this.onClick?.('press'); });
+    root.addEventListener('pointerup', (e) => { if (e.button === 0) this.onClick?.('release'); });
     root.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') {
         if (!this.menu.hidden) this.closeMenu();

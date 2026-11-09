@@ -19,7 +19,7 @@ export class MonitorScreen {
     this.texture.colorSpace = THREE.SRGBColorSpace;
     this.texture.anisotropy = 8;
     this.texture.flipY = false; // glTF UV convention (the screen mesh comes from Blender)
-    this.state = 'off'; // off | warmup | boot | desktop
+    this.state = 'off'; // off | warmup | boot | desktop | shutdown
     this.stateT = 0;
     this._accum = 0;
     this._lastClock = '';
@@ -45,6 +45,18 @@ export class MonitorScreen {
     this.draw(this.stateT);
   }
 
+  /** CRT power-off: the picture collapses to a bright horizontal line, then a dot, then dark. */
+  shutdown() {
+    if (this.state === 'off') return;
+    // Keep a copy of the current picture to squash.
+    this.lastFrame ||= document.createElement('canvas');
+    this.lastFrame.width = this.canvas.width;
+    this.lastFrame.height = this.canvas.height;
+    this.lastFrame.getContext('2d').drawImage(this.canvas, 0, 0);
+    this.state = 'shutdown';
+    this.stateT = 0;
+  }
+
   /** The boot hands off to the desktop (brief blank as the mode switches, then a fade-in). */
   showDesktop(instant = false) {
     this.state = 'desktop';
@@ -56,6 +68,7 @@ export class MonitorScreen {
     if (this.state === 'off') return;
     this.stateT += dt;
     if (this.state === 'warmup' && this.stateT > 0.9) { this.state = 'boot'; this.stateT = 0; }
+    if (this.state === 'shutdown' && this.stateT > 0.6) { this.powerOff(); return; }
     if (this.state === 'desktop' && this.stateT > 1.2) {
       // Settled desktop: only redraw when the clock changes.
       if (clockText() !== this._lastClock) this.draw(this.stateT);
@@ -84,6 +97,16 @@ export class MonitorScreen {
       ctx.fillRect(0, H / 2 - h / 2, W * (k < 0.35 ? k / 0.35 : 1), h);
     } else if (this.state === 'boot') {
       this.drawBoot(t);
+    } else if (this.state === 'shutdown') {
+      // Squash the last picture into a line (0 to 0.2 s), shrink the line to a dot (to 0.4 s), fade (to 0.6 s).
+      const k1 = Math.min(1, t / 0.2), k2 = Math.min(1, Math.max(0, (t - 0.2) / 0.2)), k3 = Math.max(0, (t - 0.4) / 0.2);
+      const h = Math.max(2, H * (1 - k1) * (1 - k1));
+      const w = Math.max(4, W * (1 - k2));
+      if (k1 < 1) ctx.drawImage(this.lastFrame, 0, 0, W, H, 0, H / 2 - h / 2, W, h);
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.fillStyle = `rgba(240,236,220,${(0.35 + 0.65 * k1) * (1 - k3)})`;
+      ctx.fillRect(W / 2 - w / 2, H / 2 - Math.max(1.5, h / 2 * 0.15), w, Math.max(3, h * 0.15));
+      ctx.globalCompositeOperation = 'source-over';
     } else if (this.state === 'desktop') {
       // 0.25 s of black (video mode switch), then the desktop fades up.
       const a = Math.min(1, Math.max(0, (t - 0.25) / 0.6));

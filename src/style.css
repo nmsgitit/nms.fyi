@@ -90,3 +90,52 @@ html, body {
   white-space: pre;
   pointer-events: none;
 }
+
+/* Tab controls panel (ui/hotkeys.js) */
+#hotkeys {
+  position: fixed;
+  right: 24px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 14;
+  min-width: 260px;
+  padding: 16px 18px 12px;
+  background: rgba(20, 18, 15, 0.82);
+  border: 1px solid rgba(217, 207, 187, 0.4);
+  border-radius: 4px;
+  color: var(--ink);
+  font: 15px/1.4 Georgia, 'Times New Roman', serif;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.45);
+}
+#hotkeys[hidden] { display: none; }
+#hotkeys .hk-title { margin: 0 0 10px; font-size: 13px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--dim); }
+#hotkeys .hk-row { display: flex; align-items: center; gap: 12px; padding: 5px 0; }
+#hotkeys .hk-row.off { opacity: 0.38; }
+#hotkeys .hk-note { margin: 10px 0 0; font-size: 12px; color: var(--dim); max-width: 260px; }
+#hotkeys kbd, #hotkeys-hint kbd {
+  display: inline-block;
+  min-width: 2.2em;
+  padding: 3px 7px;
+  border: 1px solid rgba(241, 234, 217, 0.7);
+  border-radius: 3px;
+  font: bold 13px/1 Tahoma, Verdana, sans-serif;
+  text-align: center;
+}
+#hotkeys-hint {
+  position: fixed;
+  left: 50%;
+  bottom: 28px;
+  transform: translateX(-50%) translateY(8px);
+  z-index: 12;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #f1ead9;
+  font: 14px/1 Georgia, 'Times New Roman', serif;
+  letter-spacing: 0.08em;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 600ms ease, transform 600ms ease;
+}
+#hotkeys-hint.show { opacity: 0.85; transform: translateX(-50%) translateY(0); }
+@media (prefers-reduced-motion: reduce) { #hotkeys-hint { transition: none; } }

@@ -5,6 +5,7 @@ import { Builder } from './builder.js';
 import { DESK } from './layout.js';
 import { PALETTE } from './palette.js';
 import { buildKeyboard, LOCK_LED_COLOR } from './keyboard.js';
+import { buildMouseSetup } from './mouse.js';
 
 function deskTopShape(w, d, r) {
   // Rounded rectangle with a gently bowed back edge (toward the user).
@@ -72,5 +73,7 @@ export function buildDesk(m, leds) {
 
   const desk = b.build({ name: 'desk', castShadow: true, receiveShadow: true });
   desk.add(kb.group);
+  // Mouse on its pad to the right of the keyboard, cable running off the back of the desk.
+  desk.add(buildMouseSetup(m, { x: kb.caseW / 2 + 0.19, z: kz + 0.02, top, deskBackZ: z - D / 2 }));
   return desk;
 }

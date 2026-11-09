@@ -89,6 +89,11 @@ export class SoundDesign {
     this.analyser = c.createAnalyser();
     this.analyser.fftSize = 2048;
     this.master.connect(comp).connect(this.analyser).connect(c.destination);
+    // UI bus (desktop clicks): goes straight to the compressor, so it is NOT ducked while the
+    // desktop is open. It still follows mute (see applyMaster).
+    this.ui = c.createGain();
+    this.ui.gain.value = this.muted ? 0 : this.volume;
+    this.ui.connect(comp);
 
     const smallVerb = c.createConvolver(); smallVerb.buffer = impulse(c, 0.9, 3.2);
     const bigVerb = c.createConvolver(); bigVerb.buffer = impulse(c, 3.0, 2.2);
@@ -247,15 +252,36 @@ export class SoundDesign {
     this.thump(td, { f0: 72, f1: 40, dur: 0.2, peak: 0.32, dest: room });
     this.burst(td, { dur: 0.12, freq: 480, Q: 1.2, peak: 0.14, decay: 0.11, dest: room });
 
-    // Arm motor: a geared servo whine; pitch and level track the eased descent speed.
+    // Arm motor (shared with the raise): pitch and level track the eased descent speed.
     const ts = t0 + M.descentStart, dur = M.descentDur, te = ts + dur;
+    this.armMotor(ts, dur);
+    // Arrival: clunk, then a little spring twang from the sway.
+    this.thump(te, { f0: 82, f1: 44, dur: 0.26, peak: 0.22, dest: room });
+    this.burst(te, { dur: 0.08, freq: 900, Q: 1.5, peak: 0.08, decay: 0.08, dest: room });
+    {
+      const o = c.createOscillator(); o.frequency.value = 205;
+      const vib = c.createOscillator(); vib.frequency.value = 7;
+      const vg = c.createGain(); vg.gain.value = 6;
+      vib.connect(vg).connect(o.frequency);
+      const g = c.createGain();
+      this.env(g.gain, te + 0.02, 0.01, 0.035, 0.7);
+      o.connect(g).connect(room);
+      o.start(te); vib.start(te); o.stop(te + 0.9); vib.stop(te + 0.9);
+    }
+    // CRT power-on.
+    this.crtOn(t0 + M.screenOn);
+  }
+
+  /** Geared servo whine for the telescoping arm; pitch and level follow an eased move of `dur` s. */
+  armMotor(ts, dur, pitch = 1) {
+    const c = this.ctx, room = this.room, te = ts + dur;
     const N = 64;
     const speed = (k) => (k < 0.5 ? 12 * k * k : 3 * Math.pow(2 - 2 * k, 2)) / 3; // d/dk easeInOutCubic, 0..1
     const fA = new Float32Array(N), fB = new Float32Array(N), gA = new Float32Array(N), rA = new Float32Array(N);
     for (let i = 0; i < N; i++) {
       const k = i / (N - 1), v = speed(k);
       const edge = Math.min(1, k / 0.06, (1 - k) / 0.06); // soft start/stop
-      fA[i] = 62 + 125 * v;
+      fA[i] = (62 + 125 * v) * pitch;
       fB[i] = fA[i] * 1.503;
       gA[i] = Math.max(0.0001, 0.075 * (0.25 + 0.75 * v) * edge);
       rA[i] = Math.max(0.0001, 0.025 * v * edge);
@@ -279,21 +305,39 @@ export class SoundDesign {
       g.gain.setValueCurveAtTime(rA, ts, dur);
       src.start(ts, rand(0, 1)); src.stop(te + 0.05);
     }
-    // Arrival: clunk, then a little spring twang from the sway.
-    this.thump(te, { f0: 82, f1: 44, dur: 0.26, peak: 0.22, dest: room });
-    this.burst(te, { dur: 0.08, freq: 900, Q: 1.5, peak: 0.08, decay: 0.08, dest: room });
+  }
+
+  /**
+   * Raising the monitor back into the ceiling (monitor.js RAISE timings): CRT power-off zap,
+   * the arm motor retracting (slightly higher pitch: working against gravity), the doors
+   * hissing shut with a thump and a latch click.
+   */
+  monitorRaise(R, t0 = this.now()) {
+    const c = this.ctx, room = this.room;
+    // CRT power-off: a falling zap and a soft click.
+    this.thump(t0, { f0: 1500, f1: 70, dur: 0.3, peak: 0.07, dest: room, type: 'sawtooth' });
+    this.burst(t0, { dur: 0.03, freq: 2600, Q: 2, peak: 0.12, decay: 0.025, dest: room });
+    this.stopLoops('room', 0.15); // the flyback whine stops with the picture
+    // Housing levels (small servo blip), then the arm retracts.
+    this.armMotor(t0 + R.levelStart, R.levelDur, 1.6);
+    this.armMotor(t0 + R.ascentStart, R.ascentDur, 1.12);
+    // Doors swing shut: pneumatic hiss, thump against the frame, latch.
     {
-      const o = c.createOscillator(); o.frequency.value = 205;
-      const vib = c.createOscillator(); vib.frequency.value = 7;
-      const vg = c.createGain(); vg.gain.value = 6;
-      vib.connect(vg).connect(o.frequency);
+      const td = t0 + R.doorsStart;
+      const src = c.createBufferSource(); src.buffer = this.noise;
+      const hp = c.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 2800;
       const g = c.createGain();
-      this.env(g.gain, te + 0.02, 0.01, 0.035, 0.7);
-      o.connect(g).connect(room);
-      o.start(te); vib.start(te); o.stop(te + 0.9); vib.stop(te + 0.9);
+      g.gain.value = 0.0001;
+      g.gain.setValueAtTime(0.0001, td);
+      g.gain.linearRampToValueAtTime(0.06, td + 0.08);
+      g.gain.exponentialRampToValueAtTime(0.0001, td + R.doorsDur);
+      src.connect(hp).connect(g).connect(room);
+      src.start(td, rand(0, 1)); src.stop(td + R.doorsDur + 0.1);
+      const tc = td + R.doorsDur;
+      this.thump(tc, { f0: 80, f1: 42, dur: 0.22, peak: 0.3, dest: room });
+      this.burst(tc, { dur: 0.1, freq: 520, Q: 1.2, peak: 0.12, decay: 0.09, dest: room });
+      this.burst(tc + 0.09, { dur: 0.04, freq: 2400, Q: 3, peak: 0.22, decay: 0.035, dest: room });
     }
-    // CRT power-on.
-    this.crtOn(t0 + M.screenOn);
   }
 
   /** CRT power-on: degauss "bwoom", static crackle, then a faint flyback whine. */
@@ -436,6 +480,22 @@ export class SoundDesign {
     const g = this.master.gain;
     g.cancelScheduledValues(this.now());
     g.setTargetAtTime(target, this.now(), 0.12);
+    const u = this.ui.gain;
+    u.cancelScheduledValues(this.now());
+    u.setTargetAtTime(this.muted ? 0 : this.volume, this.now(), 0.05);
+  }
+
+  /**
+   * Mouse click for the desktop: 'press' on pointer down (crisp), 'release' on pointer up
+   * (lighter). A short plastic tick: a bright noise transient plus a tiny pitched body.
+   */
+  uiClick(kind = 'press', t = this.now()) {
+    const press = kind === 'press';
+    const k = press ? 1 : 0.55;
+    const p = rand(0.95, 1.05) * (press ? 1 : 1.15);
+    this.burst(t, { dur: 0.012, type: 'bandpass', freq: 3800 * p, Q: 1.6, peak: 0.32 * k, attack: 0.0008, decay: 0.009, dest: this.ui });
+    this.thump(t, { f0: 2100 * p, f1: 1400 * p, dur: 0.018, peak: 0.12 * k, attack: 0.0008, dest: this.ui, type: 'triangle' });
+    this.burst(t + 0.002, { dur: 0.02, type: 'lowpass', freq: 900, Q: 0.7, peak: 0.08 * k, attack: 0.001, decay: 0.016, dest: this.ui });
   }
 
   /** Server room back to silent (replays/debug). */

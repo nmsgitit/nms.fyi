@@ -17,10 +17,11 @@ import { buildDesk } from './scene/desk.js';
 import { buildServerRoom, populateServerRoom, buildServerLights } from './scene/serverRoom.js';
 import { buildSupercomputer, buildCoreLights } from './scene/supercomputer.js';
 import { WALK } from './scene/layout.js';
-import { MonitorRig, MONITOR } from './scene/monitor.js';
+import { MonitorRig, MONITOR, RAISE } from './scene/monitor.js';
 import { WallCRTs } from './scene/wallCrt.js';
 import { DesktopOS } from './os/os.js';
 import { TerminalFocus } from './sequence/focus.js';
+import { HotkeyPanel } from './ui/hotkeys.js';
 import './os/os.css';
 import { Reveal } from './sequence/reveal.js';
 import { SoundDesign } from './audio/sound.js';
@@ -180,11 +181,50 @@ const debug = createDebug({ params, renderer, scene, camera, walk, setLit, leds 
 
 // ---------------------------------------------------------------- NMS FYI OS (stage 6)
 // The HTML desktop, and the camera glide into the monitor that reveals it.
-const os = new DesktopOS({ onExit: () => focus.exit() });
+const os = new DesktopOS({
+  onExit: () => focus.exit(),
+  onClick: (kind) => sound.ready && sound.uiClick(kind),
+});
 const focus = new TerminalFocus({ camera, walk, monitor, os, sound, canvas });
+const _focusIn = focus.focusIn.bind(focus);
+focus.focusIn = () => { hotkeys?.hide(); _focusIn(); };
 monitor.on('desktop', () => {
   focus.enable();
   if (sound.ready) sound.startupChime();
+  hotkeys.hintOnce();
+});
+
+// Tab: show/hide the controls list (3D view only; inside the desktop Tab moves keyboard focus).
+const hotkeys = new HotkeyPanel(() => ({
+  canUse: focus.state === 'ready',
+  canRaise: focus.state === 'ready' && monitor.state === 'down',
+  canLower: monitor.state === 'stowed' && walk.state === 'arrived',
+}));
+window.addEventListener('keydown', (e) => {
+  if (e.key !== 'Tab' || os.isOpen || !gateEl.classList.contains('hidden')) return;
+  e.preventDefault();
+  hotkeys.toggle();
+});
+for (const evt of ['desktop', 'raise', 'stowed', 'start']) monitor.on(evt, () => hotkeys.refresh());
+
+// F: raise the monitor back into the ceiling, only once the visitor has exited the desktop
+// (they're at the desk, desktop closed). Pressing F again lowers it and boots it back up.
+function lowerMonitor() {
+  if (monitor.state !== 'stowed' || walk.state !== 'arrived' || focus.state !== 'unavailable') return;
+  focus.prompt.classList.remove('show');
+  monitor.start(); // full descent + boot; its 'desktop' event re-enables focusing
+}
+focus.onLowerRequest = lowerMonitor;
+monitor.on('raise', () => sound.ready && sound.monitorRaise(RAISE));
+monitor.on('stowed', () => { if (walk.state === 'arrived') focus.showLowerPrompt(); hotkeys.refresh(); });
+window.addEventListener('keydown', (e) => {
+  if (e.key.toLowerCase() !== 'f' || e.repeat || os.isOpen) return;
+  if (focus.state === 'ready' && monitor.state === 'down') {
+    focus.disable();
+    monitor.raise();
+  } else if (monitor.state === 'stowed') {
+    lowerMonitor();
+  }
 });
 
 if (params.has('lit')) setLit(true);
