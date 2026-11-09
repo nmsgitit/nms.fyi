@@ -1,8 +1,8 @@
-// NMS FYI OS: the HTML desktop that takes over the screen when the visitor focuses the
+// LAMPLIGHT OS: the HTML desktop that takes over the screen when the visitor focuses the
 // terminal (E / click / tap). XP-reminiscent but original: blue taskbar, oil-lamp launcher
 // with an app menu and the Exit button, desktop icons, draggable windows.
 // Content comes from desktopModel.js (placeholders for now).
-import { APPS, USER_NAME, USER_TAGLINE } from './desktopModel.js';
+import { APPS, USER_NAME, USER_TAGLINE, OS_NAME } from './desktopModel.js';
 import { iconURL, wallpaperURL } from './art.js';
 import { clockText } from '../scene/screen.js';
 
@@ -34,7 +34,7 @@ export class DesktopOS {
   }
 
   build() {
-    const root = (this.root = el('div', 'os', { id: 'os', role: 'application', 'aria-label': 'NMS FYI OS desktop' }));
+    const root = (this.root = el('div', 'os', { id: 'os', role: 'application', 'aria-label': `${OS_NAME} desktop` }));
     root.hidden = true;
 
     const desk = (this.desk = el('div', 'os-desktop'));

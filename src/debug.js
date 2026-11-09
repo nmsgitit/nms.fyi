@@ -4,8 +4,9 @@
 //   ?lit     server room fully powered (preview the layout)
 //   ?skip    skip the walk; start at the desk
 //
-// Keys (any mode): L toggle server-room power, R restart the walk,
-//                  O toggle orbit camera, H toggle HUD
+// Dev keys (only in `npm run dev` or with ?debug; never for normal visitors):
+//   L toggle server-room power, O toggle orbit camera, H toggle HUD
+//   (R/M/P replays live in main.js under the same gate.)
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
 export function createDebug({ params, renderer, camera, walk, setLit }) {
@@ -31,11 +32,12 @@ export function createDebug({ params, renderer, camera, walk, setLit }) {
     camera.position.set(0, 6, 12);
   }
 
+  const devKeys = params.has('debug') || import.meta.env.DEV;
   window.addEventListener('keydown', (e) => {
+    if (!devKeys || document.getElementById('os')?.classList.contains('on')) return;
     if (e.target instanceof HTMLInputElement) return;
     const k = e.key.toLowerCase();
     if (k === 'l') { lit = !lit; setLit(lit); }
-    if (k === 'r') { orbitOn = false; if (orbit) orbit.enabled = false; walk.begin(); }
     if (k === 'o') {
       orbitOn = !orbitOn;
       ensureOrbit().enabled = orbitOn;

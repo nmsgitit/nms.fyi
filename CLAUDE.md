@@ -4,7 +4,7 @@ The user's personal/professional site at **nms.fyi**. When it opens, the visitor
 (first person, scripted, no controls) into a 1980s retro-futurist **command room**
 toward a desk at a glass wall overlooking a dark **server room**. A monitor drops
 from the ceiling while the server room powers up around a central **supercomputer**.
-The monitor boots "NMS FYI OS", and pressing **E** focuses it full screen to use a
+The monitor boots "LAMPLIGHT OS", and pressing **E** focuses it full screen to use a
 mock operating system with an XP-style desktop.
 
 Read this whole file before working. Update it whenever decisions change.
@@ -37,7 +37,7 @@ Apollo Core styling) and must be read before visual work.
    **with a flame coming out of the spout** (part of the logo, needn't animate), drawn
    **simple, like 1980s computer graphics, NOT a modern render** (user feedback: we use
    low-res pixel art, a limited flat palette, a 1 px outline, no gradients),
-   with **serif** text beneath: "NMS FYI OS", with "Version 1.0" on its own line below,
+   with **serif** text beneath: "LAMPLIGHT OS" (renamed from "NMS FYI OS" by the user), with "Version 1.0" on its own line below,
    slightly smaller.
 7. When the monitor is fully down, after a **couple of seconds' gap**, the boot screen
    gives way to a mock OS with a **Windows XP-reminiscent desktop**.
@@ -65,7 +65,7 @@ instead of blocking on them.
 | 3 | Server-room power-up on the monitor clock: breaker 1 core (spots, ring, climbing bands, core LEDs), breaker 2 ~1.15 s later room (surge dip, fluorescent row strikes, bank/rack LED cascades) | ✅ 2026-11-09 |
 | 4 | Procedural Web Audio sound (audio/sound.js): footsteps, room tone, hatch + arm motor + arrival, CRT power-on, two breakers, tube strikes, transformer hum, faint fans behind glass; mute button | ✅ 2026-11-09 (not yet heard by the user) |
 | 5 | Boot screen on the monitor: 1980s pixel-art bronze oil lamp with a lit flame (lamp.js), serif title, progress bar | ✅ 2026-11-09 (the boot to OS hand-off comes in stage 6) |
-| 6 | NMS FYI OS shell: boot to desktop 2 s after the monitor lands (+ startup chime), HTML desktop (XP-reminiscent, original), lamp launcher + Exit, window manager, E / click / tap focus with camera glide, 3D pause while open | ✅ shell 2026-11-09. **Content: placeholders; waiting on the user** |
+| 6 | LAMPLIGHT OS shell: boot to desktop 2 s after the monitor lands (+ startup chime), HTML desktop (XP-reminiscent, original), lamp launcher + Exit, window manager, E / click / tap focus with camera glide, 3D pause while open | ✅ shell 2026-11-09. **Content: placeholders; waiting on the user** |
 | 7 | Polish: film grain, fluorescent flicker, mobile/low-GPU fallback, accessibility (skip intro, reduced motion), loading screen | todo |
 | 8 | Deploy to Infomaniak Node.js hosting | todo; confirm their Node version and how they run apps |
 
@@ -92,8 +92,9 @@ npm start          # serves dist/ on $PORT (default 3000)
 - `/dev/os-preview.html` (dev server only): the HTML desktop alone, no WebGL needed (handy for phone-size checks in
   the built-in browser pane, which has no WebGL).
 - `?debug`: orbit camera + HUD (fps, draw calls, camera position).
-- Sound is silent until the first user gesture (browser rule). Visitor keys (3D view): **E** use the terminal, **F** raise/lower
-  the monitor (only after exiting the desktop), **Tab** show/hide the controls panel. Dev keys: **L** toggles server power, **R** restarts the walk, **M** replays monitor drop + power-up together,
+- Sound is silent until the first user gesture (browser rule). Visitor keys (3D view): **E** use the terminal, **Q** raise/lower
+  the monitor (only after exiting the desktop), **F** look around with the mouse, **Tab** hotkey menu. Dev keys (only
+  `npm run dev` or `?debug`; never for visitors): **L** toggles server power, **R** replays the whole intro from the corridor, **R** restarts the walk, **M** replays monitor drop + power-up together,
   **P** replays just the power-up, **O** orbit cam, **H** HUD.
 - In dev, `window.scene/camera/renderer/walk/setLit/leds/monitor/reveal` are exposed.
 - Deterministic reveal stepping (screenshots stall rAF): replace `reveal.update` and `leds.update` with no-ops
@@ -127,7 +128,10 @@ tools/blender/monitor.py  Blender script that builds + exports the monitor (and 
 public/models/monitor.glb generated, committed (~0.55 MB) so the repo deploys as-is
 src/audio/sound.js    SoundDesign: all sounds synthesized with Web Audio (no files); room / server (glass) / fx buses
 src/scene/mouse.js    late-80s two-button mouse (unbranded, PS/2-era style), pad, cable into a desk grommet
-src/ui/hotkeys.js     HotkeyPanel: Tab shows/hides the controls list; one-time "Tab Controls" hint
+src/ui/hotkeys.js     HotkeyPanel: bottom "TAB Open Hotkey Menu" button + the hotkey menu (top-left), dims inapplicable keys
+src/scene/door.js     HydraulicDoor: stepped-seam sliding leaves, status light bars, "Command Room / Lamplight Data Center" sign
+src/sequence/intro.js DoorIntro: corridor door sequence (DOOR_TIMING), starts the walk, closes the door behind
+src/sequence/lookAround.js LookAround (F): turn your head with the mouse from the desk (pointer lock; drag fallback)
 src/sequence/focus.js TerminalFocus: E / monitor click / prompt tap -> camera glide into the screen -> DesktopOS; Exit reverses
 src/os/desktopModel.js  the desktop apps + text (PLACEHOLDERS): single source for the HTML desktop and the monitor drawing
 src/os/art.js         wallpaper (original desert dusk) + 32 px pixel icons, drawn in code, also as data URLs
@@ -146,12 +150,13 @@ reference/            (gitignored) extracted frames, contact sheets, spectrogram
 - +x right, +y up, camera looks toward -z.
 - Command room: x -5..5, z 0..8, height 3.2. Glass wall at front: bottom edge y 0.95 at z 0,
   top edge y 3.2 at z -0.6 (tilts outward). Mullions at x ±1.8 keep the center pane clear.
-- Corridor behind the back-wall door: z 8.2..12. The walk starts at z 10.4.
+- Corridor behind the back-wall door: z 8.2..12, ceiling 3.2 (as tall as the room, for the sign). The hydraulic door
+  is 2.24 × 2.3 m at z 8.1. The walk starts at z 11.2 facing it, looking slightly up so the sign is in view.
 - Server room: floor y -4.5, ceiling y 9, x -16..16, z -28..-0.6. Catwalks at y -1.0.
 - Supercomputer center (0, -14). Desk center z 1.15, top 0.78. Ceiling hatch for the monitor
   at (0, 3.2, 1.05), 1.3 × 1.0.
 - Walk ends at (0, 1.65, 2.55) looking ~9° down: keyboard at the bottom edge,
-  monitor drop zone mid-low, supercomputer above it. Duration ~8.1 s, 10 footfalls.
+  monitor drop zone mid-low, supercomputer above it. Speed 1.0 m/s: duration ~9.9 s.
 
 ## Lighting rules (learned the hard way)
 
@@ -234,10 +239,9 @@ Contact sheets with timestamps are in `reference/*/sheet_*.jpg`. The terminal st
 `reference/apollo/terminal_still.webp`.
 
 ## Monitor timing (monitor.js MONITOR)
-Starts when `walk.t >= walk.duration - MONITOR.total` (~2.5 s into the 8.1 s walk, as the visitor comes
-through the door and can see the hatch open), so it arrives as the walk ends. Doors open 0 to 0.9 s, the arm
-descends 0.6 to 5.6 s (slow: stowed attach y 4.08 to final 1.81, screen center ~1.40 m), screen power-on
-at 1.4 s, tilt to -0.17 rad over the last 40% of the drop, then a damped spring/sway. The server-room
+Starts when `walk.t >= walk.duration - MONITOR.total` (5.1 s into the 9.9 s walk), so it arrives as the walk
+ends. Doors open 0 to 0.9 s, the arm descends 0.6 to 4.8 s (stowed attach y 4.08 to final 1.81, screen center
+~1.40 m), screen power-on at 1.4 s, tilt to -0.17 rad over the last 40% of the drop, then a damped spring/sway. The server-room
 power-up runs on this same clock. (Timeline was spread out on 2026-11-09 because too many sounds landed
 together around footsteps 9 to 10; keep the major sound events about a second apart.)
 
@@ -264,10 +268,10 @@ together around footsteps 9 to 10; keep the major sound events about a second ap
   Live: `sound.level()` reads the analyser RMS. Claude can't hear: the user must judge the actual sound.
 
 ## Power-up timing (sequence/reveal.js REVEAL; seconds on the monitor clock)
-Starts with the monitor (~2.5 s into the walk). CRT power-on 1.4 s. Breaker 1 at 2.5 s: core spots `lampStrike`
+Starts with the monitor (5.1 s into the walk). CRT power-on 1.4 s. Breaker 1 at 2.3 s: core spots `lampStrike`
 (fast flutter, then climb), ring light, bands climb (0.12 s + 0.11 s × i), core LEDs cascade over 0.9 s.
-Breaker 2 at 3.75 s: command room dips 40 % for 0.24 s, fixture rows `fluorescentStrike` 0.4 s apart
-nearest-first (tube sounds at 100/60/40 % per row), back wash +0.3 s, fans fade in over 5 s, monitor lands 5.6 s, banks cascade over 1.9 s, racks +0.25 s over 1.3 s. Events: `breaker` {index, strength}, `fans`
+Breaker 2 at 3.4 s: command room dips 40 % for 0.24 s, fixture rows `fluorescentStrike` 0.4 s apart
+nearest-first (tube sounds at 100/60/40 % per row), back wash +0.3 s, fans fade in over 5 s, monitor lands 4.8 s, banks cascade over 1.9 s, racks +0.25 s over 1.3 s. Events: `breaker` {index, strength}, `fans`
 (stage-4 audio hooks). State becomes `lit` 4 s after breaker 2.
 
 ## Open design questions (for the user's change-request round)
@@ -281,14 +285,14 @@ nearest-first (tube sounds at 100/60/40 % per row), back wash +0.3 s, fans fade 
 - The monitor first emerges above the frame (you're looking ahead). Possibly a scripted glance up as it drops.
 - Fluorescent warmth/greenness, bloom strength, walk speed (8.1 s).
 
-## NMS FYI OS (stage 6)
+## LAMPLIGHT OS (stage 6)
 - **Architecture:** the usable desktop is real HTML (`DesktopOS`): crisp text, accessible, indexable, normal links
   and forms. The 3D monitor shows a *drawing* of the same desktop (`MonitorScreen.drawDesktop()`) made from the
   same art (`os/art.js`), app list (`os/desktopModel.js`) and proportions (`os/layout.js`), so they match.
   Keep the two in sync when the desktop changes (icons, taskbar).
-- **Boot hand-off:** monitor clock `MONITOR.desktopAt = total + 2.0` (7.6 s): the screen goes 0.25 s black, then the
+- **Boot hand-off:** monitor clock `MONITOR.desktopAt = total + 2.0` (6.8 s): the screen goes 0.25 s black, then the
   desktop fades in; monitor emits `desktop` -> `focus.enable()` + `sound.startupChime()` (original Eb arpeggio + pad).
-  The boot progress bar fills over `MonitorScreen.BOOT_SECONDS = 4.9`, so it completes just before.
+  The boot progress bar fills over `MonitorScreen.BOOT_SECONDS = 4.1`, so it completes just before.
 - **Focus:** `TerminalFocus` (sequence/focus.js). Triggers: **E**, clicking the monitor (raycast), or the
   `#terminal-prompt` button ("Tap to use the terminal" on coarse pointers). The camera glides 1.15 s (easeInOutCubic,
   position lerp + quaternion slerp) to a pose that frames the screen glass (0.44 × 0.335 m; fits height or width
@@ -305,6 +309,23 @@ nearest-first (tube sounds at 100/60/40 % per row), back wash +0.3 s, fans fade 
 - Original artwork only: desert-at-dusk wallpaper (not XP's hill photo), our own pixel icons, a green "pill"
   launcher containing the pixel lamp.
 
+## Door intro, look-around, keys (change round 3, 2026-11-09)
+- **Door intro** (`sequence/intro.js`, DOOR_TIMING; seconds after Enter): bolts 0 / 0.2 / 0.4, status bar blinks amber,
+  then green at 0.62, hiss 0.6, leaves slide 0.75 to 2.35 (`heavy()` ease: hesitation, then a slide), walk starts at 1.75.
+  The door closes when the walk distance reaches 3.35 m (camera ~0.25 m past the doorway): 0.6 s slide, slam, bolts relock,
+  status red. Heard, not seen. Sounds: `sound.doorOpen(D)` / `doorClose(D)` (bolt, hiss, slideRumble helpers; fx bus).
+  Peaks: bolts 0.57, end stop 0.60, slam 0.70.
+- **Sign** (door.js, corridor side above the door): monotone lamp logo (`getLampSprite('mono')`: all palette entries,
+  flame included, mapped to one warm off-white's tones), "Command Room", and "Lamplight Data Center" smaller, on a softly
+  backlit dark panel. Exact wording and case from the user.
+- **Timeline after the door** (walk times): door slam 4.41, monitor hatch latch 5.10, breaker 1 7.4, breaker 2 8.5,
+  monitor lands 9.9 = walk end. Keep big sound moments at least ~0.6 s apart (the user complained about overlap before).
+- **F = look around** (`sequence/lookAround.js`): stays at the desk; pointer lock, mouse turns the head (yaw unlimited,
+  pitch ±69°); drag fallback; F or Esc turns back (0.7 s slerp). The user explicitly did NOT want a moving freecam.
+  While looking, clicks don't focus the monitor; E still works (glides into the screen from the current view).
+- **Q** raises/lowers the monitor (moved from F).
+- Developer keys (R/L/M/P/O/H) are only active in `npm run dev` or with `?debug`.
+
 ## Desk, controls & monitor stowing (change round 2, 2026-11-09)
 - **Mouse:** `scene/mouse.js`: an unbranded two-button mouse in the spirit of IBM's PS/2-era mouse (to go with the
   Model M): boxy, pale gray, top sloping toward the hand, buttons split by a groove, on a dark pad right of the keyboard.
@@ -313,15 +334,15 @@ nearest-first (tube sounds at 100/60/40 % per row), back wash +0.3 s, fans fade 
 - **Click sound:** `sound.uiClick('press' | 'release')` on every pointer down/up inside the desktop (`DesktopOS` onClick).
   It plays on a separate `ui` bus straight into the compressor, so it is NOT ducked while the desktop is open; it still
   follows mute. Peaks: press ~0.23, release ~0.12.
-- **F key:** after exiting the desktop (`focus.state === 'ready'`, monitor 'down'), F calls `monitor.raise()`:
+- **Q key** (was F; the user moved it): after exiting the desktop (`focus.state === 'ready'`, monitor 'down'), F calls `monitor.raise()`:
   RAISE timeline (monitor.js) = CRT collapse-to-dot power-off (`screen.shutdown()`, 0.6 s), housing levels
   (0.3 to 1.0 s), arm retracts (0.7 to 4.1 s), doors close (4.15 to 4.95 s), then 'stowed'. Sound: `sound.monitorRaise(RAISE)`
-  (zap, servo blip, motor at 1.12x pitch, hiss, door thump, latch). F again runs `monitor.start()`: full descent + boot
+  (zap, servo blip, motor at 1.12x pitch, hiss, door thump, latch). Q again runs `monitor.start()`: full descent + boot
   to the desktop, which re-enables E. Descent and raise share `applyPose()`. Keyboard only (no F on touch).
   Bonus: with the monitor stowed, the supercomputer is fully visible.
-- **Controls UI:** no persistent key prompts on keyboard devices (user: cleaner). **Tab** toggles the controls panel
-  (`ui/hotkeys.js`, right side). Inapplicable keys are dimmed and it live-refreshes on monitor events. A small "Tab Controls" hint
-  fades in once, the first time the terminal becomes usable. Tab is only captured in the 3D view (gate gone, desktop
+- **Controls UI:** a persistent "**TAB** Open Hotkey Menu" button at the bottom (keyboard devices, 3D view only; reads
+  "Close" while open; hidden inside the desktop). Tab or clicking it toggles the hotkey menu (`ui/hotkeys.js`, **top-left**
+  per the user). Inapplicable keys are dimmed and it live-refreshes on monitor/look events. Tab is only captured in the 3D view (gate gone, desktop
   closed); inside the desktop Tab keeps normal focus navigation. Touch devices keep the "Tap to use the terminal" button.
 
 ## Command room details (change round 1, 2026-11-09)

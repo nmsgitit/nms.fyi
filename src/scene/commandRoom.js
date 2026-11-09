@@ -96,7 +96,7 @@ export function buildCommandRoom(m, leds) {
   const dw = CORRIDOR.halfW;
   b.span(m.wallUpper, xMin, -dw, 0, H, zBack, zBack + 0.2);
   b.span(m.wallUpper, dw, xMax, 0, H, zBack, zBack + 0.2);
-  b.span(m.wallUpper, -dw, dw, CORRIDOR.height, H, zBack, zBack + 0.2);
+  b.span(m.wallUpper, -dw, dw, DOOR.height, H, zBack, zBack + 0.2); // above the door (sign side faces the corridor)
   b.span(m.wallLower, xMin, -dw - 0.25, 0, RAIL_Y0, zBack - 0.025, zBack);
   b.span(m.wallLower, dw + 0.25, xMax, 0, RAIL_Y0, zBack - 0.025, zBack);
   b.span(m.beigeLight, xMin, -dw - 0.25, RAIL_Y0, RAIL_Y1, zBack - 0.035, zBack);

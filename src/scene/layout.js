@@ -11,8 +11,9 @@ export const ROOM = {
   glassTopZ: -0.6, // the glass leans outward 0.6 m at the top
 };
 
-export const CORRIDOR = { halfW: 1.2, height: 2.6, zStart: 8.2, zEnd: 12 };
-export const DOOR = { halfW: 1.12, height: 2.6 };
+// Corridor is as tall as the room so the sign fits above the (lower) hydraulic door.
+export const CORRIDOR = { halfW: 1.2, height: 3.2, zStart: 8.2, zEnd: 12 };
+export const DOOR = { halfW: 1.12, height: 2.3, z: 8.1 }; // hydraulic door (door.js) sits in the back wall at z 8.1
 
 export const SERVER = {
   floorY: -4.5,
@@ -30,10 +31,10 @@ export const EYE_HEIGHT = 1.65;
 
 // Camera walk: from the corridor, through the door, to the desk.
 export const WALK = {
-  start: [0, EYE_HEIGHT, 10.4],
+  start: [0, EYE_HEIGHT, 11.2], // back in the corridor, facing the hydraulic door and its sign
   end: [0, EYE_HEIGHT, 2.55],
-  lookStart: [0, 1.55, -10],
+  lookStart: [0, 2.0, 5], // slightly up, so the sign above the door is in view
   lookEnd: [0, 0.85, -2.5], // ~9° down: keyboard at the bottom edge, monitor drop zone mid-low, core above
-  speed: 1.15, // m/s cruising, slow deliberate walk
+  speed: 1.0, // m/s cruising, slow deliberate walk (timed so the door slam, hatch and breakers stay apart)
   stepLength: 0.72,
 };

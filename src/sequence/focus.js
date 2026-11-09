@@ -30,7 +30,7 @@ export class TerminalFocus {
       if (e.key.toLowerCase() === 'e' && !e.repeat && !this.os.isOpen && !(e.target instanceof HTMLInputElement)) this.focusIn();
     });
     canvas.addEventListener('click', (e) => {
-      if (this.state !== 'ready') return;
+      if (this.state !== 'ready' || this.isLooking?.()) return; // while looking around, clicks don't focus
       const r = canvas.getBoundingClientRect();
       const ndc = new THREE.Vector2(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
       this.raycaster.setFromCamera(ndc, camera);

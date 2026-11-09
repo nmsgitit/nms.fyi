@@ -1,4 +1,4 @@
-// NMS FYI OS artwork, drawn in code and cached: the desktop wallpaper (an original
+// LAMPLIGHT OS artwork, drawn in code and cached: the desktop wallpaper (an original
 // desert-at-dusk scene to fit the oil-lamp theme; deliberately nothing like XP's hill photo)
 // and 32×32 pixel icons. The same canvases feed the 3D monitor and the HTML desktop
 // (as data URLs), so both always look identical.

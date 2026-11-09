@@ -21,10 +21,10 @@ export const MONITOR = {
   tilt: -0.17, // radians: screen angled up toward the standing viewer (~10°)
   doorsOpen: 0.9,
   descentStart: 0.6,
-  descentDur: 5.0, // slow, deliberate descent; also spreads out the sound events (user: overlap at steps 9-10)
+  descentDur: 4.2, // slow descent; with the door intro, timed so door slam, hatch and breakers stay apart
   screenOn: 1.4,
 };
-MONITOR.total = MONITOR.descentStart + MONITOR.descentDur; // 5.6 s: starts ~2.5 s into the walk (at the door)
+MONITOR.total = MONITOR.descentStart + MONITOR.descentDur; // 4.8 s: starts ~5.1 s into the 9.9 s walk
 MONITOR.desktopAt = MONITOR.total + 2.0; // "a couple seconds" after it is fully down, the boot gives way to the desktop
 
 // Raising back into the ceiling (F key). Seconds after raise().

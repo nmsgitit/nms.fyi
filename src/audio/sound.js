@@ -340,6 +340,84 @@ export class SoundDesign {
     }
   }
 
+  /** One heavy locking bolt: deep thunk + metallic clack. */
+  bolt(t, k = 1, dest = this.fx) {
+    this.thump(t, { f0: 85, f1: 42, dur: 0.22, peak: 0.5 * k, dest });
+    this.burst(t, { dur: 0.05, freq: 1300, Q: 2.2, peak: 0.35 * k, decay: 0.045, dest });
+    this.burst(t + 0.008, { dur: 0.03, freq: 3400, Q: 3, peak: 0.12 * k, decay: 0.025, dest });
+  }
+
+  /** Hydraulic hiss: a noise burst with a pressure-release attack, shaped by an envelope. */
+  hiss(t, { dur, peak, freq = 1800, attack = 0.03, dest = this.fx }) {
+    const c = this.ctx;
+    const src = c.createBufferSource(); src.buffer = this.noise; src.loop = true;
+    const bp = c.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = freq; bp.Q.value = 0.6;
+    const hp = c.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 700;
+    const g = c.createGain();
+    g.gain.value = 0.0001;
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.linearRampToValueAtTime(peak, t + attack);
+    g.gain.exponentialRampToValueAtTime(peak * 0.35, t + attack + dur * 0.35);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    bp.frequency.setValueAtTime(freq * 1.4, t);
+    bp.frequency.exponentialRampToValueAtTime(freq * 0.7, t + dur);
+    src.connect(bp).connect(hp).connect(g).connect(dest);
+    src.start(t, rand(0, 2)); src.stop(t + dur + 0.05);
+  }
+
+  /** Low hydraulic rumble + metal grinding while the heavy leaves slide (dur seconds). */
+  slideRumble(t, dur, peak = 1, dest = this.fx) {
+    const c = this.ctx;
+    const o = c.createOscillator(); o.type = 'sawtooth';
+    o.frequency.setValueAtTime(38, t);
+    o.frequency.linearRampToValueAtTime(52, t + dur * 0.5);
+    o.frequency.linearRampToValueAtTime(40, t + dur);
+    const lp = c.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 220;
+    const g = c.createGain();
+    g.gain.value = 0.0001;
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.linearRampToValueAtTime(0.16 * peak, t + 0.25);
+    g.gain.setValueAtTime(0.14 * peak, t + dur - 0.2);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(lp).connect(g).connect(dest);
+    o.start(t); o.stop(t + dur + 0.05);
+    // Grinding: low noise with a slow wobble.
+    const src = c.createBufferSource(); src.buffer = this.noise; src.loop = true;
+    const bp = c.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 420; bp.Q.value = 1.4;
+    const ng = c.createGain();
+    ng.gain.value = 0.0001;
+    ng.gain.setValueAtTime(0.0001, t);
+    ng.gain.linearRampToValueAtTime(0.09 * peak, t + 0.3);
+    ng.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    const lfo = c.createOscillator(); lfo.frequency.value = 7;
+    const lg = c.createGain(); lg.gain.value = 120;
+    lfo.connect(lg).connect(bp.frequency);
+    src.connect(bp).connect(ng).connect(dest);
+    src.start(t, rand(0, 2)); src.stop(t + dur + 0.05); lfo.start(t); lfo.stop(t + dur + 0.05);
+  }
+
+  /** Hydraulic door opening (intro.js DOOR_TIMING): bolts, pressure hiss, slide, end stop. */
+  doorOpen(D, t0 = this.now()) {
+    D.bolts.forEach((bt, i) => this.bolt(t0 + bt, 0.8 + i * 0.1));
+    this.hiss(t0 + D.hiss, { dur: D.openDur + 0.9, peak: 0.32, attack: 0.02 });
+    this.slideRumble(t0 + D.openStart, D.openDur);
+    const te = t0 + D.openStart + D.openDur;
+    this.thump(te, { f0: 62, f1: 34, dur: 0.4, peak: 0.6, dest: this.fx });
+    this.burst(te, { dur: 0.08, freq: 900, Q: 1.6, peak: 0.22, decay: 0.07, dest: this.fx });
+  }
+
+  /** Hydraulic door closing behind the visitor: hiss + slide, heavy slam, bolts relock. */
+  doorClose(D, t0 = this.now()) {
+    this.hiss(t0, { dur: D.closeDur + 0.3, peak: 0.24, freq: 1500, attack: 0.04 });
+    this.slideRumble(t0, D.closeDur, 0.9);
+    const ts = t0 + D.closeDur;
+    this.thump(ts, { f0: 55, f1: 28, dur: 0.7, peak: 0.85, dest: this.fx });
+    this.burst(ts, { dur: 0.12, freq: 700, Q: 1.2, peak: 0.3, decay: 0.11, dest: this.fx });
+    this.burst(ts + 0.01, { dur: 0.05, freq: 2600, Q: 2.5, peak: 0.16, decay: 0.045, dest: this.fx });
+    this.bolt(ts + 0.18, 0.7);
+    this.bolt(ts + 0.3, 0.6);
+  }
+
   /** CRT power-on: degauss "bwoom", static crackle, then a faint flyback whine. */
   crtOn(t = this.now()) {
     const c = this.ctx, room = this.room;
@@ -441,7 +519,7 @@ export class SoundDesign {
   }
 
   /**
-   * NMS FYI OS startup chime: an original warm four-note rising arpeggio over a soft pad,
+   * LAMPLIGHT OS startup chime: an original warm four-note rising arpeggio over a soft pad,
    * played from the monitor when the desktop first appears.
    */
   startupChime(t = this.now()) {

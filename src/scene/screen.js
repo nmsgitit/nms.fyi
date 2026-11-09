@@ -8,7 +8,7 @@ import { APPS, OS_NAME, OS_VERSION } from '../os/desktopModel.js';
 import { TASKBAR_H, ICON_GRID } from '../os/layout.js';
 
 export class MonitorScreen {
-  static BOOT_SECONDS = 4.9; // progress bar fill time, so it completes just before the desktop
+  static BOOT_SECONDS = 4.1; // progress bar fill time, so it completes just before the desktop (6.8 s)
 
   constructor(width = 1024, height = 780) {
     this.canvas = document.createElement('canvas');

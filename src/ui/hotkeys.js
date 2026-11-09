@@ -1,10 +1,10 @@
-// Controls panel: Tab shows/hides the list of hotkeys (user request: cleaner than prompts at
-// the bottom of the screen). Entries that don't apply right now are dimmed. A small
-// "Tab for controls" hint fades in once, the first time the terminal becomes usable.
-// Keyboard devices only; touch devices keep the tap prompt (focus.js).
+// Hotkey menu. A small "TAB  Open Hotkey Menu" button sits at the bottom of the screen
+// (keyboard devices, 3D view only). Tab, or clicking that button, shows/hides the menu.
+// Entries that don't apply right now are dimmed, and the menu live-refreshes.
+// Touch devices have no Tab key: they keep the tap prompt (focus.js) instead.
 
 export class HotkeyPanel {
-  /** state(): { canUse, canRaise, canLower } decides which entries are active. */
+  /** state(): { canUse, canRaise, canLower, canLook, looking } decides what's active. */
   constructor(state) {
     this.state = state;
     this.touch = matchMedia('(pointer: coarse)').matches;
@@ -12,29 +12,44 @@ export class HotkeyPanel {
     const panel = (this.panel = document.createElement('div'));
     panel.id = 'hotkeys';
     panel.setAttribute('role', 'dialog');
-    panel.setAttribute('aria-label', 'Controls');
+    panel.setAttribute('aria-label', 'Hotkeys');
     panel.hidden = true;
     document.body.append(panel);
 
-    const hint = (this.hint = document.createElement('div'));
-    hint.id = 'hotkeys-hint';
-    hint.setAttribute('aria-hidden', 'true');
-    hint.innerHTML = '<kbd>Tab</kbd>Controls';
-    document.body.append(hint);
-    this.hinted = false;
+    const bar = (this.bar = document.createElement('button'));
+    bar.id = 'hotkeys-bar';
+    bar.type = 'button';
+    bar.addEventListener('click', () => this.toggle());
+    document.body.append(bar);
+    this.updateBar();
   }
 
   get open() { return !this.panel.hidden; }
 
+  updateBar() {
+    this.bar.innerHTML = `<kbd>TAB</kbd>${this.open ? 'Close' : 'Open'} Hotkey Menu`;
+    this.bar.setAttribute('aria-expanded', String(this.open));
+  }
+
+  /** Show the bottom button (keyboard devices only). Hidden during the gate and inside the desktop. */
+  setBarVisible(on) {
+    this.bar.classList.toggle('show', on && !this.touch);
+    if (!on) this.hide();
+  }
+
   render() {
-    const { canUse, canRaise, canLower } = this.state();
-    const rows = [
-      ['E', 'Use the terminal', canUse],
-      ['F', canLower ? 'Lower the terminal' : 'Raise the terminal', canRaise || canLower],
-      ['Tab', 'Show / hide controls', true],
-    ];
-    this.panel.innerHTML = '<p class="hk-title">Controls</p>' + rows.map(([k, label, on]) =>
-      `<div class="hk-row${on ? '' : ' off'}"><kbd>${k}</kbd><span>${label}</span></div>`).join('') +
+    const { canUse, canRaise, canLower, canLook, looking } = this.state();
+    const row = (keys, label, on) =>
+      `<div class="hk-row${on ? '' : ' off'}">${keys.map((k) => `<kbd>${k}</kbd>`).join('')}<span>${label}</span></div>`;
+    this.panel.innerHTML =
+      '<p class="hk-title">Hotkeys</p>' +
+      row(['E'], 'Use the terminal', canUse) +
+      row(['Q'], canLower ? 'Lower the terminal' : 'Raise the terminal', canRaise || canLower) +
+      row(['F'], looking ? 'Stop looking around' : 'Look around with the mouse', canLook || looking) +
+      '<p class="hk-sub">While looking around</p>' +
+      row(['Mouse'], 'Turn your head', looking) +
+      row(['F', 'Esc'], 'Turn back to the desk', looking) +
+      row(['Tab'], 'Close this menu', true) +
       '<p class="hk-note">Inside the terminal, use Exit in the lamp menu to step back.</p>';
   }
 
@@ -42,19 +57,14 @@ export class HotkeyPanel {
     if (this.open) { this.hide(); return; }
     this.render();
     this.panel.hidden = false;
-    this.hint.classList.remove('show');
+    this.updateBar();
   }
 
-  hide() { this.panel.hidden = true; }
+  hide() {
+    this.panel.hidden = true;
+    this.updateBar();
+  }
 
-  /** Live-update the dimmed/active entries while the panel is open (e.g. while the monitor moves). */
+  /** Live-update the dimmed/active entries while the menu is open. */
   refresh() { if (this.open) this.render(); }
-
-  /** One-time "Tab for controls" note, the first time the terminal becomes usable. */
-  hintOnce() {
-    if (this.hinted || this.touch) return;
-    this.hinted = true;
-    setTimeout(() => this.hint.classList.add('show'), 1000);
-    setTimeout(() => this.hint.classList.remove('show'), 6000);
-  }
 }

@@ -22,6 +22,9 @@ import { WallCRTs } from './scene/wallCrt.js';
 import { DesktopOS } from './os/os.js';
 import { TerminalFocus } from './sequence/focus.js';
 import { HotkeyPanel } from './ui/hotkeys.js';
+import { LookAround } from './sequence/lookAround.js';
+import { HydraulicDoor } from './scene/door.js';
+import { DoorIntro } from './sequence/intro.js';
 import './os/os.css';
 import { Reveal } from './sequence/reveal.js';
 import { SoundDesign } from './audio/sound.js';
@@ -74,6 +77,8 @@ const leds = new LedField(8000);
 const commandRoom = buildCommandRoom(m, leds);
 scene.add(commandRoom);
 const wallCrts = new WallCRTs(commandRoom.userData.crtSlots); // bouncing-lamp screens on the side walls
+const door = new HydraulicDoor(m); // entrance door + "Command Room" sign
+scene.add(door.group);
 scene.add(wallCrts.group);
 scene.add(buildDesk(m, leds));
 
@@ -176,29 +181,49 @@ walk.on('step', (e) => {
   if (sound.ready) sound.footstep(e);
 });
 walk.on('arrive', () => debug?.log?.('arrived'));
+const intro = new DoorIntro({ door, walk, sound }); // corridor door opening sequence
 
 const debug = createDebug({ params, renderer, scene, camera, walk, setLit, leds });
 
-// ---------------------------------------------------------------- NMS FYI OS (stage 6)
+// ---------------------------------------------------------------- LAMPLIGHT OS (stage 6)
 // The HTML desktop, and the camera glide into the monitor that reveals it.
 const os = new DesktopOS({
   onExit: () => focus.exit(),
   onClick: (kind) => sound.ready && sound.uiClick(kind),
 });
 const focus = new TerminalFocus({ camera, walk, monitor, os, sound, canvas });
+// F: look around from the desk with the mouse (sequence/lookAround.js).
+const look = new LookAround({
+  camera, canvas, walk,
+  isBlocked: () => os.isOpen || ['zoomingIn', 'zoomingOut', 'open'].includes(focus.state),
+});
+focus.isLooking = () => look.active;
 const _focusIn = focus.focusIn.bind(focus);
-focus.focusIn = () => { hotkeys?.hide(); _focusIn(); };
+focus.focusIn = () => {
+  if (focus.state !== 'ready') return;
+  look.cancel(); // E while looking around glides into the screen from the current view
+  hotkeys.setBarVisible(false);
+  _focusIn();
+};
+const _focusExit = focus.exit.bind(focus);
+focus.exit = () => { _focusExit(); hotkeys.setBarVisible(true); };
+window.addEventListener('keydown', (e) => {
+  if (e.key.toLowerCase() !== 'f' || e.repeat || os.isOpen || !gateEl.classList.contains('hidden')) return;
+  if (look.active) look.exit();
+  else look.enter();
+});
 monitor.on('desktop', () => {
   focus.enable();
   if (sound.ready) sound.startupChime();
-  hotkeys.hintOnce();
 });
 
 // Tab: show/hide the controls list (3D view only; inside the desktop Tab moves keyboard focus).
 const hotkeys = new HotkeyPanel(() => ({
   canUse: focus.state === 'ready',
   canRaise: focus.state === 'ready' && monitor.state === 'down',
-  canLower: monitor.state === 'stowed' && walk.state === 'arrived',
+  canLower: monitor.state === 'stowed' && (walk.state === 'arrived' || look.active),
+  canLook: look.canEnter(),
+  looking: look.active,
 }));
 window.addEventListener('keydown', (e) => {
   if (e.key !== 'Tab' || os.isOpen || !gateEl.classList.contains('hidden')) return;
@@ -206,19 +231,20 @@ window.addEventListener('keydown', (e) => {
   hotkeys.toggle();
 });
 for (const evt of ['desktop', 'raise', 'stowed', 'start']) monitor.on(evt, () => hotkeys.refresh());
+look.on('change', () => hotkeys.refresh());
 
-// F: raise the monitor back into the ceiling, only once the visitor has exited the desktop
-// (they're at the desk, desktop closed). Pressing F again lowers it and boots it back up.
+// Q: raise the monitor back into the ceiling, only once the visitor has exited the desktop
+// (they're at the desk, desktop closed). Pressing Q again lowers it and boots it back up.
 function lowerMonitor() {
-  if (monitor.state !== 'stowed' || walk.state !== 'arrived' || focus.state !== 'unavailable') return;
+  if (monitor.state !== 'stowed' || !(walk.state === 'arrived' || look.active) || focus.state !== 'unavailable') return;
   focus.prompt.classList.remove('show');
   monitor.start(); // full descent + boot; its 'desktop' event re-enables focusing
 }
 focus.onLowerRequest = lowerMonitor;
 monitor.on('raise', () => sound.ready && sound.monitorRaise(RAISE));
-monitor.on('stowed', () => { if (walk.state === 'arrived') focus.showLowerPrompt(); hotkeys.refresh(); });
+monitor.on('stowed', () => { focus.showLowerPrompt(); hotkeys.refresh(); });
 window.addEventListener('keydown', (e) => {
-  if (e.key.toLowerCase() !== 'f' || e.repeat || os.isOpen) return;
+  if (e.key.toLowerCase() !== 'q' || e.repeat || os.isOpen) return;
   if (focus.state === 'ready' && monitor.state === 'down') {
     focus.disable();
     monitor.raise();
@@ -238,14 +264,19 @@ if (params.has('skip') || params.has('os')) {
   focus.enable();
   if (params.has('os')) { focus.focusIn(); focus.t = focus.dur; }
 }
+// Dev replay keys: only in `npm run dev` or with ?debug (never for normal visitors).
+const devKeys = params.has('debug') || import.meta.env.DEV;
 window.addEventListener('keydown', (e) => {
-  if (os.isOpen) return; // the desktop has the keyboard
+  if (!devKeys || os.isOpen) return; // the desktop has the keyboard
   const k = e.key.toLowerCase();
   if (k === 'm' || k === 'r') focus.disable();
   // M: replay the monitor drop together with the power-up (they share a clock).
   if (k === 'm') { sound.resetMonitor(); sound.resetServer(); monitor.reset(); monitor.start(); reveal.start(elapsed); }
   if (k === 'p') { sound.resetServer(); reveal.start(elapsed); } // replay just the power-up
-  if (k === 'r') { sound.resetMonitor(); sound.resetServer(); monitor.reset(); reveal.reset(); } // walk restart re-triggers
+  if (k === 'r') { // replay the whole intro from the corridor
+    look.cancel(); sound.resetMonitor(); sound.resetServer(); monitor.reset(); reveal.reset();
+    walk.placeAtStart(); intro.reset(); intro.start();
+  }
 });
 
 // ---------------------------------------------------------------- gate
@@ -253,7 +284,8 @@ function enter() {
   gateEl.classList.add('hidden');
   enterBtn.blur();
   startSound(); // inside the click: browsers allow audio to start here
-  if (!params.has('skip')) walk.begin();
+  hotkeys.setBarVisible(true);
+  if (!params.has('skip')) intro.start(); // door opens, then the walk begins (intro.js)
 }
 enterBtn.addEventListener('click', enter);
 gateStatus.textContent = 'Ready';
@@ -264,6 +296,7 @@ if (params.has('skip') || params.has('debug') || params.has('os')) {
   const unlock = () => startSound();
   window.addEventListener('pointerdown', unlock, { once: true });
   window.addEventListener('keydown', unlock, { once: true });
+  if (!['zoomingIn', 'open'].includes(focus.state)) hotkeys.setBarVisible(true);
 }
 
 // ---------------------------------------------------------------- loop
@@ -277,6 +310,8 @@ function frame() {
   elapsed += dt;
   focus.update(dt);
   if (focus.paused3D) { requestAnimationFrame(frame); return; } // desktop covers the screen: skip 3D work
+  look.update(dt);
+  intro.update(dt, elapsed);
   if (!debug.orbitActive()) walk.update(dt);
   if (monitor.state === 'stowed' && walk.state === 'walking' && walk.t >= monitorTrigger) {
     monitor.start();
@@ -303,4 +338,4 @@ window.addEventListener('resize', () => {
 });
 
 // Expose for console debugging in development.
-if (import.meta.env.DEV) Object.assign(window, { THREE, scene, camera, renderer, walk, setLit, leds, monitor, reveal, sound, wallCrts, os, focus });
+if (import.meta.env.DEV) Object.assign(window, { THREE, scene, camera, renderer, walk, setLit, leds, monitor, reveal, sound, wallCrts, os, focus, look, hotkeys, canvas, door, intro });

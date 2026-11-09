@@ -1,4 +1,4 @@
-// The NMS FYI OS boot logo: a bronze oil lamp with a lit flame, in a 1980s
+// The LAMPLIGHT OS boot logo: a bronze oil lamp with a lit flame, in a 1980s
 // computer-graphics style. A simple silhouette with flat banded shading is drawn small
 // (SPRITE_W px wide), quantized to a limited palette (5 bronze tones + 4 flame colors,
 // no gradients or soft edges), then scaled up with nearest-neighbor into chunky pixels.
@@ -171,13 +171,17 @@ const VARIANTS = {
   rose: ['#2b0a1a', '#7a1f4c', '#c24b84', '#f08cbd', '#ffd6ea'],
 };
 export const LAMP_VARIANTS = Object.keys(VARIANTS);
+// Monotone (no color) version for signage: every palette entry, flame included, mapped to
+// tones of one warm off-white. The outline matches the dark sign background so it disappears.
+const MONO = ['#1d1b18', '#8a857a', '#bdb6a7', '#dfd9cb', '#f8f5ec', '#9f998c', '#cdc6b7', '#ebe5d8', '#ffffff'];
 const variantCache = new Map();
 const hexRgb = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
 
 /** The lamp sprite (SPRITE_W x SPRITE_H canvas) in a color variant. */
 export function getLampSprite(variant = 'bronze') {
   sprite ||= buildSprite();
-  if (!VARIANTS[variant]) return sprite;
+  const map = variant === 'mono' ? MONO : VARIANTS[variant];
+  if (!map) return sprite;
   if (variantCache.has(variant)) return variantCache.get(variant);
   const c = document.createElement('canvas');
   c.width = SPRITE_W;
@@ -186,8 +190,8 @@ export function getLampSprite(variant = 'bronze') {
   ctx.drawImage(sprite, 0, 0);
   const img = ctx.getImageData(0, 0, SPRITE_W, SPRITE_H);
   const d = img.data;
-  const from = PALETTE_RGB.slice(0, 5);
-  const to = VARIANTS[variant].map(hexRgb);
+  const to = map.map(hexRgb);
+  const from = PALETTE_RGB.slice(0, to.length);
   for (let i = 0; i < d.length; i += 4) {
     if (!d[i + 3]) continue;
     const k = from.findIndex(([r, g, b]) => r === d[i] && g === d[i + 1] && b === d[i + 2]);

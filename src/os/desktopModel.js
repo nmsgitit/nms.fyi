@@ -1,10 +1,10 @@
-// NMS FYI OS: the single source of truth for what's on the desktop. Both the HTML desktop
+// LAMPLIGHT OS: the single source of truth for what's on the desktop. Both the HTML desktop
 // (os.js) and the drawing of it on the 3D monitor (screen.js) read from here, so the two
 // always match.
 //
 // PLACEHOLDER CONTENT: the user still has to decide the real apps and their contents.
 
-export const OS_NAME = 'NMS FYI OS';
+export const OS_NAME = 'LAMPLIGHT OS';
 export const OS_VERSION = 'Version 1.0';
 export const USER_NAME = 'NMS';
 export const USER_TAGLINE = 'Welcome. Pick something to open.';
