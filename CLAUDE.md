@@ -65,7 +65,7 @@ instead of blocking on them.
 | 3 | Server-room power-up on the monitor clock: breaker 1 core (spots, ring, climbing bands, core LEDs), breaker 2 ~1.15 s later room (surge dip, fluorescent row strikes, bank/rack LED cascades) | ✅ 2026-11-09 |
 | 4 | Procedural Web Audio sound (audio/sound.js): footsteps, room tone, hatch + arm motor + arrival, CRT power-on, two breakers, tube strikes, transformer hum, faint fans behind glass; mute button | ✅ 2026-11-09 (not yet heard by the user) |
 | 5 | Boot screen on the monitor: 1980s pixel-art bronze oil lamp with a lit flame (lamp.js), serif title, progress bar | ✅ 2026-11-09 (the boot to OS hand-off comes in stage 6) |
-| 6 | Mock OS: XP-like desktop, lamp launcher, Exit; E to focus/fullscreen | todo; needs discussion |
+| 6 | NMS FYI OS shell: boot to desktop 2 s after the monitor lands (+ startup chime), HTML desktop (XP-reminiscent, original), lamp launcher + Exit, window manager, E / click / tap focus with camera glide, 3D pause while open | ✅ shell 2026-11-09. **Content: placeholders; waiting on the user** |
 | 7 | Polish: film grain, fluorescent flicker, mobile/low-GPU fallback, accessibility (skip intro, reduced motion), loading screen | todo |
 | 8 | Deploy to Infomaniak Node.js hosting | todo; confirm their Node version and how they run apps |
 
@@ -88,6 +88,9 @@ npm start          # serves dist/ on $PORT (default 3000)
 ### URL flags (development)
 - `?skip`: skip the intro: at the desk, monitor down, server room powered. Add `?dark` to keep it unpowered.
 - `?lit`: server room fully powered (preview the layout).
+- `?os`: skip straight into the desktop (development).
+- `/dev/os-preview.html` (dev server only): the HTML desktop alone, no WebGL needed (handy for phone-size checks in
+  the built-in browser pane, which has no WebGL).
 - `?debug`: orbit camera + HUD (fps, draw calls, camera position).
 - Sound is silent until the first user gesture (browser rule). Keys: **L** toggles server power, **R** restarts the walk, **M** replays monitor drop + power-up together,
   **P** replays just the power-up, **O** orbit cam, **H** HUD.
@@ -122,6 +125,13 @@ tools/blender/check_monitor.py  imports the .glb and reports parts poking throug
 tools/blender/monitor.py  Blender script that builds + exports the monitor (and renders previews)
 public/models/monitor.glb generated, committed (~0.55 MB) so the repo deploys as-is
 src/audio/sound.js    SoundDesign: all sounds synthesized with Web Audio (no files); room / server (glass) / fx buses
+src/sequence/focus.js TerminalFocus: E / monitor click / prompt tap -> camera glide into the screen -> DesktopOS; Exit reverses
+src/os/desktopModel.js  the desktop apps + text (PLACEHOLDERS): single source for the HTML desktop and the monitor drawing
+src/os/art.js         wallpaper (original desert dusk) + 32 px pixel icons, drawn in code, also as data URLs
+src/os/layout.js      shared desktop proportions (768 px reference height)
+src/os/os.js          DesktopOS: HTML desktop, icons, taskbar, lamp launcher menu with Exit, window manager
+src/os/os.css         XP-reminiscent styling (original; no Microsoft assets) + the 3D "use the terminal" prompt
+dev/os-preview.html   dev-only standalone desktop page
 src/sequence/reveal.js Reveal: power-up timeline (REVEAL timings, fluorescentStrike/lampStrike curves, events)
 src/scene/wallCrt.js  WallCRTs: side-wall CRT screens with the pixel lamp bouncing DVD-style (color changes on each wall hit)
 src/scene/supercomputer.js original supercomputer (dais, C-ring cabinets, bench, lathe core, bands, face panel) + core lights
@@ -258,6 +268,8 @@ nearest-first (tube sounds at 100/60/40 % per row), back wash +0.3 s, fans fade 
 (stage-4 audio hooks). State becomes `lit` 4 s after breaker 2.
 
 ## Open design questions (for the user's change-request round)
+- **Desktop contents (next up):** which apps/icons, what's in each (bio, projects with images, résumé + PDF,
+  contact: email link vs. a form, which needs a Node endpoint), the user's display name and tagline, links.
 - **Composition:** from the standing position the monitor arm lines up exactly with the supercomputer
   core column, so the monitor plus arm hide the core's center. Options: offset hatch/monitor sideways,
   shift the camera end point, lower the monitor, or redesign the core silhouette (wider top).
@@ -265,6 +277,30 @@ nearest-first (tube sounds at 100/60/40 % per row), back wash +0.3 s, fans fade 
   a rougher screen, or a glass-reflection map so the boot logo stays clean.
 - The monitor first emerges above the frame (you're looking ahead). Possibly a scripted glance up as it drops.
 - Fluorescent warmth/greenness, bloom strength, walk speed (8.1 s).
+
+## NMS FYI OS (stage 6)
+- **Architecture:** the usable desktop is real HTML (`DesktopOS`): crisp text, accessible, indexable, normal links
+  and forms. The 3D monitor shows a *drawing* of the same desktop (`MonitorScreen.drawDesktop()`) made from the
+  same art (`os/art.js`), app list (`os/desktopModel.js`) and proportions (`os/layout.js`), so they match.
+  Keep the two in sync when the desktop changes (icons, taskbar).
+- **Boot hand-off:** monitor clock `MONITOR.desktopAt = total + 2.0` (7.6 s): the screen goes 0.25 s black, then the
+  desktop fades in; monitor emits `desktop` -> `focus.enable()` + `sound.startupChime()` (original Eb arpeggio + pad).
+  The boot progress bar fills over `MonitorScreen.BOOT_SECONDS = 4.9`, so it completes just before.
+- **Focus:** `TerminalFocus` (sequence/focus.js). Triggers: **E**, clicking the monitor (raycast), or the
+  `#terminal-prompt` button ("Tap to use the terminal" on coarse pointers). The camera glides 1.15 s (easeInOutCubic,
+  position lerp + quaternion slerp) to a pose that frames the screen glass (0.44 × 0.335 m; fits height or width
+  depending on aspect), then `os.show()` fades the desktop in. While open, the render loop skips all 3D work
+  (`focus.paused3D`) and `sound.duck(true)` drops the master to 35 %. **Exit** (launcher menu) does
+  `os.hide()`, then glides back to `walk.apply(walk.duration)` and restores `walk.state = 'arrived'`.
+  Escape closes the menu or the active window; it does NOT exit (the brief says Exit lives in the launcher).
+- **Scaling:** the desktop root gets CSS `zoom = clamp(innerHeight / 768, 1, 2)` so it looks like a full-size XP screen
+  on any monitor and matches the monitor drawing. Window dragging divides pointer deltas by `os.zoom`.
+- **Gotcha:** the page uses `color-scheme: dark` (for the 3D view), which makes button text white by default.
+  `.os` sets `color-scheme: light`; give buttons explicit colors.
+- Phones (<700 px): windows fill the desktop, no dragging, no maximize button, taskbar labels hidden.
+- Desktop icons: double-click with a mouse; single tap on touch; Enter from the keyboard.
+- Original artwork only: desert-at-dusk wallpaper (not XP's hill photo), our own pixel icons, a green "pill"
+  launcher containing the pixel lamp.
 
 ## Command room details (change round 1, 2026-11-09)
 - Walkway mat ends in a rounded tip at z 2.1 (ExtrudeGeometry stadium end). The trim is straight side strips plus a half RingGeometry.

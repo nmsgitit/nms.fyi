@@ -1,0 +1,299 @@
+/* NMS FYI OS: XP-reminiscent desktop (original styling, no Microsoft assets). */
+.os {
+  --os-blue: #2a5fd1;
+  --os-blue-dark: #173f9c;
+  --os-title: linear-gradient(180deg, #2f6fe6 0%, #1f58d6 8%, #1a4fc8 50%, #1747b8 90%, #123c9c 100%);
+  --os-title-inactive: linear-gradient(180deg, #8ea7d8 0%, #7b95c9 50%, #6d86b8 100%);
+  --os-face: #ece9d8;
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  display: grid;
+  grid-template-rows: 1fr 44px;
+  font: 13px/1.4 Tahoma, Verdana, 'Segoe UI', sans-serif;
+  color: #1b1b1b;
+  opacity: 0;
+  transition: opacity 380ms ease;
+  user-select: none;
+  /* The 3D page uses the dark scheme, which would make button text white here. */
+  color-scheme: light;
+}
+.os.on { opacity: 1; }
+.os[hidden] { display: none; }
+
+.os-desktop {
+  position: relative;
+  overflow: hidden;
+  background-size: cover;
+  background-position: center;
+}
+
+/* Desktop icons */
+.os-icons {
+  list-style: none;
+  margin: 0;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  flex-wrap: wrap;
+  align-content: flex-start;
+  gap: 8px;
+  height: 100%;
+  box-sizing: border-box;
+  width: max-content;
+}
+.os-icon {
+  width: 92px;
+  padding: 6px 4px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  background: none;
+  border: 1px solid transparent;
+  border-radius: 3px;
+  color: #fff;
+  font: inherit;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.85);
+  cursor: default;
+}
+.os-icon img { image-rendering: pixelated; }
+.os-icon span { padding: 0 3px; line-height: 1.25; }
+.os-icon.selected span, .os-icon:focus-visible span { background: #2f5fd0; text-shadow: none; }
+.os-icon.selected img { filter: brightness(0.75) sepia(0.4) hue-rotate(180deg) saturate(2); }
+.os-icon:focus-visible { outline: 1px dotted #fff; }
+.os-icon.dark { color: #1b1b1b; text-shadow: none; }
+.os-icon.dark.selected span { color: #fff; }
+
+/* Windows */
+.os-windows { position: absolute; inset: 0; pointer-events: none; }
+.win {
+  position: absolute;
+  width: min(560px, calc(100% - 40px));
+  max-height: calc(100% - 60px);
+  display: flex;
+  flex-direction: column;
+  background: var(--os-face);
+  border: 3px solid #1f58d6;
+  border-top: 0;
+  border-radius: 8px 8px 0 0;
+  box-shadow: 2px 4px 14px rgba(0, 0, 0, 0.45);
+  pointer-events: auto;
+  outline: none;
+}
+.win:not(.active) { border-color: #7b95c9; }
+.win.max { left: 0 !important; top: 0 !important; width: 100%; height: 100%; max-height: none; border-radius: 0; }
+.win-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 30px;
+  padding: 0 4px 0 8px;
+  background: var(--os-title);
+  border-radius: 7px 7px 0 0;
+  color: #fff;
+  font-weight: bold;
+  text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.5);
+  touch-action: none;
+  cursor: default;
+}
+.win:not(.active) .win-bar { background: var(--os-title-inactive); }
+.win-bar img { image-rendering: pixelated; }
+.win-title { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.win-btns { display: flex; gap: 2px; }
+.win-btn {
+  width: 22px;
+  height: 22px;
+  border: 1px solid #fff;
+  border-radius: 3px;
+  background: linear-gradient(180deg, #4d8cf5, #2560df);
+  color: #fff;
+  font: bold 14px/1 Tahoma, sans-serif;
+  cursor: pointer;
+  padding: 0;
+}
+.win-close { background: linear-gradient(180deg, #e8835f, #c9441f); }
+.win-btn:hover { filter: brightness(1.15); }
+.win-btn:focus-visible { outline: 2px solid #fff; outline-offset: 1px; }
+.win-body {
+  flex: 1;
+  overflow: auto;
+  margin: 0 0 3px;
+  padding: 14px 18px;
+  background: #fff;
+  user-select: text;
+  border-top: 1px solid #a7a6a0;
+}
+.win-body h1 { font: bold 20px/1.3 Georgia, 'Times New Roman', serif; margin: 0 0 10px; }
+.win-body .placeholder { color: #6a655a; font-style: italic; }
+.folder-grid { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+
+/* Taskbar */
+.os-taskbar {
+  display: flex;
+  align-items: stretch;
+  background: linear-gradient(180deg, #3a74e0 0%, #2a5fd1 12%, #1d4bb5 90%, #173f9c 100%);
+  border-top: 1px solid #0f2f7a;
+}
+.os-launch {
+  width: 64px;
+  border: 0;
+  border-radius: 0 22px 22px 0;
+  background: linear-gradient(180deg, #5fae4a 0%, #3b8a2c 50%, #2d6e21 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35), 2px 0 4px rgba(0, 0, 0, 0.3);
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+}
+.os-launch img { image-rendering: pixelated; }
+.os-launch:hover, .os-launch[aria-expanded='true'] { filter: brightness(1.12); }
+.os-launch:focus-visible { outline: 2px solid #fff; outline-offset: -4px; }
+.os-tasks { flex: 1; display: flex; gap: 4px; padding: 5px 8px; overflow: hidden; }
+.os-task {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 180px;
+  min-width: 0;
+  padding: 0 10px;
+  border: 1px solid #1a43a3;
+  border-radius: 3px;
+  background: linear-gradient(180deg, #4c8af0, #2f69dc);
+  color: #fff;
+  font: inherit;
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+}
+.os-task span { overflow: hidden; text-overflow: ellipsis; }
+.os-task img { image-rendering: pixelated; flex: none; }
+.os-task.active { background: linear-gradient(180deg, #1c48b0, #2357c6); box-shadow: inset 1px 1px 3px rgba(0, 0, 0, 0.45); }
+.os-tray {
+  min-width: 92px;
+  display: grid;
+  place-items: center;
+  padding: 0 12px;
+  background: linear-gradient(180deg, #1fa3e8, #127fcf);
+  border-left: 1px solid #0d5fa6;
+  color: #fff;
+}
+
+/* Launcher menu */
+.os-menu {
+  position: absolute;
+  left: 0;
+  bottom: 44px;
+  width: min(320px, 100vw);
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+  border: 2px solid #1f58d6;
+  border-radius: 8px 8px 0 0;
+  box-shadow: 3px -3px 14px rgba(0, 0, 0, 0.45);
+  overflow: hidden;
+  z-index: 40;
+}
+.os-menu[hidden] { display: none; }
+.os-menu-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  background: var(--os-title);
+  color: #fff;
+}
+.os-menu-head img { image-rendering: pixelated; background: rgba(0, 0, 0, 0.25); border-radius: 4px; padding: 2px; }
+.os-menu-user { display: flex; flex-direction: column; }
+.os-menu-user strong { font-size: 16px; }
+.os-menu-user span { font-size: 12px; opacity: 0.9; }
+.os-menu-list { display: flex; flex-direction: column; padding: 6px; }
+.os-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 8px;
+  border: 0;
+  border-radius: 2px;
+  background: none;
+  color: #1b1b1b;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.os-menu-item img { image-rendering: pixelated; }
+.os-menu-item:hover, .os-menu-item:focus-visible { background: #2f5fd0; color: #fff; outline: none; }
+.os-menu-foot {
+  display: flex;
+  justify-content: flex-end;
+  padding: 8px 10px;
+  background: linear-gradient(180deg, #4c8af0, #2a5fd1);
+  border-top: 1px solid #1a43a3;
+}
+.os-exit {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  border-radius: 3px;
+  background: linear-gradient(180deg, #e8835f, #c9441f);
+  color: #fff;
+  font: bold 13px Tahoma, Verdana, sans-serif;
+  cursor: pointer;
+}
+.os-exit:hover, .os-exit:focus-visible { filter: brightness(1.12); outline: 2px solid #fff; outline-offset: 1px; }
+.os-exit-icon { font-size: 15px; }
+
+/* Faint CRT scanlines so it still feels like the terminal (purely decorative). */
+.os-crt {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(180deg, rgba(0, 0, 0, 0.05) 0 1px, transparent 1px 3px);
+  mix-blend-mode: multiply;
+}
+
+/* Phones: windows fill the desktop; no dragging. */
+@media (max-width: 700px) {
+  .win { left: 0 !important; top: 0 !important; width: 100%; height: 100%; max-height: none; border-radius: 0; border-width: 0; }
+  .win-bar { border-radius: 0; height: 40px; }
+  .win-btn { width: 30px; height: 30px; }
+  .win-max { display: none; }
+  .os-task span { display: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .os { transition: none; }
+}
+
+/* The "use the terminal" prompt in the 3D view. */
+#terminal-prompt {
+  position: fixed;
+  left: 50%;
+  bottom: 28px;
+  transform: translateX(-50%) translateY(8px);
+  z-index: 12;
+  font: 14px/1 Georgia, 'Times New Roman', serif;
+  letter-spacing: 0.08em;
+  color: #f1ead9;
+  background: rgba(20, 18, 15, 0.6);
+  border: 1px solid rgba(217, 207, 187, 0.45);
+  border-radius: 3px;
+  padding: 10px 16px;
+  cursor: pointer;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 500ms ease, transform 500ms ease;
+}
+#terminal-prompt.show { opacity: 1; transform: translateX(-50%) translateY(0); pointer-events: auto; }
+#terminal-prompt kbd {
+  display: inline-block;
+  min-width: 1.4em;
+  padding: 2px 6px;
+  margin-right: 6px;
+  border: 1px solid rgba(241, 234, 217, 0.7);
+  border-radius: 3px;
+  font: bold 13px/1 Tahoma, sans-serif;
+  text-align: center;
+}
+#terminal-prompt:focus-visible { outline: 2px solid #f1ead9; outline-offset: 3px; }

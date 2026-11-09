@@ -1,11 +1,14 @@
 // The monitor's screen: a canvas drawn in 2D and used as an emissive CanvasTexture.
-// Power states: off -> CRT warm-up -> boot screen (bronze oil lamp, serif title,
-// progress bar). Stage 6 adds the OS desktop after the boot.
+// Power states: off -> CRT warm-up -> boot screen (pixel oil lamp, serif title, progress
+// bar) -> desktop (a drawn copy of the HTML desktop in os/, from the same art and app list).
 import * as THREE from 'three';
 import { drawLamp } from './lamp.js';
+import { getWallpaper, getIcon } from '../os/art.js';
+import { APPS, OS_NAME, OS_VERSION } from '../os/desktopModel.js';
+import { TASKBAR_H, ICON_GRID } from '../os/layout.js';
 
 export class MonitorScreen {
-  static BOOT_SECONDS = 4.5; // progress bar fill time (from boot-screen start)
+  static BOOT_SECONDS = 4.9; // progress bar fill time, so it completes just before the desktop
 
   constructor(width = 1024, height = 780) {
     this.canvas = document.createElement('canvas');
@@ -16,9 +19,10 @@ export class MonitorScreen {
     this.texture.colorSpace = THREE.SRGBColorSpace;
     this.texture.anisotropy = 8;
     this.texture.flipY = false; // glTF UV convention (the screen mesh comes from Blender)
-    this.state = 'off'; // off | warmup | boot
+    this.state = 'off'; // off | warmup | boot | desktop
     this.stateT = 0;
     this._accum = 0;
+    this._lastClock = '';
     this.draw(0);
   }
 
@@ -34,10 +38,17 @@ export class MonitorScreen {
     this.draw(0);
   }
 
-  /** Jump straight to the steady boot image (skip-intro). */
+  /** Jump straight to the steady boot image. */
   forceBoot() {
     this.state = 'boot';
     this.stateT = 10;
+    this.draw(this.stateT);
+  }
+
+  /** The boot hands off to the desktop (brief blank as the mode switches, then a fade-in). */
+  showDesktop(instant = false) {
+    this.state = 'desktop';
+    this.stateT = instant ? 10 : 0;
     this.draw(this.stateT);
   }
 
@@ -45,6 +56,11 @@ export class MonitorScreen {
     if (this.state === 'off') return;
     this.stateT += dt;
     if (this.state === 'warmup' && this.stateT > 0.9) { this.state = 'boot'; this.stateT = 0; }
+    if (this.state === 'desktop' && this.stateT > 1.2) {
+      // Settled desktop: only redraw when the clock changes.
+      if (clockText() !== this._lastClock) this.draw(this.stateT);
+      return;
+    }
     // Redraw at ~30 fps. Canvas uploads aren't free.
     this._accum += dt;
     if (this._accum < 1 / 30) return;
@@ -68,6 +84,14 @@ export class MonitorScreen {
       ctx.fillRect(0, H / 2 - h / 2, W * (k < 0.35 ? k / 0.35 : 1), h);
     } else if (this.state === 'boot') {
       this.drawBoot(t);
+    } else if (this.state === 'desktop') {
+      // 0.25 s of black (video mode switch), then the desktop fades up.
+      const a = Math.min(1, Math.max(0, (t - 0.25) / 0.6));
+      if (a > 0) {
+        ctx.globalAlpha = a;
+        this.drawDesktop();
+        ctx.globalAlpha = 1;
+      }
     }
     if (this.state !== 'off') this.drawCRT();
     this.texture.needsUpdate = true;
@@ -78,8 +102,7 @@ export class MonitorScreen {
     const { ctx, canvas: c } = this;
     const W = c.width, H = c.height;
     const fade = Math.min(1, t / 0.6);
-    const bg = `rgba(10,8,6,${fade})`; // flat near-black: no soft modern gradients
-    ctx.fillStyle = bg;
+    ctx.fillStyle = `rgba(10,8,6,${fade})`; // flat near-black: no soft modern gradients
     ctx.fillRect(0, 0, W, H);
     ctx.globalAlpha = fade;
     drawLamp(ctx, W / 2, H * 0.37, W * 0.46);
@@ -87,10 +110,10 @@ export class MonitorScreen {
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.font = `${Math.round(H * 0.085)}px Georgia, "Times New Roman", serif`;
-    ctx.fillText('NMS FYI OS', W / 2, H * 0.66);
+    ctx.fillText(OS_NAME, W / 2, H * 0.66);
     ctx.font = `${Math.round(H * 0.05)}px Georgia, "Times New Roman", serif`;
     ctx.fillStyle = '#c9b792';
-    ctx.fillText('Version 1.0', W / 2, H * 0.75);
+    ctx.fillText(OS_VERSION, W / 2, H * 0.75);
 
     // Boot progress: a slim segmented bar that fills over BOOT_SECONDS.
     const segs = 24, bw = W * 0.34, bh = H * 0.018, bx = W / 2 - bw / 2, by = H * 0.84;
@@ -105,7 +128,71 @@ export class MonitorScreen {
     ctx.globalAlpha = 1;
   }
 
-  /** Scanlines + vignette so it reads as a CRT even before the shader polish stage. */
+  /**
+   * The desktop as it looks on the monitor: wallpaper, icon column, taskbar with the lamp
+   * launcher and a clock. Sizes come from os/layout.js, scaled to this canvas, so it
+   * matches the HTML desktop's proportions.
+   */
+  drawDesktop() {
+    const { ctx, canvas: c } = this;
+    const W = c.width, H = c.height;
+    const s = H / 768; // the HTML desktop's reference height is 768 px
+    const wp = getWallpaper();
+    const k = Math.max(W / wp.width, H / wp.height); // cover
+    ctx.drawImage(wp, (W - wp.width * k) / 2, (H - wp.height * k) / 2, wp.width * k, wp.height * k);
+
+    // Desktop icons.
+    ctx.imageSmoothingEnabled = false;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'top';
+    ctx.font = `${Math.round(13 * s)}px Tahoma, Verdana, sans-serif`;
+    APPS.forEach((app, i) => {
+      const x = (ICON_GRID.x + ICON_GRID.w / 2) * s;
+      const y = (ICON_GRID.y + i * ICON_GRID.h) * s;
+      ctx.drawImage(getIcon(app.icon), x - 24 * s, y, 48 * s, 48 * s);
+      ctx.fillStyle = 'rgba(0,0,0,0.6)';
+      ctx.fillText(app.title, x + 1.5 * s, y + 55.5 * s);
+      ctx.fillStyle = '#fff';
+      ctx.fillText(app.title, x, y + 54 * s);
+    });
+
+    // Taskbar.
+    const th = TASKBAR_H * s, ty = H - th;
+    const bar = ctx.createLinearGradient(0, ty, 0, H);
+    bar.addColorStop(0, '#3a74e0');
+    bar.addColorStop(0.12, '#2a5fd1');
+    bar.addColorStop(0.9, '#1d4bb5');
+    bar.addColorStop(1, '#173f9c');
+    ctx.fillStyle = bar;
+    ctx.fillRect(0, ty, W, th);
+    // Lamp launcher pill.
+    const lw = 64 * s;
+    const pill = ctx.createLinearGradient(0, ty, 0, H);
+    pill.addColorStop(0, '#5fae4a');
+    pill.addColorStop(0.5, '#3b8a2c');
+    pill.addColorStop(1, '#2d6e21');
+    ctx.fillStyle = pill;
+    ctx.beginPath();
+    ctx.roundRect(0, ty, lw, th, [0, th / 2, th / 2, 0]);
+    ctx.fill();
+    ctx.drawImage(getIcon('lamp'), lw / 2 - 18 * s, ty + th / 2 - 18 * s, 36 * s, 36 * s);
+    ctx.imageSmoothingEnabled = true;
+    // Clock tray.
+    const cw = 92 * s;
+    const tray = ctx.createLinearGradient(0, ty, 0, H);
+    tray.addColorStop(0, '#1fa3e8');
+    tray.addColorStop(1, '#127fcf');
+    ctx.fillStyle = tray;
+    ctx.fillRect(W - cw, ty, cw, th);
+    this._lastClock = clockText();
+    ctx.fillStyle = '#fff';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.font = `${Math.round(13 * s)}px Tahoma, Verdana, sans-serif`;
+    ctx.fillText(this._lastClock, W - cw / 2, ty + th / 2);
+  }
+
+  /** Scanlines + vignette so it reads as a CRT. */
   drawCRT() {
     const { ctx, canvas: c } = this;
     const W = c.width, H = c.height;
@@ -117,4 +204,8 @@ export class MonitorScreen {
     ctx.fillStyle = v;
     ctx.fillRect(0, 0, W, H);
   }
+}
+
+export function clockText(d = new Date()) {
+  return d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
 }

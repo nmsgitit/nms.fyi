@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>NMS FYI OS preview</title>
+    <style>
+      html, body { margin: 0; height: 100%; background: #000; }
+    </style>
+  </head>
+  <body>
+    <!-- Dev-only: the HTML desktop on its own, without the 3D scene (no WebGL needed).
+         Served by `npm run dev` at /dev/os-preview.html; not part of the production build. -->
+    <script type="module">
+      import '/src/os/os.css';
+      import { DesktopOS } from '/src/os/os.js';
+      const os = new DesktopOS({ onExit: () => console.log('[os-preview] Exit pressed') });
+      os.show();
+      window.os = os;
+    </script>
+  </body>
+</html>

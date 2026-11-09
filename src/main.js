@@ -19,6 +19,9 @@ import { buildSupercomputer, buildCoreLights } from './scene/supercomputer.js';
 import { WALK } from './scene/layout.js';
 import { MonitorRig, MONITOR } from './scene/monitor.js';
 import { WallCRTs } from './scene/wallCrt.js';
+import { DesktopOS } from './os/os.js';
+import { TerminalFocus } from './sequence/focus.js';
+import './os/os.css';
 import { Reveal } from './sequence/reveal.js';
 import { SoundDesign } from './audio/sound.js';
 import { Walk } from './camera/walk.js';
@@ -175,16 +178,30 @@ walk.on('arrive', () => debug?.log?.('arrived'));
 
 const debug = createDebug({ params, renderer, scene, camera, walk, setLit, leds });
 
+// ---------------------------------------------------------------- NMS FYI OS (stage 6)
+// The HTML desktop, and the camera glide into the monitor that reveals it.
+const os = new DesktopOS({ onExit: () => focus.exit() });
+const focus = new TerminalFocus({ camera, walk, monitor, os, sound, canvas });
+monitor.on('desktop', () => {
+  focus.enable();
+  if (sound.ready) sound.startupChime();
+});
+
 if (params.has('lit')) setLit(true);
 monitorTrigger = Math.max(0, walk.duration - MONITOR.total);
 // ?skip = skip the intro: at the desk, monitor down, room powered (?dark keeps it unpowered).
-if (params.has('skip')) {
+// ?os = skip straight into the desktop (development).
+if (params.has('skip') || params.has('os')) {
   walk.jumpToEnd();
   monitor.setDown();
   if (!params.has('dark')) reveal.finish();
+  focus.enable();
+  if (params.has('os')) { focus.focusIn(); focus.t = focus.dur; }
 }
 window.addEventListener('keydown', (e) => {
+  if (os.isOpen) return; // the desktop has the keyboard
   const k = e.key.toLowerCase();
+  if (k === 'm' || k === 'r') focus.disable();
   // M: replay the monitor drop together with the power-up (they share a clock).
   if (k === 'm') { sound.resetMonitor(); sound.resetServer(); monitor.reset(); monitor.start(); reveal.start(elapsed); }
   if (k === 'p') { sound.resetServer(); reveal.start(elapsed); } // replay just the power-up
@@ -201,7 +218,7 @@ function enter() {
 enterBtn.addEventListener('click', enter);
 gateStatus.textContent = 'Ready';
 enterBtn.disabled = false;
-if (params.has('skip') || params.has('debug')) {
+if (params.has('skip') || params.has('debug') || params.has('os')) {
   gateEl.classList.add('hidden');
   // No gate click in these modes, so the first click or key anywhere unlocks sound.
   const unlock = () => startSound();
@@ -218,6 +235,8 @@ function frame() {
   // motion on devices below that frame rate.
   const dt = Math.min(timer.getDelta(), 0.1);
   elapsed += dt;
+  focus.update(dt);
+  if (focus.paused3D) { requestAnimationFrame(frame); return; } // desktop covers the screen: skip 3D work
   if (!debug.orbitActive()) walk.update(dt);
   if (monitor.state === 'stowed' && walk.state === 'walking' && walk.t >= monitorTrigger) {
     monitor.start();
@@ -240,7 +259,8 @@ window.addEventListener('resize', () => {
   renderer.setSize(w, h);
   composer.setSize(w, h);
   bloom.setSize(w, h);
+  focus.onResize();
 });
 
 // Expose for console debugging in development.
-if (import.meta.env.DEV) Object.assign(window, { THREE, scene, camera, renderer, walk, setLit, leds, monitor, reveal, sound, wallCrts });
+if (import.meta.env.DEV) Object.assign(window, { THREE, scene, camera, renderer, walk, setLit, leds, monitor, reveal, sound, wallCrts, os, focus });

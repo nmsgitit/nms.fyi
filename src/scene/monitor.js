@@ -25,6 +25,7 @@ export const MONITOR = {
   screenOn: 1.4,
 };
 MONITOR.total = MONITOR.descentStart + MONITOR.descentDur; // 5.6 s: starts ~2.5 s into the walk (at the door)
+MONITOR.desktopAt = MONITOR.total + 2.0; // "a couple seconds" after it is fully down, the boot gives way to the desktop
 
 const easeInOutCubic = (k) => (k < 0.5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2);
 const easeOutBack = (k, s = 1.25) => 1 + (s + 1) * Math.pow(k - 1, 3) + s * Math.pow(k - 1, 2);
@@ -129,6 +130,7 @@ export class MonitorRig {
         o.receiveShadow = true;
       }
       if (o.name === 'Tilt') this.tiltNode = o;
+      if (o.isMesh && o.material === this.screenMat) this.screenMesh = o; // the focus camera frames this
     });
     this.holder.add(root);
     this.apply(this.state === 'down' ? 999 : this.t);
@@ -159,7 +161,7 @@ export class MonitorRig {
   setDown() {
     this.state = 'down';
     this.t = 999;
-    this.screen.forceBoot();
+    this.screen.showDesktop(true);
     this.ledMat.color.set(PALETTE.ledCyan).multiplyScalar(2);
     this.apply(999);
   }
@@ -171,7 +173,11 @@ export class MonitorRig {
         this.screen.powerOn();
         this.ledMat.color.set(PALETTE.ledCyan).multiplyScalar(2);
       }
-      if (this.t > MONITOR.total + 2.5) this.state = 'down';
+      if (this.t >= MONITOR.desktopAt && this.screen.state === 'boot') {
+        this.screen.showDesktop();
+        this.emit('desktop'); // startup chime, enables focusing the terminal
+      }
+      if (this.t > MONITOR.desktopAt + 0.5) this.state = 'down';
       this.apply(this.t);
     }
     this.screen.update(dt);

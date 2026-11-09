@@ -119,10 +119,7 @@ export class SoundDesign {
 
   setMuted(muted) {
     this.muted = muted;
-    if (!this.ctx) return;
-    const g = this.master.gain;
-    g.cancelScheduledValues(this.now());
-    g.setTargetAtTime(muted ? 0 : this.volume, this.now(), 0.05);
+    this.applyMaster();
   }
 
   /** Current output level (RMS, 0..1). For metering and tests. */
@@ -397,6 +394,48 @@ export class SoundDesign {
     }
     const o = this.tone(t, { type: 'square', freq: 120, gain: 0.02, fadeIn: 1.5, dest: this.server, filter: { type: 'bandpass', freq: 900, Q: 2 } });
     this.loops.server.push(o);
+  }
+
+  /**
+   * NMS FYI OS startup chime: an original warm four-note rising arpeggio over a soft pad,
+   * played from the monitor when the desktop first appears.
+   */
+  startupChime(t = this.now()) {
+    const c = this.ctx, dest = this.room;
+    const notes = [311.13, 392.0, 466.16, 622.25]; // Eb4 G4 Bb4 Eb5
+    notes.forEach((f, i) => {
+      const at = t + i * 0.13;
+      for (const [type, mul, amp] of [['sine', 1, 0.11], ['triangle', 2, 0.025]]) {
+        const o = c.createOscillator(); o.type = type; o.frequency.value = f * mul;
+        const g = c.createGain();
+        this.env(g.gain, at, 0.04, amp, 2.2 - i * 0.2);
+        o.connect(g).connect(dest);
+        o.start(at); o.stop(at + 2.4);
+      }
+    });
+    // Soft pad underneath (root + fifth), swelling in and out.
+    for (const f of [155.56, 233.08]) {
+      const o = c.createOscillator(); o.type = 'triangle'; o.frequency.value = f;
+      const lp = c.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 900;
+      const g = c.createGain();
+      this.env(g.gain, t, 0.5, 0.045, 2.4);
+      o.connect(lp).connect(g).connect(dest);
+      o.start(t); o.stop(t + 3.1);
+    }
+  }
+
+  /** Lower everything while the visitor is "inside" the terminal (desktop open). */
+  duck(on) {
+    this.ducked = on;
+    this.applyMaster();
+  }
+
+  applyMaster() {
+    if (!this.ctx) return;
+    const target = this.muted ? 0 : this.volume * (this.ducked ? 0.35 : 1);
+    const g = this.master.gain;
+    g.cancelScheduledValues(this.now());
+    g.setTargetAtTime(target, this.now(), 0.12);
   }
 
   /** Server room back to silent (replays/debug). */
