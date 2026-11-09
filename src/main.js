@@ -1,7 +1,8 @@
 // nms.fyi entry point.
 // Stage 1: command room, server room, supercomputer, walking camera.
 // Stage 2: overhead monitor (Blender model) dropping from a ceiling hatch during the walk.
-// Next: timed reveal (stage 3), sound (stage 4), boot screen (stage 5), OS (stage 6).
+// Stage 3: server-room power-up (sequence/reveal.js) on the monitor's clock.
+// Stage 5: boot screen. Next: sound (stage 4), OS (stage 6).
 import * as THREE from 'three';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
@@ -17,6 +18,7 @@ import { buildServerRoom, populateServerRoom, buildServerLights } from './scene/
 import { buildSupercomputer, buildCoreLights } from './scene/supercomputer.js';
 import { WALK } from './scene/layout.js';
 import { MonitorRig, MONITOR } from './scene/monitor.js';
+import { Reveal } from './sequence/reveal.js';
 import { Walk } from './camera/walk.js';
 import { createDebug } from './debug.js';
 
@@ -72,7 +74,8 @@ buildSupercomputer(serverBuilder, m, leds);
 scene.add(serverBuilder.build({ name: 'serverRoom', castShadow: true, receiveShadow: true }));
 
 scene.add(leds.build());
-scene.add(buildCommandLights());
+const commandLights = buildCommandLights();
+scene.add(commandLights);
 const serverLights = buildServerLights(m);
 const coreLights = buildCoreLights(m);
 scene.add(serverLights.group, coreLights.group);
@@ -117,21 +120,11 @@ try {
 // The descent starts so the monitor arrives as the walk ends.
 let monitorTrigger = 0;
 
-// ---------------------------------------------------------------- server-room power levels
-// Stage 2 will animate these on a timeline. Stage 1 exposes them for preview.
-const power = { core: 0, room: 0 };
-function applyPower() {
-  for (const { light, max } of coreLights.lights) light.intensity = max * power.core;
-  for (const { mat, max } of coreLights.emissives) mat.color.copy(max).multiplyScalar(power.core);
-  for (const { light, max } of serverLights.room) light.intensity = max * power.room;
-  for (const { mat, max } of serverLights.fixtures) mat.color.copy(max).multiplyScalar(power.room);
-}
-function setLit(on) {
-  power.core = power.room = on ? 1 : 0;
-  ['core', 'banks', 'racks'].forEach((g) => leds.forceGroup(g, on));
-  applyPower();
-}
-applyPower();
+// ---------------------------------------------------------------- server-room power-up
+// Built after the glass capture (which briefly changes the panel colors).
+const reveal = new Reveal({ coreLights, serverLights, commandLights, panelMats: [m.lightPanel, m.corridorPanel], leds });
+reveal.on('breaker', (e) => debug?.log?.(`breaker ${e.index}`));
+const setLit = (on) => (on ? reveal.finish() : reveal.reset()); // debug L key, ?lit
 
 // ---------------------------------------------------------------- post-processing
 const composer = new EffectComposer(renderer);
@@ -146,18 +139,22 @@ walk.placeAtStart();
 walk.on('step', (e) => debug?.log?.(`step ${e.index} ${e.foot}`));
 walk.on('arrive', () => debug?.log?.('arrived'));
 
-const debug = createDebug({ params, renderer, scene, camera, walk, setLit, power, leds });
+const debug = createDebug({ params, renderer, scene, camera, walk, setLit, leds });
 
 if (params.has('lit')) setLit(true);
 monitorTrigger = Math.max(0, walk.duration - MONITOR.total);
+// ?skip = skip the intro: at the desk, monitor down, room powered (?dark keeps it unpowered).
 if (params.has('skip')) {
   walk.jumpToEnd();
   monitor.setDown();
+  if (!params.has('dark')) reveal.finish();
 }
 window.addEventListener('keydown', (e) => {
   const k = e.key.toLowerCase();
-  if (k === 'm') { monitor.reset(); monitor.start(); } // replay the monitor drop
-  if (k === 'r') monitor.reset(); // the walk restart re-triggers it
+  // M: replay the monitor drop together with the power-up (they share a clock).
+  if (k === 'm') { monitor.reset(); monitor.start(); reveal.start(elapsed); }
+  if (k === 'p') reveal.start(elapsed); // replay just the power-up
+  if (k === 'r') { monitor.reset(); reveal.reset(); } // the walk restart re-triggers both
 });
 
 // ---------------------------------------------------------------- gate
@@ -181,8 +178,12 @@ function frame() {
   const dt = Math.min(timer.getDelta(), 0.1);
   elapsed += dt;
   if (!debug.orbitActive()) walk.update(dt);
-  if (monitor.state === 'stowed' && walk.state === 'walking' && walk.t >= monitorTrigger) monitor.start();
+  if (monitor.state === 'stowed' && walk.state === 'walking' && walk.t >= monitorTrigger) {
+    monitor.start();
+    reveal.start(elapsed);
+  }
   monitor.update(dt);
+  reveal.update(elapsed);
   leds.update(elapsed);
   debug.update(dt);
   composer.render();
@@ -200,4 +201,4 @@ window.addEventListener('resize', () => {
 });
 
 // Expose for console debugging in development.
-if (import.meta.env.DEV) Object.assign(window, { THREE, scene, camera, renderer, walk, setLit, power, applyPower, leds, monitor });
+if (import.meta.env.DEV) Object.assign(window, { THREE, scene, camera, renderer, walk, setLit, leds, monitor, reveal });

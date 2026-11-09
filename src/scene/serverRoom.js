@@ -74,11 +74,12 @@ export function buildServerRoom(m) {
   }
   const fixtures = [];
   for (const x of [-11, -5.5, 5.5, 11]) {
-    for (let z = zMax - 4.3; z > zMin + 2; z -= 7.2) fixtures.push([x, z]);
+    let row = 0;
+    for (let z = zMax - 4.3; z > zMin + 2; z -= 7.2) fixtures.push([x, z, row++]);
   }
-  for (const [x, z] of fixtures) {
+  for (const [x, z, row] of fixtures) {
     b.span(m.taupe, x - 0.5, x + 0.5, C - 0.95, C - 0.75, z - 1.5, z + 1.5);
-    b.span(m.serverFixture, x - 0.42, x + 0.42, C - 0.97, C - 0.95, z - 1.42, z + 1.42);
+    b.span(m.serverFixtureRows[row], x - 0.42, x + 0.42, C - 0.97, C - 0.95, z - 1.42, z + 1.42);
   }
 
   // ---- catwalks along the side walls and back wall
@@ -139,7 +140,7 @@ export function buildServerLights(m) {
       r.position.set(x, C - 1, z);
       r.rotation.x = -Math.PI / 2;
       group.add(r);
-      room.push({ light: r, max: 2.2 });
+      room.push({ light: r, max: 2.2, row: z > -12 ? 0 : 2 }); // follows the fixture rows above it
     }
   }
   // Back-wall wash so the far data banks read.
@@ -147,7 +148,8 @@ export function buildServerLights(m) {
   back.position.set(0, C - 1.5, SERVER.zMin + 6);
   back.lookAt(0, -1, SERVER.zMin);
   group.add(back);
-  room.push({ light: back, max: 1.2 });
+  room.push({ light: back, max: 1.2, row: 3 });
 
-  return { group, room, fixtures: [{ mat: m.serverFixture, max: new THREE.Color(white).multiplyScalar(2.4) }] };
+  const fixtureMax = new THREE.Color(white).multiplyScalar(2.4);
+  return { group, room, fixtures: m.serverFixtureRows.map((mat, row) => ({ mat, max: fixtureMax, row })) };
 }

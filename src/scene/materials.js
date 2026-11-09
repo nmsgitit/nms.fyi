@@ -103,8 +103,10 @@ export function createMaterials(maxAnisotropy = 4) {
   // Small idle wall displays: faint phosphor glow.
   m.screenGlow = new THREE.MeshBasicMaterial({ color: new THREE.Color(0x0f2a22), toneMapped: false });
   // Server-room fixture lenses: start dark and are brightened by the reveal.
-  m.serverFixture = new THREE.MeshBasicMaterial({ color: 0x050505, toneMapped: false });
-  m.coreFixture = new THREE.MeshBasicMaterial({ color: 0x050505, toneMapped: false });
-  m.coreBands = new THREE.MeshBasicMaterial({ color: 0x080808, toneMapped: false });
+  // One material per fixture row (0 = nearest the window) so rows can strike in sequence.
+  m.serverFixtureRows = [0, 1, 2, 3].map(() => new THREE.MeshBasicMaterial({ color: 0x000000, toneMapped: false }));
+  m.coreFixture = new THREE.MeshBasicMaterial({ color: 0x000000, toneMapped: false });
+  // One material per light band on the core column (0 = lowest) so they climb in sequence.
+  m.coreBands = [0, 1, 2, 3, 4, 5].map(() => new THREE.MeshBasicMaterial({ color: 0x000000, toneMapped: false }));
   return m;
 }

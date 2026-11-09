@@ -1,5 +1,5 @@
-// Command desk at the glass: a soft-edged 1980s console in beige and taupe,
-// with angled side wings and button decks, a keyboard, and a row of indicator buttons.
+// Command desk at the glass: a soft-edged 1980s console in beige and taupe
+// with a keyboard and a row of indicator buttons (no side wings or button sets).
 import * as THREE from 'three';
 import { Builder } from './builder.js';
 import { DESK } from './layout.js';
@@ -44,25 +44,8 @@ export function buildDesk(m, leds) {
   // kick plates
   for (const s of [-1, 1]) b.span(m.grille, s * (W / 2 - 0.4) - 0.28, s * (W / 2 - 0.4) + 0.28, 0, 0.06, z + D / 2 - 0.08, z + D / 2 - 0.05);
 
-  // Angled side wings with button decks (soft, rounded take on the pod-console look).
-  for (const s of [-1, 1]) {
-    const wx = s * (W / 2 + 0.05);
-    // The wing's top face leans inward, toward the user at the center.
-    const wingRot = [0, 0, s * 0.22];
-    const wingPos = new THREE.Vector3(wx, top + 0.18, z);
-    const wingEuler = new THREE.Euler(...wingRot);
-    const onWing = (lx, ly, lz) => new THREE.Vector3(lx, ly, lz).applyEuler(wingEuler).add(wingPos).toArray();
-    b.rbox(m.beige, 0.34, 0.5, D - 0.04, 0.08, wx, top + 0.18, z, wingRot);
-    // Button panel set into the wing top (local y = 0.25 is the top face).
-    b.rbox(m.taupeDark, 0.23, 0.014, 0.54, 0.006, ...onWing(0, 0.247, 0), wingRot);
-    for (let r = 0; r < 5; r++) {
-      for (let c = 0; c < 3; c++) {
-        const amber = (r === 0 && c === (s > 0 ? 2 : 0)) || (r === 3 && c === 1);
-        const [bx, by, bz] = onWing((c - 1) * 0.066, 0.262, -0.2 + r * 0.1);
-        b.rbox(amber ? m.amberKey : m.beigeLight, 0.048, 0.022, 0.06, 0.007, bx, by, bz, wingRot, 2);
-      }
-    }
-  }
+  // (No side wings or button sets: removed at the user's request on 2026-11-09. They
+  // echoed the Apollo Core desk too closely.)
 
   // Row of round indicator buttons across the back of the deck.
   for (let i = 0; i < 14; i++) {

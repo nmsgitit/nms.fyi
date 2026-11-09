@@ -81,7 +81,7 @@ export function buildSupercomputer(b, m, leds) {
 
   // Glowing bands around the shaft (lit during the reveal).
   for (let i = 0; i < 6; i++) {
-    b.add(new THREE.TorusGeometry(1.07, 0.035, 8, 64), m.coreBands, P(0, base + 5.4 + i * 1.05, 0), [Math.PI / 2, 0, 0]);
+    b.add(new THREE.TorusGeometry(1.07, 0.035, 8, 64), m.coreBands[i], P(0, base + 5.4 + i * 1.05, 0), [Math.PI / 2, 0, 0]);
   }
   // Cable conduits rising from the cabinet ring to the collar.
   for (let i = 0; i < 8; i++) {
@@ -139,9 +139,7 @@ export function buildCoreLights(m) {
   return {
     group,
     lights,
-    emissives: [
-      { mat: m.coreFixture, max: new THREE.Color(white).multiplyScalar(3) },
-      { mat: m.coreBands, max: new THREE.Color(PALETTE.ledCool).multiplyScalar(2.2) },
-    ],
+    fixture: { mat: m.coreFixture, max: new THREE.Color(white).multiplyScalar(3) },
+    bands: m.coreBands.map((mat, i) => ({ mat, max: new THREE.Color(PALETTE.ledCool).multiplyScalar(2.2), index: i })),
   };
 }
