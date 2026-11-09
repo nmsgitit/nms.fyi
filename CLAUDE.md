@@ -21,7 +21,9 @@ Apollo Core styling) and must be read before visual work.
    sterile white, light gray, and 1980s **taupe/beige** across BOTH rooms.
 2. **Camera walks** (bobbing like a person, not hovering) from the command-room
    entrance to front-center at the glass, with **footstep** sounds.
-3. A **command desk** at front-center with a **keyboard**.
+3. A **command desk** at front-center with a **keyboard**: a **standard QWERTY layout with a numpad**
+   (built as a 1985 IBM Model M-style 101-key board: F-row, nav cluster, arrows, numpad,
+   two-tone beige/taupe caps, lock lights, no Windows keys, which suits the period).
 4. As the user approaches, an **overhead data-terminal monitor lowers from the
    ceiling**. Its casing should be **more bulbous than the Apollo Core terminal**
    (which is sharp-edged).
@@ -98,7 +100,8 @@ src/scene/materials.js shared materials + procedural canvas textures (grain, flo
 src/scene/builder.js  Builder: merges primitives per material -> few draw calls (box/span/rbox/add)
 src/scene/leds.js     LedField: every indicator LED as one InstancedMesh; groups, cascades, blink
 src/scene/commandRoom.js  room geometry + command-room lights
-src/scene/desk.js     command desk, side wings, button decks, indicator row, keyboard
+src/scene/desk.js     command desk, side wings, button decks, indicator row; places the keyboard
+src/scene/keyboard.js full-size Model M-style QWERTY + nav cluster + numpad (layout table -> keycaps + one legend decal)
 src/scene/serverRoom.js   hall shell, window surround, trusses, fixtures, catwalks, data banks, racks, room lights
 src/scene/supercomputer.js original supercomputer (dais, C-ring cabinets, bench, lathe core, bands, face panel) + core lights
 docs/references.md    written notes on the reference videos (timeline, style)

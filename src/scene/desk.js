@@ -4,6 +4,7 @@ import * as THREE from 'three';
 import { Builder } from './builder.js';
 import { DESK } from './layout.js';
 import { PALETTE } from './palette.js';
+import { buildKeyboard, LOCK_LED_COLOR } from './keyboard.js';
 
 function deskTopShape(w, d, r) {
   // Rounded rectangle with a gently bowed back edge (toward the user).
@@ -71,29 +72,22 @@ export function buildDesk(m, leds) {
     });
   }
 
-  // ---- keyboard
-  const kz = z + 0.2;
-  const kTilt = -0.07;
-  const kbW = 0.66, kbD = 0.24;
-  b.rbox(m.beige, kbW, 0.035, kbD, 0.014, 0, top + 0.0175, kz, [kTilt, 0, 0]);
-  b.rbox(m.taupeDark, kbW - 0.04, 0.01, kbD - 0.05, 0.004, 0, top + 0.034, kz + 0.005, [kTilt, 0, 0]);
-  const key = 0.034, pitch = 0.039;
-  const rowsSpec = [
-    { n: 15, off: 0 }, { n: 14, off: 0.25 }, { n: 13, off: 0.5 }, { n: 12, off: 0.75 },
-  ];
-  const keyGeom = new THREE.BoxGeometry(key, 0.016, key);
-  rowsSpec.forEach((row, ri) => {
-    const rz = kz - 0.07 + ri * pitch;
-    for (let i = 0; i < row.n; i++) {
-      const x = -kbW / 2 + 0.04 + (i + row.off) * pitch;
-      if (x > kbW / 2 - 0.04) continue;
-      const y = top + 0.044 - Math.sin(kTilt) * (rz - kz) + (ri === 0 ? 0.004 : 0); // sculpted rows
-      const accent = (ri === 0 && (i === 0 || i === 14)) ? m.amberKey : (ri === 3 && i === 11) ? m.cyanKey : m.keycap;
-      b.add(keyGeom, accent, [x, y, rz], [kTilt, 0, 0]);
-    }
+  // ---- keyboard: full-size Model M-style QWERTY with numpad (see keyboard.js)
+  const kb = buildKeyboard(m);
+  const kz = z + 0.19;
+  const kTilt = 0.09; // back edge raised (rotation about +x lifts the -z side)
+  kb.group.position.set(0, top, kz);
+  kb.group.rotation.x = kTilt;
+  // Lock lights: transform local positions into world space for the LED field.
+  const kbMatrix = new THREE.Matrix4().compose(
+    new THREE.Vector3(0, top, kz), new THREE.Quaternion().setFromEuler(new THREE.Euler(kTilt, 0, 0)), new THREE.Vector3(1, 1, 1));
+  const up = new THREE.Vector3(0, 1, 0).applyAxisAngle(new THREE.Vector3(1, 0, 0), kTilt);
+  kb.localLeds.forEach((p, i) => {
+    const wp = new THREE.Vector3(...p).applyMatrix4(kbMatrix);
+    leds.add(wp.toArray(), up.toArray(), { size: 0.0028, color: LOCK_LED_COLOR, group: 'desk', intensity: i === 0 ? 1.8 : 0.0 });
   });
-  // space bar
-  b.add(new THREE.BoxGeometry(0.24, 0.016, key), m.keycap, [-0.02, top + 0.044 - Math.sin(kTilt) * (kz + 0.09 - kz), kz + 0.09], [kTilt, 0, 0]);
 
-  return b.build({ name: 'desk', castShadow: true, receiveShadow: true });
+  const desk = b.build({ name: 'desk', castShadow: true, receiveShadow: true });
+  desk.add(kb.group);
+  return desk;
 }
