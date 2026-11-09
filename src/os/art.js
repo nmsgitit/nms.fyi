@@ -119,6 +119,16 @@ const DRAW = {
     for (let i = 0; i < 12; i++) { r(4 + i, 9 + i * 0.6, 1, 1, P.grayD); r(27 - i, 9 + i * 0.6, 1, 1, P.grayD); }
     r(22, 11, 4, 4, P.red);
   },
+  camera: (r) => {
+    // 1980s CCTV camera on a wall bracket: long housing under a sun hood, lens to the left.
+    r(26, 6, 4, 20, P.ol); r(27, 7, 2, 18, P.gray); // wall plate
+    r(19, 16, 8, 3, P.ol); r(20, 17, 7, 1, P.grayD); // arm
+    r(18, 13, 4, 6, P.ol); r(19, 14, 2, 4, P.grayD); // pan-tilt head
+    r(3, 6, 22, 3, P.ol); r(4, 7, 20, 1, P.beigeD); // sun hood
+    r(5, 8, 18, 7, P.ol); r(6, 9, 16, 5, P.beige); r(6, 13, 16, 1, P.beigeD); // housing
+    r(2, 9, 4, 5, P.ol); r(3, 10, 2, 3, P.screen); r(3, 10, 1, 1, P.glow); // lens window
+    r(20, 10, 1, 1, P.red); // tally light
+  },
   bin: (r) => {
     r(8, 6, 16, 3, P.ol); r(9, 7, 14, 1, P.gray); r(13, 4, 6, 2, P.ol);
     r(9, 9, 14, 19, P.ol); r(10, 9, 12, 18, P.gray);

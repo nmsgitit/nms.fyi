@@ -12,6 +12,7 @@ export const USER_TAGLINE = 'Welcome. Pick something to open.';
 /**
  * Desktop apps, in icon order (top to bottom, then the next column).
  * icon: one of the pixel icons in art.js. kind: how the window body renders.
+ * requires3D: only in the full experience (it shows or drives the 3D world).
  */
 export const APPS = [
   {
@@ -34,6 +35,10 @@ export const APPS = [
   {
     id: 'contact', title: 'Contact', icon: 'mail', kind: 'document',
     body: '<h1>Contact</h1><p class="placeholder">Placeholder. Email address, links, or a contact form (a form needs a small server endpoint on the Node app).</p>',
+  },
+  {
+    // Live views of the server room from four CCTV cameras (apps/cameras.js). Full experience only.
+    id: 'cameras', title: 'Security Cameras', icon: 'camera', kind: 'cameras', requires3D: true,
   },
   {
     id: 'bin', title: 'Recycle Bin', icon: 'bin', kind: 'document',

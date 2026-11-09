@@ -6,11 +6,12 @@
 //   * a uniform-width chamfered octagonal frame with symmetric retro trim (pinstripes, vent slots)
 // It slides UP into the wall/ceiling cavity. Not a heavy blast door: green light flashes with
 // three chirps, a brief hiss as it opens; a brief hiss and soft thud when it closes.
-// The sign over it (corridor side): monotone lamp logo / "Command Room" / "Lamplight Mainframe".
+// The signs over it (both sides): lit amber LED boards (ledSign.js): lamp, "COMMAND ROOM",
+// "LAMPLIGHT MAINFRAME", two gears.
 import * as THREE from 'three';
 import { Builder } from './builder.js';
 import { DOOR } from './layout.js';
-import { getLampSprite } from './lamp.js';
+import { ledBoardTexture, LED_BOARD_ASPECT } from './ledSign.js';
 
 const PANEL_T = 0.08;
 const FRAME_W = DOOR.frameHalfW - DOOR.halfW; // frame band width (0.3 m)
@@ -61,39 +62,9 @@ function plate(b, mat, shape, t, zFace, dir) {
   b.add(g, mat);
 }
 
-function signTexture() {
-  const W = 1024, H = 256;
-  const c = document.createElement('canvas');
-  c.width = W;
-  c.height = H;
-  const ctx = c.getContext('2d');
-  ctx.fillStyle = '#1d1b18';
-  ctx.fillRect(0, 0, W, H);
-  ctx.strokeStyle = 'rgba(232,226,212,0.55)';
-  ctx.lineWidth = 4;
-  ctx.strokeRect(10, 10, W - 20, H - 20);
-  const lamp = getLampSprite('mono'); // monotone logo, pixel-crisp
-  ctx.imageSmoothingEnabled = false;
-  const lw = 112, lh = (lamp.height / lamp.width) * lw;
-  ctx.drawImage(lamp, (W - lw) / 2, 18, lw, lh);
-  ctx.fillStyle = '#ece6d8';
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'alphabetic';
-  if ('letterSpacing' in ctx) ctx.letterSpacing = '6px';
-  ctx.font = 'bold 58px "Helvetica Neue", Helvetica, Arial, sans-serif';
-  ctx.fillText('Command Room', W / 2, 160);
-  if ('letterSpacing' in ctx) ctx.letterSpacing = '4px';
-  ctx.font = '34px "Helvetica Neue", Helvetica, Arial, sans-serif';
-  ctx.fillStyle = '#bfb8a8';
-  ctx.fillText('Lamplight Mainframe', W / 2, 214);
-  const t = new THREE.CanvasTexture(c);
-  t.colorSpace = THREE.SRGBColorSpace;
-  t.anisotropy = 8;
-  return t;
-}
-
 export class HydraulicDoor {
-  constructor(m) {
+  /** signs: false for the prop doors in the server room (scene/serverRoom.js addCatwalkDoors). */
+  constructor(m, { signs = true } = {}) {
     this.group = new THREE.Group();
     this.group.name = 'entranceDoor';
     this.group.position.set(0, 0, DOOR.z);
@@ -185,18 +156,38 @@ export class HydraulicDoor {
     }
     this.group.add(this.panel);
 
-    // ---- the sign above the door (corridor side), with breathing room above and below
-    const sy = DOOR.frameHeight + 0.57, sz = 0.1 + 0.004; // corridor face of the back wall (z 8.2)
-    const sb = new Builder();
-    sb.rbox(m.taupeDark, 1.78, 0.5, 0.04, 0.02, 0, sy, sz + 0.02);
-    this.group.add(sb.build({ name: 'signFrame', receiveShadow: true }));
-    const face = new THREE.Mesh(new THREE.PlaneGeometry(1.7, 0.425), new THREE.MeshBasicMaterial({ map: signTexture(), toneMapped: false }));
-    face.material.color.setScalar(0.92); // softly backlit
-    face.position.set(0, sy, sz + 0.042);
-    this.group.add(face);
+    // ---- the lit LED message board above the door, on BOTH sides of the wall (identical signs).
+    // Corridor side: higher (the corridor is taller), with breathing room above the frame.
+    // Room side: centered between the frame top (2.4) and the room ceiling (3.2).
+    if (signs) {
+      this.addSign(m, DOOR.frameHeight + 0.57, 0.1, 1); // corridor face of the back wall (z 8.2)
+      this.addSign(m, 2.8, -0.1, -1); // room face of the back wall (z 8.0)
+    }
 
     this.setOpen(0);
     this.setStatus('locked');
+  }
+
+  /** One LED board in its housing, mounted on the wall face at local z = zWall, facing dir (±1 z). */
+  addSign(m, y, zWall, dir) {
+    const faceW = 1.8, faceH = faceW / LED_BOARD_ASPECT;
+    const sign = new THREE.Group();
+    sign.position.set(0, y, zWall);
+    if (dir < 0) sign.rotation.y = Math.PI;
+    const b = new Builder();
+    b.rbox(m.taupeDark, faceW + 0.12, faceH + 0.12, 0.07, 0.015, 0, 0, 0.035); // housing
+    b.box(m.grille, faceW + 0.02, faceH + 0.02, 0.01, 0, 0, 0.068); // dark bezel recess behind the dots
+    for (const sx of [-1, 1]) b.rbox(m.beige, 0.05, faceH + 0.16, 0.02, 0.006, sx * (faceW / 2 + 0.045), 0, 0.076); // end caps
+    sign.add(b.build({ name: 'ledSignHousing', receiveShadow: true }));
+    if (!this.signMat) {
+      this.signMat = new THREE.MeshBasicMaterial({ map: ledBoardTexture(), toneMapped: false });
+      this.signMat.color.setScalar(1.35); // the brightest dot centers push into bloom
+    }
+    const face = new THREE.Mesh(new THREE.PlaneGeometry(faceW, faceH), this.signMat);
+    face.position.z = 0.0745;
+    face.name = 'ledSignFace';
+    sign.add(face);
+    this.group.add(sign);
   }
 
   /** 0 = closed, 1 = fully open (panel up inside the wall/ceiling cavity). */

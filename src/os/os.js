@@ -2,9 +2,13 @@
 // terminal (E / click / tap). XP-reminiscent but original: blue taskbar, oil-lamp launcher
 // with an app menu and the Exit button, desktop icons, draggable windows.
 // Content comes from desktopModel.js (placeholders for now).
-import { APPS, USER_NAME, USER_TAGLINE, OS_NAME } from './desktopModel.js';
+//
+// Modes: 'full' (on the 3D terminal: Exit returns to the command room, the security-camera app
+// is available), 'light' (desktop only, no 3D) and 'mobile' (desktop only, touch layout).
+// Outside 'full', everything that drives the 3D world is left out (Exit, apps with requires3D).
+import { APPS, USER_NAME, USER_TAGLINE, OS_NAME, OS_VERSION } from './desktopModel.js';
 import { iconURL, wallpaperURL } from './art.js';
-import { clockText } from '../scene/screen.js';
+import { clockText } from './clock.js';
 
 const el = (tag, cls, attrs = {}) => {
   const e = document.createElement(tag);
@@ -21,10 +25,16 @@ export class DesktopOS {
   /**
    * onExit: called when the visitor picks Exit in the launcher menu.
    * onClick(kind): 'press' / 'release' for every pointer click on the desktop (click sounds).
+   * apps: handlers for interactive app kinds, e.g. { cameras: { mount(body, ctx), unmount(), setVisible(on) } }.
    */
-  constructor({ onExit, onClick }) {
+  constructor({ mode = 'full', onExit, onClick, apps = {} } = {}) {
+    this.mode = mode;
+    this.full = mode === 'full';
+    this.mobile = mode === 'mobile';
     this.onExit = onExit;
     this.onClick = onClick;
+    this.handlers = apps;
+    this.apps = APPS.filter((a) => this.full || !a.requires3D);
     this.windows = new Map(); // id -> { win, task, app, minimized }
     this.zoom = 1;
     window.addEventListener("resize", () => { if (this.isOpen) this.applyScale(); });
@@ -34,13 +44,13 @@ export class DesktopOS {
   }
 
   build() {
-    const root = (this.root = el('div', 'os', { id: 'os', role: 'application', 'aria-label': `${OS_NAME} desktop` }));
+    const root = (this.root = el('div', `os os-${this.mode}`, { id: 'os', role: 'application', 'aria-label': `${OS_NAME} desktop` }));
     root.hidden = true;
 
     const desk = (this.desk = el('div', 'os-desktop'));
     desk.style.backgroundImage = `url(${wallpaperURL()})`;
     const icons = el('ul', 'os-icons', { 'aria-label': 'Desktop' });
-    for (const app of APPS) {
+    for (const app of this.apps) {
       const li = el('li');
       const b = el('button', 'os-icon', { type: 'button', 'data-app': app.id, title: `Open ${app.title}` });
       b.append(el('img', '', { src: iconURL(app.icon), alt: '', width: 48, height: 48 }), el('span', '', { text: app.title }));
@@ -48,7 +58,7 @@ export class DesktopOS {
       b.addEventListener('dblclick', () => this.open(app.id));
       b.addEventListener('click', (e) => {
         icons.querySelectorAll('.os-icon').forEach((x) => x.classList.toggle('selected', x === b));
-        if (e.pointerType === 'touch' || e.detail === 0) this.open(app.id); // touch or keyboard Enter
+        if (this.mobile || e.pointerType === 'touch' || e.detail === 0) this.open(app.id); // touch or keyboard Enter
       });
       li.append(b);
       icons.append(li);
@@ -77,17 +87,22 @@ export class DesktopOS {
     head.append(el('img', '', { src: iconURL('lamp'), alt: '', width: 48, height: 48 }),
       el('div', 'os-menu-user', { html: `<strong>${USER_NAME}</strong><span>${USER_TAGLINE}</span>` }));
     const list = el('div', 'os-menu-list');
-    for (const app of APPS) {
+    for (const app of this.apps) {
       const item = el('button', 'os-menu-item', { type: 'button', role: 'menuitem' });
       item.append(el('img', '', { src: iconURL(app.icon), alt: '', width: 32, height: 32 }), el('span', '', { text: app.title }));
       item.addEventListener('click', () => { this.closeMenu(); this.open(app.id); });
       list.append(item);
     }
     const foot = el('div', 'os-menu-foot');
-    const exit = el('button', 'os-exit', { type: 'button', role: 'menuitem' });
-    exit.append(el('span', 'os-exit-icon', { 'aria-hidden': 'true', text: '⏻' }), el('span', '', { text: 'Exit' }));
-    exit.addEventListener('click', () => { this.closeMenu(); this.onExit?.(); });
-    foot.append(exit);
+    if (this.full) {
+      // Exit steps back out of the terminal into the 3D room, so it only exists in the full experience.
+      const exit = el('button', 'os-exit', { type: 'button', role: 'menuitem' });
+      exit.append(el('span', 'os-exit-icon', { 'aria-hidden': 'true', text: '⏻' }), el('span', '', { text: 'Exit' }));
+      exit.addEventListener('click', () => { this.closeMenu(); this.onExit?.(); });
+      foot.append(exit);
+    } else {
+      foot.append(el('span', 'os-menu-version', { text: `${OS_NAME} · ${OS_VERSION}` }));
+    }
     menu.append(head, list, foot);
 
     root.append(desk, bar, menu, el('div', 'os-crt', { 'aria-hidden': 'true' }));
@@ -114,7 +129,8 @@ export class DesktopOS {
    * on the 3D monitor.
    */
   applyScale() {
-    this.zoom = Math.min(2, Math.max(1, window.innerHeight / 768));
+    // The mobile layout is sized for touch in CSS pixels instead.
+    this.zoom = this.mobile ? 1 : Math.min(2, Math.max(1, window.innerHeight / 768));
     this.root.style.zoom = String(this.zoom);
   }
 
@@ -125,7 +141,8 @@ export class DesktopOS {
     this.tickClock();
     this._clockTimer = setInterval(() => this.tickClock(), 15000);
     requestAnimationFrame(() => this.root.classList.add('on'));
-    setTimeout(() => this.launchBtn.focus(), 300);
+    if (!this.mobile) setTimeout(() => this.launchBtn.focus(), 300);
+    for (const w of this.windows.values()) if (!w.minimized) w.handler?.setVisible?.(true);
   }
 
   hide() {
@@ -133,6 +150,7 @@ export class DesktopOS {
     this.closeMenu();
     this.root.classList.remove('on');
     clearInterval(this._clockTimer);
+    for (const w of this.windows.values()) w.handler?.setVisible?.(false);
     setTimeout(() => { if (!this.isOpen) this.root.hidden = true; }, 400);
   }
 
@@ -161,13 +179,13 @@ export class DesktopOS {
   }
 
   open(id, override) {
-    const app = override || APPS.find((a) => a.id === id);
+    const app = override || this.apps.find((a) => a.id === id);
     if (!app) return;
     const existing = this.windows.get(app.id);
     if (existing) { this.restore(app.id); return; }
 
     const n = this.windows.size;
-    const win = el('section', 'win', { role: 'dialog', 'aria-label': app.title, tabindex: '-1' });
+    const win = el('section', `win win-app-${app.id}`, { role: 'dialog', 'aria-label': app.title, tabindex: '-1' });
     win.style.left = `${140 + n * 28}px`;
     win.style.top = `${40 + n * 24}px`;
     const bar = el('header', 'win-bar');
@@ -180,7 +198,7 @@ export class DesktopOS {
     };
     btns.append(
       mk('win-min', 'Minimize', '_', () => this.minimize(app.id)),
-      mk('win-max', 'Maximize', '□', () => win.classList.toggle('max')),
+      ...(this.mobile ? [] : [mk('win-max', 'Maximize', '□', () => win.classList.toggle('max'))]),
       mk('win-close', 'Close', '×', () => this.close(app.id)),
     );
     bar.append(btns);
@@ -203,6 +221,8 @@ export class DesktopOS {
       body.prepend(grid);
     }
     win.append(bar, body);
+    const handler = this.handlers[app.kind];
+    if (handler) handler.mount(body, { win });
     win.addEventListener('pointerdown', () => this.focus(app.id));
     this.makeDraggable(win, bar);
     this.layer.append(win);
@@ -216,7 +236,7 @@ export class DesktopOS {
       else this.focus(app.id);
     });
     this.tasks.append(task);
-    this.windows.set(app.id, { win, task, app, minimized: false });
+    this.windows.set(app.id, { win, task, app, minimized: false, handler });
     this.focus(app.id);
   }
 
@@ -235,6 +255,7 @@ export class DesktopOS {
     const w = this.windows.get(id);
     w.minimized = true;
     w.win.hidden = true;
+    w.handler?.setVisible?.(false);
     w.task.classList.remove('active');
   }
 
@@ -242,12 +263,14 @@ export class DesktopOS {
     const w = this.windows.get(id);
     w.minimized = false;
     w.win.hidden = false;
+    w.handler?.setVisible?.(true);
     this.focus(id);
   }
 
   close(id) {
     const w = this.windows.get(id);
     if (!w) return;
+    w.handler?.unmount?.();
     w.win.remove();
     w.task.remove();
     this.windows.delete(id);
@@ -258,7 +281,7 @@ export class DesktopOS {
   makeDraggable(win, handle) {
     let sx = 0, sy = 0, ox = 0, oy = 0, dragging = false;
     handle.addEventListener('pointerdown', (e) => {
-      if (e.target.closest('.win-btn') || win.classList.contains('max') || window.innerWidth / this.zoom < 700) return;
+      if (this.mobile || e.target.closest('.win-btn') || win.classList.contains('max') || window.innerWidth / this.zoom < 700) return;
       dragging = true;
       sx = e.clientX; sy = e.clientY;
       ox = win.offsetLeft; oy = win.offsetTop;

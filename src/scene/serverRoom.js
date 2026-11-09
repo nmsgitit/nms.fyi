@@ -9,6 +9,7 @@ import { PALETTE } from './palette.js';
 const F = SERVER.floorY;
 const C = SERVER.ceilY;
 const CATWALK_Y = -1.0;
+const FRONT_WALL_Z0 = -0.95; // server-room face of the wall that holds the command-room glass
 
 const ledColor = (r) => (r < 0.07 ? PALETTE.ledAmber : r < 0.1 ? PALETTE.ledRed : r < 0.55 ? PALETTE.ledCool : PALETTE.ledCyan);
 const ledBlink = (r) => (r < 0.25 ? 0.4 + r * 6 : 0);
@@ -57,7 +58,7 @@ export function buildServerRoom(m) {
   b.span(m.wallLower, xMin, xMax, F, F + 0.6, zMin, zMin + 0.03);
 
   // ---- front wall (server-room side), with the command-room window opening
-  const wz0 = -0.95, wz1 = ROOM.glassTopZ; // wall slab just outside the glass
+  const wz0 = FRONT_WALL_Z0, wz1 = ROOM.glassTopZ; // wall slab just outside the glass
   const ox0 = ROOM.xMin - 0.2, ox1 = ROOM.xMax + 0.2;
   b.span(m.wallUpper, xMin, ox0, F, C, wz0, wz1);
   b.span(m.wallUpper, ox1, xMax, F, C, wz0, wz1);
@@ -84,8 +85,9 @@ export function buildServerRoom(m) {
 
   // ---- catwalks along the side walls and back wall
   const cwDepth = 2.2;
-  b.span(m.taupeDark, xMin, xMin + cwDepth, CATWALK_Y - 0.12, CATWALK_Y, zMin, zMax - 0.5);
-  b.span(m.taupeDark, xMax - cwDepth, xMax, CATWALK_Y - 0.12, CATWALK_Y, zMin, zMax - 0.5);
+  // Side decks run up to the front wall, where the catwalk doors are (addCatwalkDoors).
+  b.span(m.taupeDark, xMin, xMin + cwDepth, CATWALK_Y - 0.12, CATWALK_Y, zMin, wz0);
+  b.span(m.taupeDark, xMax - cwDepth, xMax, CATWALK_Y - 0.12, CATWALK_Y, zMin, wz0);
   b.span(m.taupeDark, xMin, xMax, CATWALK_Y - 0.12, CATWALK_Y, zMin, zMin + cwDepth);
   // railings
   const rail = (x0, x1, z0, z1) => {
@@ -126,6 +128,28 @@ export function populateServerRoom(b, m, leds) {
   for (const x of [-10.2, 10.2]) {
     for (let z = -5.5; z > -24; z -= 1.1) rack(b, m, leds, x, z, 'racks', (-5.5 - z) / 20);
   }
+}
+
+/**
+ * Two closed prop doors in the entry door's style on the server-room face of the glass wall, at
+ * the near ends of the two side catwalks (well clear of the window surround at x ±5.5): the way
+ * people would reach the upper catwalks. Returns the door objects (add their .group to the scene).
+ */
+export function addCatwalkDoors(m, b, HydraulicDoor) {
+  const { xMin, xMax } = SERVER;
+  const wallFace = FRONT_WALL_Z0; // server-room face of the front wall
+  const doors = [];
+  for (const s of [-1, 1]) {
+    const x = s > 0 ? xMax - 1.1 : xMin + 1.1; // centered on the catwalk deck (2.2 m wide)
+    const d = new HydraulicDoor(m, { signs: false });
+    d.group.position.set(x, CATWALK_Y, wallFace - 0.06); // panel just proud of the wall face
+    d.group.rotation.y = Math.PI; // its front faces into the server room
+    d.group.name = 'catwalkDoor';
+    doors.push(d);
+    // Landing plinth under the door: hides the frame's lower band below the catwalk deck.
+    b.span(m.taupeDark, x - 1.0, x + 1.0, CATWALK_Y - 0.36, CATWALK_Y - 0.12, wallFace - 0.36, wallFace);
+  }
+  return doors;
 }
 
 /** Server-room lights. All start at 0. The reveal (stage 2) raises them; debug can force them. */

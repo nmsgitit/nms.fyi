@@ -10,20 +10,40 @@
   <body>
     <canvas id="view" aria-label="3D command room"></canvas>
 
-    <!-- Click-to-enter gate: browsers only allow audio after a user gesture,
-         so the walk-in (with footsteps) starts from this click. -->
-    <div id="gate" role="dialog" aria-labelledby="gate-title">
+    <!-- Version chooser (src/main.js). Nothing 3D is downloaded until "Full" is picked.
+         Touch-only devices skip it and get the mobile desktop. -->
+    <div id="chooser" role="dialog" aria-labelledby="chooser-title" hidden>
+      <div class="gate-box">
+        <p id="chooser-title" class="gate-title">NMS FYI</p>
+        <p class="gate-sub">How would you like to visit?</p>
+        <div class="choices">
+          <button id="choose-full" class="choice" type="button">
+            <span class="choice-name">Full experience</span>
+            <span class="choice-desc">Walk into a 3D command room, with sound. Best on a computer with a capable graphics card.</span>
+          </button>
+          <button id="choose-light" class="choice" type="button">
+            <span class="choice-name">Light version</span>
+            <span class="choice-desc">Go straight to the desktop. No 3D, so it’s quick on older computers and easy on the battery.</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Click-to-enter gate (full experience only): browsers only allow audio after a user
+         gesture, so the walk-in (with footsteps) starts from this click. -->
+    <div id="gate" role="dialog" aria-labelledby="gate-title" hidden>
       <div class="gate-box">
         <p id="gate-title" class="gate-title">NMS FYI</p>
         <p class="gate-sub" id="gate-status">Loading…</p>
         <button id="gate-enter" type="button" disabled>Enter</button>
+        <button id="gate-light" class="gate-alt" type="button" hidden>Open the light version</button>
         <p class="gate-hint">Best with sound on</p>
       </div>
     </div>
 
-    <button id="mute" type="button" aria-pressed="false" aria-label="Toggle sound">Sound on</button>
+    <button id="mute" type="button" hidden aria-pressed="false" aria-label="Toggle sound">Sound on</button>
     <div id="debug-hud" hidden></div>
-    <noscript>This site needs JavaScript and WebGL.</noscript>
+    <noscript>This site needs JavaScript.</noscript>
     <script type="module" src="/src/main.js"></script>
   </body>
 </html>

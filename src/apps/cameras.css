@@ -1,0 +1,107 @@
+/* Security Cameras app: a 1980s black-and-white CCTV monitor inside a LAMPLIGHT OS window. */
+.win.win-cameras { width: min(700px, calc(100% - 40px)); }
+.win-body.cctv {
+  padding: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  background: #1a1916;
+  user-select: none;
+}
+.cctv-screen {
+  position: relative;
+  aspect-ratio: 4 / 3;
+  overflow: hidden;
+  background: #000;
+  cursor: crosshair;
+  container-type: inline-size;
+}
+.cctv-screen canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+/* Monochrome tube picture: soft focus, crushed blacks, a little bloom in the whites. */
+.cctv-feed { filter: grayscale(1) contrast(1.35) brightness(1.25) blur(0.6px); }
+.cctv-noise { mix-blend-mode: overlay; opacity: 0.42; }
+.cctv-fx {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  /* scanlines + vignette + a faint cool phosphor tint */
+  background:
+    repeating-linear-gradient(180deg, rgba(0, 0, 0, 0.28) 0 1px, transparent 1px 3px),
+    radial-gradient(ellipse at center, transparent 55%, rgba(0, 0, 0, 0.75) 100%),
+    linear-gradient(rgba(170, 200, 210, 0.06), rgba(170, 200, 210, 0.06));
+}
+/* Mains hum bar drifting up the picture. */
+.cctv-bar {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 22%;
+  background: linear-gradient(180deg, transparent, rgba(255, 255, 255, 0.07) 50%, transparent);
+  animation: cctv-hum 7s linear infinite;
+}
+@keyframes cctv-hum { from { top: 110%; } to { top: -30%; } }
+/* Switching: static fills the picture and it rolls once. */
+.cctv-screen.switching .cctv-noise { animation: cctv-static 380ms ease-out; }
+.cctv-screen.switching .cctv-feed { animation: cctv-roll 380ms ease-out; }
+@keyframes cctv-static { from { opacity: 1; mix-blend-mode: normal; } 70% { opacity: 0.9; } to { opacity: 0.42; } }
+@keyframes cctv-roll { from { transform: translateY(-35%); } 60% { transform: translateY(6%); } to { transform: none; } }
+
+.cctv-osd {
+  position: absolute;
+  inset: 0;
+  padding: 3.5cqw 4.5cqw;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  grid-template-rows: auto 1fr auto;
+  pointer-events: none;
+  color: #f4f4ee;
+  font: bold 2.9cqw/1.2 'Courier New', Courier, monospace;
+  letter-spacing: 0.12em;
+  text-shadow: 0 0 2px #000, 1px 1px 0 #000;
+}
+.cctv-label { white-space: pre; }
+.cctv-date { text-align: right; }
+.cctv-rec { grid-row: 3; align-self: end; animation: cctv-blink 1s steps(1) infinite; }
+.cctv-time { grid-row: 3; align-self: end; text-align: right; }
+@keyframes cctv-blink { 50% { opacity: 0; } }
+
+.cctv-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 7px 10px;
+  background: linear-gradient(180deg, #3b3832, #2a2824);
+  border-top: 1px solid #000;
+  color: #cfc8b8;
+  font-size: 12px;
+}
+.cctv-cams { display: flex; gap: 4px; }
+.cctv-cam {
+  padding: 4px 10px;
+  border: 1px solid #12110f;
+  border-radius: 2px;
+  background: linear-gradient(180deg, #d9d2c2, #b5ad9b);
+  color: #23211d;
+  font: bold 12px 'Courier New', monospace;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+}
+.cctv-cam[aria-pressed='true'] {
+  background: linear-gradient(180deg, #8e2a1e, #b8402c);
+  color: #fff;
+  box-shadow: inset 1px 1px 3px rgba(0, 0, 0, 0.5);
+}
+.cctv-cam:focus-visible { outline: 2px solid #fff; outline-offset: 1px; }
+.cctv-hint kbd {
+  display: inline-block;
+  padding: 0 4px;
+  margin-left: 2px;
+  border: 1px solid #8f887a;
+  border-radius: 2px;
+  font: bold 11px/1.4 Tahoma, sans-serif;
+}
+@media (prefers-reduced-motion: reduce) {
+  .cctv-bar, .cctv-rec { animation: none; }
+  .cctv-screen.switching .cctv-feed { animation: none; }
+}

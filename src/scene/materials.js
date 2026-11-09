@@ -23,6 +23,41 @@ function noiseTexture(size = 256, strength = 18, seed = 1) {
   return t;
 }
 
+function diffuserTexture(w = 512, h = 232) {
+  // Prismatic acrylic diffuser of a 1980s fluorescent troffer: soft brighter bands where the tubes
+  // sit behind it, a fine diamond prism texture, and darker edges toward the metal frame. Makes the
+  // panels read as fixtures instead of flat blown-out white rectangles (user: "not as harsh").
+  const c = document.createElement('canvas');
+  c.width = w;
+  c.height = h;
+  const ctx = c.getContext('2d');
+  const img = ctx.createImageData(w, h);
+  const cell = 7;
+  for (let y = 0; y < h; y++) {
+    const v = y / (h - 1);
+    // Three tube bands along the length, on a dimmer base.
+    let tube = 0;
+    for (const tv of [0.22, 0.5, 0.78]) tube += Math.exp(-(((v - tv) / 0.085) ** 2));
+    for (let x = 0; x < w; x++) {
+      const u = x / (w - 1);
+      const edge = Math.min(u, 1 - u, v * (h / w), (1 - v) * (h / w)) * w; // px to the nearest edge
+      const falloff = Math.min(1, 0.55 + edge / 40);
+      const endFade = 0.82 + 0.18 * Math.sin(Math.PI * u); // tube ends are dimmer
+      const cx = x % cell, cy = y % cell;
+      const prism = (Math.abs(cx - cell / 2) + Math.abs(cy - cell / 2) < cell / 2 ? 1.04 : 0.95);
+      const k = (0.66 + 0.3 * Math.min(1, tube)) * falloff * endFade * prism;
+      const i = (y * w + x) * 4;
+      img.data[i] = img.data[i + 1] = img.data[i + 2] = Math.min(255, k * 255);
+      img.data[i + 3] = 255;
+    }
+  }
+  ctx.putImageData(img, 0, 0);
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  t.anisotropy = 8;
+  return t;
+}
+
 function tileTexture(size = 512, seams = '#6f6b64', base = '#b3afa6') {
   // Raised-floor tiles for the server room.
   const c = document.createElement('canvas');
@@ -86,8 +121,9 @@ export function createMaterials(maxAnisotropy = 4) {
     coreShell: std(0xe9e7e1, 0.32, 0.05),
     screenOff: new THREE.MeshStandardMaterial({ color: PALETTE.screenOff, roughness: 0.15, metalness: 0.1 }),
     // Ceiling light panels: pure emissive so they read as light sources and feed the bloom.
-    lightPanel: new THREE.MeshBasicMaterial({ color: new THREE.Color(PALETTE.fluorescentPanel).multiplyScalar(1.5), toneMapped: false }),
-    corridorPanel: new THREE.MeshBasicMaterial({ color: new THREE.Color(PALETTE.fluorescentPanel).multiplyScalar(1.2), toneMapped: false }),
+    // Toned down from 1.5x / 1.2x flat white (too harsh): a diffuser texture, peaks only just into bloom.
+    lightPanel: new THREE.MeshBasicMaterial({ color: new THREE.Color(PALETTE.fluorescentPanel).multiplyScalar(1.08), map: diffuserTexture(), toneMapped: false }),
+    corridorPanel: new THREE.MeshBasicMaterial({ color: new THREE.Color(PALETTE.fluorescentPanel).multiplyScalar(0.95), map: diffuserTexture(512, 290), toneMapped: false }),
     glass: new THREE.MeshStandardMaterial({
       color: 0xdfe8ec,
       roughness: 0.14,

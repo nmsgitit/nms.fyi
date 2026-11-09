@@ -35,6 +35,55 @@ html, body {
   z-index: 10;
 }
 #gate.hidden { opacity: 0; pointer-events: none; }
+#gate[hidden], #chooser[hidden], #mute[hidden] { display: none; }
+
+/* Version chooser (main.js) */
+#chooser {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  overflow: auto;
+  background: radial-gradient(ellipse at center, #17161a, #050506);
+  z-index: 11;
+}
+.choices { display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; margin-top: 24px; }
+.choice {
+  width: 280px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 20px 22px;
+  text-align: left;
+  font: inherit;
+  color: var(--ink);
+  background: rgba(30, 28, 24, 0.7);
+  border: 1px solid rgba(217, 207, 187, 0.3);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: border-color 160ms ease, background 160ms ease;
+}
+.choice:hover, .choice:focus-visible { border-color: var(--accent); background: rgba(48, 44, 38, 0.8); }
+.choice:focus-visible { outline: 2px solid var(--ink); outline-offset: 3px; }
+.choice:disabled { opacity: 0.45; cursor: not-allowed; }
+.choice-name { font-size: 18px; letter-spacing: 0.12em; text-transform: uppercase; }
+.choice-desc { font-size: 14px; line-height: 1.45; color: var(--dim); }
+.gate-alt {
+  display: block;
+  margin: 16px auto 0;
+  font: inherit;
+  font-size: 14px;
+  letter-spacing: 0.1em;
+  color: var(--ink);
+  background: none;
+  border: 1px solid rgba(217, 207, 187, 0.45);
+  border-radius: 3px;
+  padding: 10px 20px;
+  cursor: pointer;
+}
+.gate-alt[hidden], #gate-enter[hidden] { display: none; }
+/* Light / mobile: the desktop is the whole page. */
+.desktop-only body { background: #000; }
 
 .gate-box { text-align: center; padding: 16px; }
 .gate-title { font-size: clamp(28px, 6vw, 44px); letter-spacing: 0.18em; margin: 0 0 8px; }

@@ -66,6 +66,7 @@ instead of blocking on them.
 | 4 | Procedural Web Audio sound (audio/sound.js): footsteps, room tone, hatch + arm motor + arrival, CRT power-on, two breakers, tube strikes, transformer hum, faint fans behind glass; mute button | ✅ 2026-11-09 (not yet heard by the user) |
 | 5 | Boot screen on the monitor: 1980s pixel-art bronze oil lamp with a lit flame (lamp.js), serif title, progress bar | ✅ 2026-11-09 (the boot to OS hand-off comes in stage 6) |
 | 6 | LAMPLIGHT OS shell: boot to desktop 2 s after the monitor lands (+ startup chime), HTML desktop (XP-reminiscent, original), lamp launcher + Exit, window manager, E / click / tap focus with camera glide, 3D pause while open | ✅ shell 2026-11-09. **Content: placeholders; waiting on the user** |
+| 6b | Full/Light chooser + lazy 3D, mobile spin, Security Cameras app, LED signs (change round 6) | ✅ 2026-11-09 |
 | 7 | Polish: film grain, fluorescent flicker, mobile/low-GPU fallback, accessibility (skip intro, reduced motion), loading screen | todo |
 | 8 | Deploy to Infomaniak Node.js hosting | todo; confirm their Node version and how they run apps |
 
@@ -86,6 +87,7 @@ npm start          # serves dist/ on $PORT (default 3000)
 ```
 
 ### URL flags (development)
+- `?full`, `?light`, `?mobile`: force a version (skip the chooser / mobile detection).
 - `?skip`: skip the intro: at the desk, monitor down, server room powered. Add `?dark` to keep it unpowered.
 - `?lit`: server room fully powered (preview the layout).
 - `?os`: skip straight into the desktop (development).
@@ -107,7 +109,13 @@ npm start          # serves dist/ on $PORT (default 3000)
 ```
 index.html            canvas + click-to-enter gate (needed so audio can start) + debug HUD
 server.js             Express production server (static dist/, SPA fallback, /healthz)
-src/main.js           renderer, scene assembly, glass env capture, power levels, bloom, loop
+src/main.js           tiny loader: mobile detection, Full/Light chooser, then lazy-imports full.js or desktopOnly.js
+src/full.js           (separate chunk, loaded only for Full) renderer, scene assembly, glass env capture, power levels, bloom, loop
+src/desktopOnly.js    Light version / mobile spin: LAMPLIGHT OS alone, no three.js
+src/os/clock.js       taskbar clock text (kept out of scene/ so the desktop never imports three)
+src/scene/cctv.js     CctvSystem: 4 corner CCTV cameras (bracket, pan head, tilt platform, housing), servo motion, patrol, lens cameras
+src/apps/cameras.js   Security Cameras app (full only): renders the CCTV views into the window, mouse pan, arrows switch, grain/OSD (cameras.css)
+src/scene/ledSign.js  amber LED dot-matrix board texture (5x7 font, dot lamp, two gears) for the door signs
 src/debug.js          URL flags, orbit camera, HUD, keys
 src/style.css
 src/camera/walk.js    scripted first-person walk: speed profile, head bob/sway/roll, 'step' events
@@ -331,7 +339,7 @@ nearest-first (tube sounds at 100/60/40 % per row), back wash +0.3 s, fans fade 
   Gotcha: never put a shape hole inside another hole (the border ring had the window cutout inside its inner hole: odd
   triangulation, a pale blob on the panel).
 - **Back wall band/rail** stop at x = ±0.70, i.e. behind the door frame, so they meet its outline at every height.
-- **Sign** (door.js, corridor side above the door): monotone lamp logo (`getLampSprite('mono')`: all palette entries,
+- **Sign** (superseded in round 6 by the LED boards): monotone lamp logo (`getLampSprite('mono')`: all palette entries,
   flame included, mapped to one warm off-white's tones), "Command Room", and "Lamplight Mainframe" smaller (user renamed it
   from "Lamplight Data Center"), on a softly backlit dark panel, ~0.35 m clear of the frame and ~0.3 m below the ceiling.
 - **Timeline after the door** (walk times): door slam 4.41, monitor hatch latch 5.10, breaker 1 7.4, breaker 2 8.5,
@@ -362,6 +370,41 @@ nearest-first (tube sounds at 100/60/40 % per row), back wash +0.3 s, fans fade 
   and flickered against it above the sign. It now ends inside the wall (zBack + 0.1). Never end a slab on another face.
 - **Window top rail back** (the user re-requested it, suspecting the old angle was off): it's now rotated with the glass
   tilt (`[-tilt, 0, 0]`) and centered on the glass top edge, so it reads as the glass's own head rail, not a level beam.
+
+## Change round 6 (2026-11-09): versions, cameras, LED signs
+- **Version chooser** (`src/main.js`, `#chooser` in index.html): Full experience vs Light version. The user's GPU sat at
+  ~60 % on the old start page, which renders the corridor behind the gate. Now nothing 3D loads until Full is picked:
+  three.js and the scene live in `full.js`, a separate Vite chunk fetched by `import()` (entry ~4 kB, desktop ~17 kB,
+  full ~1 MB). No canvas / WebGL context exists before that. Full then shows the old Enter gate (needed for audio).
+  The last choice is remembered in localStorage `nms-mode` (only pre-focuses the button; the chooser always shows).
+  If full.js fails (no WebGL2), the gate offers "Open the light version".
+- **Light version** (`desktopOnly.js`): the desktop at once; no canvas, no sound, no mute button.
+- **Mobile spin**: touch-first devices (UA mobile, iPadOS, or coarse pointer with no fine pointer) skip the chooser and
+  get `DesktopOS({ mode: 'mobile' })`: zoom 1, home-screen icon grid, single tap opens, apps full screen with 40 px
+  title buttons, no maximize/drag, taller taskbar, launcher as a bottom sheet (`.os-mobile` in os.css).
+- **3D-only features are absent outside Full** (user rule): Exit in the launcher (replaced by a version label), apps
+  with `requires3D` (the cameras), the hotkey bar/menu, terminal prompt, E/F/Q keys (all created by full.js only).
+- **Security Cameras app** (full only): 4 CCTV cameras in the server room's upper corners (`CCTV_CAMERAS`, clockwise
+  NW, NE, SE, SW; ← / → walk around). Model: wall plate + arm + gusset, pan drum, tilt uprights and axle, platform,
+  long enamel housing, sun hood with skirts, bezel/lens, rear cap with cable gland, red tally light (bright on the
+  watched camera). The camera sits ON TOP of the head: a hanging yoke collided when tilting. Mouse over the picture
+  steers the watched camera (±46° pan, tilt -58° to -3°), rate-limited like a servo, with a motor whir
+  (`sound.cctvMotor`); the others slowly patrol. Switching: static burst + roll + relay clack (`sound.cctvSwitch`).
+  Rendering while the desktop is open: full.js's paused loop calls `cameraApp.render()`, which draws the lens camera
+  into a 384×288 corner of the main canvas (hidden behind the desktop), `drawImage`s it into the app canvas in the same
+  task, at 30 fps, with `shadowMap.autoUpdate` off. Look: CSS grayscale/contrast/blur, cycled noise frames (overlay),
+  scanlines, vignette, hum bar, Courier OSD (camera, date, time, blinking REC).
+  The corner cameras sit above the light fixtures, so they're dark in the 3D view (realistic; add a wash if asked).
+- **Catwalk doors**: two closed props of the entry door (`HydraulicDoor(m, { signs: false })`) on the server-room face
+  of the glass wall at the near ends of the side catwalks (x ±14.9, catwalk height), with landing plinths hiding the
+  frame band below the deck. Side catwalk decks now run to that wall. The user asked for them on the glass wall
+  (not in the command room, not on the back wall), as long as nothing intersects.
+- **Signs**: both sides of the entry door now carry the same lit amber LED dot-matrix board (`ledSign.js`, 210×28
+  dots): dot lamp (with flame) left, "COMMAND ROOM" double-size, "LAMPLIGHT MAINFRAME" single-size, two overlapping
+  gears right (small gear in front with a one-dot gap). Unlit dots stay faintly visible. Corridor side y 2.97, room side
+  y 2.8 (between the frame top and the ceiling). Face color 1.35 so the lit dots bloom.
+- **Ceiling lights softened**: panels went from flat 1.5× white to 1.08× (corridor 0.95×) with a prismatic diffuser
+  texture (tube bands, diamond prisms, darker edges). Only the panels' look changed; the actual lights are unchanged.
 
 ## Desk, controls & monitor stowing (change round 2, 2026-11-09)
 - **Mouse:** `scene/mouse.js`: an unbranded two-button mouse in the spirit of IBM's PS/2-era mouse (to go with the

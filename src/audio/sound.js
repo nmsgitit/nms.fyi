@@ -549,6 +549,34 @@ export class SoundDesign {
     this.burst(t + 0.002, { dur: 0.02, type: 'lowpass', freq: 900, Q: 0.7, peak: 0.08 * k, attack: 0.001, decay: 0.016, dest: this.ui });
   }
 
+  /** Security-camera switch: a relay clack and a short burst of video static. */
+  cctvSwitch(t = this.now()) {
+    this.burst(t, { dur: 0.01, type: 'bandpass', freq: 2400, Q: 2, peak: 0.22, attack: 0.0005, decay: 0.008, dest: this.ui });
+    this.thump(t, { f0: 900, f1: 480, dur: 0.03, peak: 0.1, attack: 0.001, dest: this.ui, type: 'square' });
+    this.burst(t + 0.012, { dur: 0.3, type: 'highpass', freq: 2600, Q: 0.5, peak: 0.05, attack: 0.01, decay: 0.22, dest: this.ui });
+  }
+
+  /** Pan/tilt motor whir of the watched camera, following its turning speed (rad/s; 0 = still). */
+  cctvMotor(speed) {
+    if (!this.ctx) return;
+    if (!this._motor) {
+      const c = this.ctx;
+      const o = c.createOscillator();
+      o.type = 'sawtooth';
+      o.frequency.value = 110;
+      const f = c.createBiquadFilter();
+      f.type = 'bandpass'; f.frequency.value = 850; f.Q.value = 1.4;
+      const g = c.createGain();
+      g.gain.value = 0;
+      o.connect(f).connect(g).connect(this.ui);
+      o.start();
+      this._motor = { o, g };
+    }
+    const k = Math.min(1, speed / 0.7), t = this.now();
+    this._motor.g.gain.setTargetAtTime(k * 0.03, t, 0.06);
+    this._motor.o.frequency.setTargetAtTime(105 + k * 70, t, 0.06);
+  }
+
   /** Server room back to silent (replays/debug). */
   resetServer() {
     if (!this.ctx) return;

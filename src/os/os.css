@@ -243,6 +243,7 @@
 }
 .os-exit:hover, .os-exit:focus-visible { filter: brightness(1.12); outline: 2px solid #fff; outline-offset: 1px; }
 .os-exit-icon { font-size: 15px; }
+.os-menu-version { color: #fff; font-size: 12px; opacity: 0.9; }
 
 /* Faint CRT scanlines so it still feels like the terminal (purely decorative). */
 .os-crt {
@@ -265,6 +266,54 @@
 @media (prefers-reduced-motion: reduce) {
   .os { transition: none; }
 }
+
+/* Light version (desktop only): appears at once, no glide from the terminal. */
+.os-light, .os-mobile { transition-duration: 200ms; }
+
+/* Mobile spin: a touch layout of the same desktop. Home-screen icon grid, apps open full
+   screen with big title-bar buttons, a taller taskbar, and the launcher as a bottom sheet. */
+.os-mobile { height: 100dvh; grid-template-rows: 1fr 58px; font-size: 15px; }
+.os-mobile .os-icons {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(92px, 1fr));
+  justify-items: center;
+  gap: 18px 4px;
+  width: auto;
+  height: auto;
+  padding: 22px 10px;
+}
+.os-mobile .os-icon { width: 92px; padding: 8px 2px; font-size: 14px; }
+.os-mobile .os-icon img { width: 60px; height: 60px; }
+.os-mobile .os-icon.selected span { background: none; text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.85); }
+.os-mobile .os-icon.selected img { filter: none; }
+.os-mobile .win {
+  left: 0 !important; top: 0 !important; width: 100%; height: 100%; max-height: none;
+  border-radius: 0; border-width: 0; box-shadow: none;
+}
+.os-mobile .win-bar { height: 50px; padding: 0 6px 0 12px; border-radius: 0; font-size: 16px; gap: 10px; }
+.os-mobile .win-bar img { width: 22px; height: 22px; }
+.os-mobile .win-btns { gap: 6px; }
+.os-mobile .win-btn { width: 40px; height: 40px; font-size: 22px; border-radius: 5px; }
+.os-mobile .win-body { padding: 18px 20px; font-size: 16px; line-height: 1.55; overscroll-behavior: contain; }
+.os-mobile .win-body h1 { font-size: 24px; }
+.os-mobile .os-launch { width: 78px; border-radius: 0 28px 28px 0; }
+.os-mobile .os-launch img { width: 42px; height: 42px; }
+.os-mobile .os-tasks { gap: 6px; padding: 7px 8px; overflow-x: auto; }
+.os-mobile .os-task { flex: none; min-width: 52px; justify-content: center; }
+.os-mobile .os-task img { width: 22px; height: 22px; }
+.os-mobile .os-task span { display: none; }
+.os-mobile .os-tray { min-width: 80px; font-size: 14px; }
+.os-mobile .os-menu {
+  left: 0; right: 0; bottom: 58px; width: auto;
+  max-height: calc(100% - 80px);
+  overflow-y: auto;
+  border-width: 2px 0 0;
+  border-radius: 12px 12px 0 0;
+}
+.os-mobile .os-menu-head { padding: 14px 16px; }
+.os-mobile .os-menu-item { min-height: 54px; padding: 8px 12px; font-size: 16px; gap: 14px; }
+.os-mobile .os-menu-item img { width: 36px; height: 36px; }
+.os-mobile .folder-grid .os-icon { width: 96px; }
 
 /* The "use the terminal" prompt in the 3D view. */
 #terminal-prompt {
