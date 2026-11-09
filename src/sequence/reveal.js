@@ -12,10 +12,10 @@
 // Emits 'breaker' {index, strength} and 'fans' so stage-4 audio can hook in.
 
 export const REVEAL = {
-  breaker1: 1.2, // s after the monitor starts (just after its screen powers on at 1.1)
-  breaker2: 2.35,
-  rowStagger: 0.3, // fixture rows strike nearest-first
-  backDelay: 0.25, // the back-wall wash after the last row
+  breaker1: 2.5, // s after the monitor starts (after the CRT degauss at 1.4 has died away)
+  breaker2: 3.75,
+  rowStagger: 0.4, // fixture rows strike nearest-first
+  backDelay: 0.3, // the back-wall wash after the last row
   bandDelay: 0.12, // first core band after breaker 1
   bandStagger: 0.11, // band i lights at bandDelay + i * bandStagger
   coreLedCascade: 0.9,

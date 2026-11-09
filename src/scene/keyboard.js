@@ -1,7 +1,7 @@
 // Full-size keyboard: standard QWERTY with function row, navigation cluster, arrows,
 // and numpad, laid out after the 1985 IBM Model M (101 keys, period-correct: no
-// Windows keys; bottom row Ctrl, Alt, long space, Alt, Ctrl). Keycaps are real geometry;
-// legends are one transparent decal drawn from the same layout table.
+// Windows keys; bottom row Ctrl, Alt, long space, Alt, Ctrl). Keycaps are real geometry
+// with legends printed onto their top faces via one shared atlas texture.
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { Builder } from './builder.js';
@@ -72,28 +72,53 @@ export function keyboardLayout() {
   return { keys, widthU: 22.5, depthU: 6 + ROW_GAP };
 }
 
-function legendTexture(keys, widthU, depthU, pxPerU = 96) {
+// Keycap colors and their printed-legend colors (legends are a darker shade of each cap,
+// per the user: printed on the caps, not floating above them).
+const CAP = {
+  light: { cap: '#e4dccb', ink: '#4a4337' },
+  mod: { cap: '#9d9484', ink: '#3a342b' },
+  amber: { cap: '#d8893a', ink: '#5a3210' },
+};
+const capKind = (k) => (k.accent === 'amber' ? 'amber' : k.mod ? 'mod' : 'light');
+
+/**
+ * One texture for every keycap: the keyboard layout drawn at pxPerU per key unit (cap color +
+ * printed legend per key), plus a strip of plain swatches below it for the caps' sides.
+ * Keycap top faces get UVs into their own key rectangle; side faces get the swatch.
+ */
+function keycapAtlas(keys, widthU, depthU, pxPerU = 96) {
   const c = document.createElement('canvas');
   c.width = Math.ceil(widthU * pxPerU);
-  c.height = Math.ceil(depthU * pxPerU);
+  c.height = Math.ceil((depthU + 1) * pxPerU);
   const ctx = c.getContext('2d');
-  ctx.clearRect(0, 0, c.width, c.height);
+  ctx.fillStyle = CAP.light.cap;
+  ctx.fillRect(0, 0, c.width, c.height);
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   for (const k of keys) {
+    const kind = CAP[capKind(k)];
+    ctx.fillStyle = kind.cap;
+    ctx.fillRect(k.x * pxPerU, k.y * pxPerU, k.w * pxPerU, k.h * pxPerU);
     if (!k.label) continue;
     const cx = (k.x + k.w / 2) * pxPerU;
     const cy = (k.y + k.h / 2) * pxPerU;
     const big = k.label.length === 1;
-    ctx.fillStyle = k.mod ? 'rgba(232,226,212,0.92)' : 'rgba(52,49,44,0.95)';
-    ctx.font = `${big ? 600 : 500} ${big ? pxPerU * 0.42 : pxPerU * (k.label.length > 5 ? 0.17 : 0.21)}px "Helvetica Neue", Arial, sans-serif`;
-    if (big) ctx.fillText(k.label, cx - pxPerU * 0.16, cy - pxPerU * 0.14); // top-left like real caps
+    ctx.fillStyle = kind.ink;
+    ctx.font = `${big ? 600 : 500} ${big ? pxPerU * 0.38 : pxPerU * (k.label.length > 5 ? 0.16 : 0.2)}px "Helvetica Neue", Arial, sans-serif`;
+    if (big) ctx.fillText(k.label, cx - pxPerU * 0.15, cy - pxPerU * 0.13); // top-left like real caps
     else ctx.fillText(k.label, cx, cy);
   }
+  // Swatch strip (one key unit tall) for cap sides: light, mod, amber.
+  const swatches = {};
+  ['light', 'mod', 'amber'].forEach((kind, i) => {
+    ctx.fillStyle = CAP[kind].cap;
+    ctx.fillRect(i * 2 * pxPerU, depthU * pxPerU, 2 * pxPerU, pxPerU);
+    swatches[kind] = [(i * 2 + 1) / widthU, 1 - (depthU + 0.5) / (depthU + 1)]; // UV of the swatch center
+  });
   const t = new THREE.CanvasTexture(c);
   t.colorSpace = THREE.SRGBColorSpace;
   t.anisotropy = 8;
-  return t;
+  return { texture: t, swatches, atlasW: widthU, atlasH: depthU + 1 };
 }
 
 /**
@@ -116,39 +141,33 @@ export function buildKeyboard(m) {
 
   const gap = 0.0022;
   const capH = 0.0105;
-  const geomCache = new Map();
-  const capGeom = (w, h) => {
-    const key = `${w}x${h}`;
-    if (!geomCache.has(key)) geomCache.set(key, new RoundedBoxGeometry(w * U - gap, capH, h * U - gap, 2, 0.0022));
-    return geomCache.get(key);
-  };
+  const atlas = keycapAtlas(keys, widthU, depthU);
+  const capMat = new THREE.MeshStandardMaterial({ map: atlas.texture, roughness: 0.5 });
   for (const k of keys) {
     if (k.w <= 0) continue;
+    const cw = k.w * U - gap, cd = k.h * U - gap;
+    const geom = new RoundedBoxGeometry(cw, capH, cd, 2, 0.0022);
+    // Remap UVs: top-facing vertices sample this key's rectangle in the atlas (so the legend
+    // is printed on the cap and follows its height); all other faces sample the plain swatch.
+    const pos = geom.attributes.position, nrm = geom.attributes.normal, uv = geom.attributes.uv;
+    const sw = atlas.swatches[capKind(k)];
+    for (let i = 0; i < pos.count; i++) {
+      if (nrm.getY(i) > 0.55) {
+        const uu = k.x + (pos.getX(i) / (k.w * U) + 0.5) * k.w;
+        const vv = k.y + (pos.getZ(i) / (k.h * U) + 0.5) * k.h;
+        uv.setXY(i, uu / atlas.atlasW, 1 - vv / atlas.atlasH);
+      } else {
+        uv.setXY(i, sw[0], sw[1]);
+      }
+    }
     const x = -W / 2 + (k.x + k.w / 2) * U;
     const z = zKeys0 + (k.y + k.h / 2) * U;
     const lift = ROW_LIFT[k.row] || 0; // k.row = index into the row table (index 1 is the gap row)
-    const mat = k.accent === 'amber' ? m.amberKey : k.mod ? m.keycapMod : m.keycap;
-    b.add(capGeom(k.w, k.h), mat, [x, caseH + capH / 2 + 0.002 + lift, z]);
+    b.add(geom, capMat, [x, caseH + capH / 2 + 0.002 + lift, z]);
+    geom.dispose();
   }
 
   const group = b.build({ name: 'keyboard', castShadow: true, receiveShadow: true });
-
-  // Legends: one decal just above the highest keycap tops.
-  const decal = new THREE.Mesh(
-    new THREE.PlaneGeometry(W, D),
-    new THREE.MeshStandardMaterial({
-      map: legendTexture(keys, widthU, depthU),
-      transparent: true,
-      depthWrite: false,
-      roughness: 0.6,
-      polygonOffset: true,
-      polygonOffsetFactor: -2,
-    }),
-  );
-  decal.rotation.x = -Math.PI / 2;
-  decal.position.set(0, caseH + capH + 0.0025 + Math.max(...ROW_LIFT) + 0.0003, zKeys0 + D / 2);
-  decal.renderOrder = 1;
-  group.add(decal);
 
   // Lock lights sit in the top band above the numpad.
   const padCenterX = -W / 2 + (18.5 + 2) * U;

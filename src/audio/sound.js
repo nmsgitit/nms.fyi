@@ -347,14 +347,15 @@ export class SoundDesign {
   /** A row of fluorescent tubes striking behind the glass: tink + stuttering buzz, then a steady hum. */
   tubeStrike(row = 0, t = this.now()) {
     const c = this.ctx, dest = this.server;
-    this.thump(t, { f0: 2200 + row * 260, f1: 1800, dur: 0.05, peak: 0.07, dest });
+    const level = [1, 0.6, 0.4][row] ?? 0.4; // later rows quieter: they land as the monitor arrives
+    this.thump(t, { f0: 2200 + row * 260, f1: 1800, dur: 0.05, peak: 0.07 * level, dest });
     const o = c.createOscillator(); o.type = 'square'; o.frequency.value = 120;
     const bp = c.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 900; bp.Q.value = 2;
     const g = c.createGain();
     // Same stutter as reveal.js fluorescentStrike(), then settle to a quiet hum.
     const pat = [[0, 0.85], [0.05, 0], [0.1, 0.6], [0.14, 0.04], [0.25, 1], [0.3, 0.3], [0.35, 0.8]];
     g.gain.setValueAtTime(0.0001, t);
-    for (const [dt, v] of pat) g.gain.setValueAtTime(Math.max(0.0001, v * 0.05), t + dt);
+    for (const [dt, v] of pat) g.gain.setValueAtTime(Math.max(0.0001, v * 0.05 * level), t + dt);
     g.gain.setTargetAtTime(0.009, t + 0.4, 0.4);
     o.connect(bp).connect(g).connect(dest);
     o.start(t);
@@ -371,12 +372,12 @@ export class SoundDesign {
     const pk = c.createBiquadFilter(); pk.type = 'peaking'; pk.frequency.value = 230; pk.Q.value = 3; pk.gain.value = 6;
     const g = c.createGain();
     g.gain.setValueAtTime(0.0001, t);
-    g.gain.linearRampToValueAtTime(0.17, t + 3.5); // "faint" per the brief: well under the footsteps
+    g.gain.linearRampToValueAtTime(0.17, t + 5); // "faint" per the brief: well under the footsteps
     src.connect(lp).connect(pk).connect(g).connect(this.server);
     src.start(t);
     this.loops.server.push({ src, gain: g });
     for (const [f, a] of [[147, 0.011], [196, 0.009], [233, 0.007]]) {
-      const h = this.tone(t, { freq: f, gain: a, fadeIn: 3.5, dest: this.server });
+      const h = this.tone(t, { freq: f, gain: a, fadeIn: 5, dest: this.server });
       // Slow beating so the blades don't sound like a test tone.
       const lfo = c.createOscillator(); lfo.frequency.value = rand(0.15, 0.4);
       const lg = c.createGain(); lg.gain.value = rand(1.5, 3);

@@ -18,6 +18,7 @@ import { buildServerRoom, populateServerRoom, buildServerLights } from './scene/
 import { buildSupercomputer, buildCoreLights } from './scene/supercomputer.js';
 import { WALK } from './scene/layout.js';
 import { MonitorRig, MONITOR } from './scene/monitor.js';
+import { WallCRTs } from './scene/wallCrt.js';
 import { Reveal } from './sequence/reveal.js';
 import { SoundDesign } from './audio/sound.js';
 import { Walk } from './camera/walk.js';
@@ -66,7 +67,10 @@ const pmrem = new THREE.PMREMGenerator(renderer);
 m.serverFloor.map.repeat.set(32 / 0.6, 27.4 / 0.6);
 
 const leds = new LedField(8000);
-scene.add(buildCommandRoom(m, leds));
+const commandRoom = buildCommandRoom(m, leds);
+scene.add(commandRoom);
+const wallCrts = new WallCRTs(commandRoom.userData.crtSlots); // bouncing-lamp screens on the side walls
+scene.add(wallCrts.group);
 scene.add(buildDesk(m, leds));
 
 const { builder: serverBuilder } = buildServerRoom(m);
@@ -220,6 +224,7 @@ function frame() {
     reveal.start(elapsed);
   }
   monitor.update(dt);
+  wallCrts.update(dt);
   reveal.update(elapsed);
   leds.update(elapsed);
   debug.update(dt);
@@ -238,4 +243,4 @@ window.addEventListener('resize', () => {
 });
 
 // Expose for console debugging in development.
-if (import.meta.env.DEV) Object.assign(window, { THREE, scene, camera, renderer, walk, setLit, leds, monitor, reveal, sound });
+if (import.meta.env.DEV) Object.assign(window, { THREE, scene, camera, renderer, walk, setLit, leds, monitor, reveal, sound, wallCrts });

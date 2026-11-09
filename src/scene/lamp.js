@@ -160,6 +160,44 @@ function buildSprite() {
   return c;
 }
 
+// Recolored lamp bodies (the flame keeps its colors) for the wall CRTs' bouncing logo,
+// which changes color at each wall hit like the old DVD screensaver.
+// Order matches the five bronze entries: outline, dark, mid, light, shine.
+const VARIANTS = {
+  bronze: null,
+  phosphor: ['#0a2a0f', '#1f6b2a', '#3fae4a', '#79e07c', '#c8ffc4'],
+  amber: ['#2a1600', '#7a4500', '#c97a00', '#ffb22e', '#ffe2a0'],
+  cyan: ['#062330', '#0f5a75', '#2a9fc4', '#6fdcff', '#d2f6ff'],
+  rose: ['#2b0a1a', '#7a1f4c', '#c24b84', '#f08cbd', '#ffd6ea'],
+};
+export const LAMP_VARIANTS = Object.keys(VARIANTS);
+const variantCache = new Map();
+const hexRgb = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
+
+/** The lamp sprite (SPRITE_W x SPRITE_H canvas) in a color variant. */
+export function getLampSprite(variant = 'bronze') {
+  sprite ||= buildSprite();
+  if (!VARIANTS[variant]) return sprite;
+  if (variantCache.has(variant)) return variantCache.get(variant);
+  const c = document.createElement('canvas');
+  c.width = SPRITE_W;
+  c.height = SPRITE_H;
+  const ctx = c.getContext('2d');
+  ctx.drawImage(sprite, 0, 0);
+  const img = ctx.getImageData(0, 0, SPRITE_W, SPRITE_H);
+  const d = img.data;
+  const from = PALETTE_RGB.slice(0, 5);
+  const to = VARIANTS[variant].map(hexRgb);
+  for (let i = 0; i < d.length; i += 4) {
+    if (!d[i + 3]) continue;
+    const k = from.findIndex(([r, g, b]) => r === d[i] && g === d[i + 1] && b === d[i + 2]);
+    if (k >= 0) [d[i], d[i + 1], d[i + 2]] = to[k];
+  }
+  ctx.putImageData(img, 0, 0);
+  variantCache.set(variant, c);
+  return c;
+}
+
 /** Draw the logo centered at (cx, cy), `size` px wide, with chunky nearest-neighbor pixels. */
 export function drawLamp(ctx, cx, cy, size) {
   sprite ||= buildSprite();

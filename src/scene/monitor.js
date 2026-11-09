@@ -20,11 +20,11 @@ export const MONITOR = {
   anchor: 4.75, // top of the fixed sleeve
   tilt: -0.17, // radians: screen angled up toward the standing viewer (~10°)
   doorsOpen: 0.9,
-  descentStart: 0.55,
-  descentDur: 3.4,
-  screenOn: 1.1,
+  descentStart: 0.6,
+  descentDur: 5.0, // slow, deliberate descent; also spreads out the sound events (user: overlap at steps 9-10)
+  screenOn: 1.4,
 };
-MONITOR.total = MONITOR.descentStart + MONITOR.descentDur; // ~3.95 s until it's down
+MONITOR.total = MONITOR.descentStart + MONITOR.descentDur; // 5.6 s: starts ~2.5 s into the walk (at the door)
 
 const easeInOutCubic = (k) => (k < 0.5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2);
 const easeOutBack = (k, s = 1.25) => 1 + (s + 1) * Math.pow(k - 1, 3) + s * Math.pow(k - 1, 2);

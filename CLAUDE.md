@@ -117,12 +117,13 @@ src/scene/keyboard.js full-size Model M-style QWERTY + nav cluster + numpad (lay
 src/scene/serverRoom.js   hall shell, window surround, trusses, fixtures, catwalks, data banks, racks, room lights
 src/scene/monitor.js  MonitorRig: hatch doors, shaft, telescoping arm, loads public/models/monitor.glb, descent timeline
 src/scene/screen.js   MonitorScreen: canvas -> emissive CanvasTexture (off / CRT warm-up / boot screen; stage 6 adds the OS)
-src/scene/lamp.js     boot logo: lamp drawn at 112×76 px, palette-quantized, scaled up nearest-neighbor (static, cached)
+src/scene/lamp.js     boot logo + getLampSprite(variant) recolors (bronze/phosphor/amber/cyan/rose): lamp drawn at 112×76 px, palette-quantized, scaled up nearest-neighbor (static, cached)
 tools/blender/check_monitor.py  imports the .glb and reports parts poking through the housing shell + corner renders
 tools/blender/monitor.py  Blender script that builds + exports the monitor (and renders previews)
 public/models/monitor.glb generated, committed (~0.55 MB) so the repo deploys as-is
 src/audio/sound.js    SoundDesign: all sounds synthesized with Web Audio (no files); room / server (glass) / fx buses
 src/sequence/reveal.js Reveal: power-up timeline (REVEAL timings, fluorescentStrike/lampStrike curves, events)
+src/scene/wallCrt.js  WallCRTs: side-wall CRT screens with the pixel lamp bouncing DVD-style (color changes on each wall hit)
 src/scene/supercomputer.js original supercomputer (dais, C-ring cabinets, bench, lathe core, bands, face panel) + core lights
 docs/references.md    written notes on the reference videos (timeline, style)
 reference/            (gitignored) extracted frames, contact sheets, spectrogram
@@ -220,10 +221,12 @@ Contact sheets with timestamps are in `reference/*/sheet_*.jpg`. The terminal st
 `reference/apollo/terminal_still.webp`.
 
 ## Monitor timing (monitor.js MONITOR)
-Starts when `walk.t >= walk.duration - MONITOR.total` (~4.1 s into the 8.1 s walk), so it arrives as
-the walk ends. Doors open 0 to 0.9 s, the arm descends 0.55 to 3.95 s (stowed attach y 4.08 to final 1.81:
-screen center ~1.40 m), screen power-on at 1.1 s, tilt to -0.17 rad over the last 40% of the drop,
-then a damped spring/sway. Stage 3 will tie the server-room reveal to this same clock.
+Starts when `walk.t >= walk.duration - MONITOR.total` (~2.5 s into the 8.1 s walk, as the visitor comes
+through the door and can see the hatch open), so it arrives as the walk ends. Doors open 0 to 0.9 s, the arm
+descends 0.6 to 5.6 s (slow: stowed attach y 4.08 to final 1.81, screen center ~1.40 m), screen power-on
+at 1.4 s, tilt to -0.17 rad over the last 40% of the drop, then a damped spring/sway. The server-room
+power-up runs on this same clock. (Timeline was spread out on 2026-11-09 because too many sounds landed
+together around footsteps 9 to 10; keep the major sound events about a second apart.)
 
 ## Sound (audio/sound.js)
 - **All procedural** (Web Audio): no audio files, so nothing to license. Never rip audio from the references.
@@ -248,10 +251,10 @@ then a damped spring/sway. Stage 3 will tie the server-room reveal to this same 
   Live: `sound.level()` reads the analyser RMS. Claude can't hear: the user must judge the actual sound.
 
 ## Power-up timing (sequence/reveal.js REVEAL; seconds on the monitor clock)
-Starts with the monitor (~4.1 s into the walk). Breaker 1 at 1.2 s: core spots `lampStrike` (fast flutter, then
-climb), ring light, bands climb (0.12 s + 0.11 s × i), core LEDs cascade over 0.9 s. Breaker 2 at 2.35 s:
-command room dips 40 % for 0.24 s, fixture rows `fluorescentStrike` 0.3 s apart nearest-first, back wash
-+0.25 s, banks cascade over 1.9 s, racks +0.25 s over 1.3 s. Events: `breaker` {index, strength}, `fans`
+Starts with the monitor (~2.5 s into the walk). CRT power-on 1.4 s. Breaker 1 at 2.5 s: core spots `lampStrike`
+(fast flutter, then climb), ring light, bands climb (0.12 s + 0.11 s × i), core LEDs cascade over 0.9 s.
+Breaker 2 at 3.75 s: command room dips 40 % for 0.24 s, fixture rows `fluorescentStrike` 0.4 s apart
+nearest-first (tube sounds at 100/60/40 % per row), back wash +0.3 s, fans fade in over 5 s, monitor lands 5.6 s, banks cascade over 1.9 s, racks +0.25 s over 1.3 s. Events: `breaker` {index, strength}, `fans`
 (stage-4 audio hooks). State becomes `lit` 4 s after breaker 2.
 
 ## Open design questions (for the user's change-request round)
@@ -262,6 +265,17 @@ command room dips 40 % for 0.24 s, fixture rows `fluorescentStrike` 0.3 s apart 
   a rougher screen, or a glass-reflection map so the boot logo stays clean.
 - The monitor first emerges above the frame (you're looking ahead). Possibly a scripted glance up as it drops.
 - Fluorescent warmth/greenness, bloom strength, walk speed (8.1 s).
+
+## Command room details (change round 1, 2026-11-09)
+- Walkway mat ends in a rounded tip at z 2.1 (ExtrudeGeometry stadium end). The trim is straight side strips plus a half RingGeometry.
+- Wall bands: side/back wainscot top and rail = the window-ledge cap height (`RAIL_Y0 = sill - 0.04`,
+  `RAIL_Y1 = sill + 0.01`, beigeLight) so they run continuously into the front ledge. Keep these tied to `sill`.
+- Side wall panels: 5 columns x 2 rows per side (the user thought six; told them it's ten), rounded-corner
+  slabs (`roundedSlab()`). Center column top+bottom = wall CRTs (`crtSlots` -> WallCRTs), the rest carry
+  blinking status lights (warm/amber/green/red, ~55 % blinking).
+- Keyboard legends are printed onto the keycaps: one atlas texture (cap color + darker legend per key) with
+  per-key UVs on top faces and a plain swatch on the sides (`keycapAtlas()` in keyboard.js). No decal.
+- Desk: the pedestal "kick plates" (black strips at the base) were removed at the user's request.
 
 ## Known rough edges
 - A faint reflection glow stays on the center pane in the dark state.

@@ -41,8 +41,6 @@ export function buildDesk(m, leds) {
   // Body: two pedestals plus a modesty panel, slightly inset from the top.
   for (const s of [-1, 1]) b.rbox(m.taupe, 0.62, top - 0.08, D - 0.12, 0.05, s * (W / 2 - 0.4), (top - 0.08) / 2, z);
   b.rbox(m.taupeDark, W - 1.4, top - 0.2, 0.06, 0.02, 0, (top - 0.2) / 2 + 0.08, z - D / 2 + 0.12);
-  // kick plates
-  for (const s of [-1, 1]) b.span(m.grille, s * (W / 2 - 0.4) - 0.28, s * (W / 2 - 0.4) + 0.28, 0, 0.06, z + D / 2 - 0.08, z + D / 2 - 0.05);
 
   // (No side wings or button sets: removed at the user's request on 2026-11-09. They
   // echoed the Apollo Core desk too closely.)
