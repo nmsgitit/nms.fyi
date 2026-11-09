@@ -354,6 +354,15 @@ nearest-first (tube sounds at 100/60/40 % per row), back wash +0.3 s, fans fade 
   bands are spaced 0.48 m from base+5.25.
 - **Window top rail removed** (the user found the beam across the top of the window awkward).
 
+## Change round 5 (2026-11-09)
+- **Baseboard all around:** the dark taupe baseboard (0.1 m) now runs along the back wall too (stops at x = ±0.70, behind
+  the door frame, like the wainscot band) and along the foot of the front window ledge (z 0.5..0.53), so it meets the
+  side-wall baseboards at every corner.
+- **Sign z-fight fixed:** the command-room ceiling slab used to end at z 8.2, exactly the corridor face of the back wall,
+  and flickered against it above the sign. It now ends inside the wall (zBack + 0.1). Never end a slab on another face.
+- **Window top rail back** (the user re-requested it, suspecting the old angle was off): it's now rotated with the glass
+  tilt (`[-tilt, 0, 0]`) and centered on the glass top edge, so it reads as the glass's own head rail, not a level beam.
+
 ## Desk, controls & monitor stowing (change round 2, 2026-11-09)
 - **Mouse:** `scene/mouse.js`: an unbranded two-button mouse in the spirit of IBM's PS/2-era mouse (to go with the
   Model M): boxy, pale gray, top sloping toward the hand, buttons split by a groove, on a dark pad right of the keyboard.

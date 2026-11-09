@@ -69,7 +69,8 @@ export function buildCommandRoom(m, leds) {
     const hx0 = HATCH.x - HATCH.w / 2, hx1 = HATCH.x + HATCH.w / 2;
     const hz0 = HATCH.z - HATCH.d / 2, hz1 = HATCH.z + HATCH.d / 2;
     b.span(m.ceiling, xMin, xMax, H, H + 0.1, zTop, hz0);
-    b.span(m.ceiling, xMin, xMax, H, H + 0.1, hz1, zBack + 0.2);
+    // Ends INSIDE the back wall (z 8.1): ending at its corridor face (8.2) z-fought with the sign wall.
+    b.span(m.ceiling, xMin, xMax, H, H + 0.1, hz1, zBack + 0.1);
     b.span(m.ceiling, xMin, hx0, H, H + 0.1, hz0, hz1);
     b.span(m.ceiling, hx1, xMax, H, H + 0.1, hz0, hz1);
   }
@@ -111,6 +112,9 @@ export function buildCommandRoom(m, leds) {
   b.span(m.wallLower, fw, xMax, 0, RAIL_Y0, zBack - 0.025, zBack);
   b.span(m.beigeLight, xMin, -fw, RAIL_Y0, RAIL_Y1, zBack - 0.035, zBack);
   b.span(m.beigeLight, fw, xMax, RAIL_Y0, RAIL_Y1, zBack - 0.035, zBack);
+  // Dark taupe baseboard continues along the back wall (stops behind the door frame like the band).
+  b.span(m.taupeDark, xMin, -fw, 0, 0.1, zBack - 0.03, zBack);
+  b.span(m.taupeDark, fw, xMax, 0, 0.1, zBack - 0.03, zBack);
 
   // ---- side walls
   const panelGeom = roundedSlab(1.24, 0.86, 0.11, PANEL_T);
@@ -154,6 +158,7 @@ export function buildCommandRoom(m, leds) {
 
   // ---- front: console ledge under the sill, then the tilted glass wall
   b.rbox(m.taupe, xMax - xMin, sill - 0.03, 0.5, 0.035, 0, (sill - 0.03) / 2, 0.25);
+  b.span(m.taupeDark, xMin, xMax, 0, 0.1, 0.5, 0.53); // baseboard along the front, at the foot of the ledge
   b.rbox(m.beigeLight, xMax - xMin, 0.05, 0.58, 0.02, 0, sill - 0.015, 0.21);
   // Under the ledge, between sill and floor at the very front.
   b.span(m.wallUpper, xMin, xMax, -0.06, sill - 0.03, ROOM.glassTopZ, 0);
@@ -166,7 +171,9 @@ export function buildCommandRoom(m, leds) {
   const mullionX = [xMin + 0.06, -1.8, 1.8, xMax - 0.06];
   for (const x of mullionX) b.rbox(m.beige, 0.12, glassLen, 0.16, 0.03, x, midY, midZ, [-tilt, 0, 0]);
   b.rbox(m.beige, xMax - xMin, 0.1, 0.18, 0.03, 0, sill, 0.0); // bottom rail
-  // (No top rail: the user found the beam across the top of the window awkward.)
+  // Top rail along the glass's top edge, tilted WITH the glass (like the mullions). An earlier level
+  // rail didn't follow the lean and looked off; the user asked for it back, angled correctly.
+  b.rbox(m.beige, xMax - xMin, 0.14, 0.18, 0.03, 0, H - 0.07 * Math.cos(tilt), zTop + 0.07 * Math.sin(tilt), [-tilt, 0, 0]);
   const panes = [[xMin + 0.06, -1.8], [-1.8, 1.8], [1.8, xMax - 0.06]];
   for (const [x0, x1] of panes) {
     b.add(new THREE.PlaneGeometry(x1 - x0 - 0.12, glassLen - 0.1), m.glass, [(x0 + x1) / 2, midY, midZ], [-tilt, 0, 0]);
