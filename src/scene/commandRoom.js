@@ -117,15 +117,17 @@ export function buildCommandRoom(m, leds) {
     b.span(m.wallLower, Math.min(xw, xw - s * 0.025), Math.max(xw, xw - s * 0.025), 0, RAIL_Y0, 0.5, zBack);
     b.span(m.beigeLight, Math.min(xw, xw - s * 0.035), Math.max(xw, xw - s * 0.035), RAIL_Y0, RAIL_Y1, 0.5, zBack);
 
-    // Raised wall panels, 5 columns x 2 rows, with rounded corners. The center column's
-    // top and bottom panels are wall CRTs (screens are built by wallCrt.js from crtSlots);
+    // Raised wall panels, 5 columns x 2 rows, with rounded corners. The second and third columns'
+    // panels are wall CRTs (screens are built by wallCrt.js from crtSlots);
     // every other panel carries a grid of blinking status lights.
     const cols = [1.25, 2.65, 4.05, 5.45, 6.85];
     const rows = [1.62, 2.62];
     const rotY = -s * Math.PI / 2; // shape x -> world z, extrusion -> into the room
     cols.forEach((z, ci) => {
       rows.forEach((y, ri) => {
-        const isCrt = ci === 2;
+        // CRT columns: z 2.65 and 4.05 (the 6.85 column is barely visible, so the visible four
+        // read lights, CRT, CRT, lights: the user asked for this balance).
+        const isCrt = ci === 1 || ci === 2;
         b.add(panelGeom, isCrt ? m.beige : m.panelInset, [xw, y, z], [0, rotY, 0]);
         const face = xw - s * PANEL_T; // the panel's front surface
         if (isCrt) {

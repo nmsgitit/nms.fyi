@@ -271,7 +271,8 @@ nearest-first (tube sounds at 100/60/40 % per row), back wash +0.3 s, fans fade 
 - Wall bands: side/back wainscot top and rail = the window-ledge cap height (`RAIL_Y0 = sill - 0.04`,
   `RAIL_Y1 = sill + 0.01`, beigeLight) so they run continuously into the front ledge. Keep these tied to `sill`.
 - Side wall panels: 5 columns x 2 rows per side (the user thought six; told them it's ten), rounded-corner
-  slabs (`roundedSlab()`). Center column top+bottom = wall CRTs (`crtSlots` -> WallCRTs), the rest carry
+  slabs (`roundedSlab()`). Columns z 2.65 and 4.05 (top + bottom) = 8 wall CRTs (`crtSlots` -> WallCRTs); the
+  z 6.85 column is barely visible on the walk, so the visible four read lights, CRT, CRT, lights. The rest carry
   blinking status lights (warm/amber/green/red, ~55 % blinking).
 - Keyboard legends are printed onto the keycaps: one atlas texture (cap color + darker legend per key) with
   per-key UVs on top faces and a plain swatch on the sides (`keycapAtlas()` in keyboard.js). No decal.
