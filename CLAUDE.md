@@ -21,7 +21,8 @@ Apollo Core styling) and must be read before visual work.
    sterile white, light gray, and 1980s **taupe/beige** across BOTH rooms.
 2. **Camera walks** (bobbing like a person, not hovering) from the command-room
    entrance to front-center at the glass, with **footstep** sounds.
-3. A **command desk** at front-center with a **keyboard**: a **standard QWERTY layout with a numpad**
+3. A **command desk** at front-center with a **keyboard** (NO side wings / button sets: the user
+   asked to remove the Apollo-style left and right button decks on 2026-11-09): a **standard QWERTY layout with a numpad**
    (built as a 1985 IBM Model M-style 101-key board: F-row, nav cluster, arrows, numpad,
    two-tone beige/taupe caps, lock lights, no Windows keys, which suits the period).
 4. As the user approaches, an **overhead data-terminal monitor lowers from the
@@ -61,7 +62,7 @@ instead of blocking on them.
 | 0 | Reference capture, project scaffold, repo | ✅ done 2026-11-09 |
 | 1 | Rough 3D version: command room, glass wall, server room, supercomputer, desk + keyboard, walking camera, palette/lighting | ✅ 2026-11-09 |
 | 2 | Overhead monitor (Blender-scripted bulbous CRT .glb), ceiling hatch doors + shaft, 3-stage telescoping arm, descent synced to the walk, CRT warm-up + placeholder boot card | ✅ 2026-11-09 |
-| 3 | Reveal timeline: core lights, then room ~1 s later; LED cascade; fixtures | todo (power hooks exist) |
+| 3 | Server-room power-up on the monitor clock: breaker 1 core (spots, ring, climbing bands, core LEDs), breaker 2 ~1.15 s later room (surge dip, fluorescent row strikes, bank/rack LED cascades) | ✅ 2026-11-09 |
 | 4 | Sound: footsteps, breaker clunks, fan hum, monitor motor, CRT whine | todo |
 | 5 | Boot screen on the monitor: 1980s pixel-art bronze oil lamp with a lit flame (lamp.js), serif title, progress bar | ✅ 2026-11-09 (the boot to OS hand-off comes in stage 6) |
 | 6 | Mock OS: XP-like desktop, lamp launcher, Exit; E to focus/fullscreen | todo; needs discussion |
@@ -85,11 +86,14 @@ npm start          # serves dist/ on $PORT (default 3000)
 ```
 
 ### URL flags (development)
-- `?skip`: start at the desk, no gate, no walk.
+- `?skip`: skip the intro: at the desk, monitor down, server room powered. Add `?dark` to keep it unpowered.
 - `?lit`: server room fully powered (preview the layout).
 - `?debug`: orbit camera + HUD (fps, draw calls, camera position).
-- Keys: **L** toggles server power, **R** restarts the walk, **M** replays the monitor drop, **O** orbit cam, **H** HUD.
-- In dev, `window.scene/camera/renderer/walk/setLit/power/applyPower/leds/monitor` are exposed.
+- Keys: **L** toggles server power, **R** restarts the walk, **M** replays monitor drop + power-up together,
+  **P** replays just the power-up, **O** orbit cam, **H** HUD.
+- In dev, `window.scene/camera/renderer/walk/setLit/leds/monitor/reveal` are exposed.
+- Deterministic reveal stepping (screenshots stall rAF): replace `reveal.update` and `leds.update` with no-ops
+  driven by your own clock, `reveal.start(0)`, then call the original `update(T)` in small increments.
 - Screenshots stall rAF in the Claude-in-Chrome tab, so wall-clock timing checks are unreliable there.
   Freeze and step instead: set `walk.state='idle'`, call `walk.apply(t)`, and `monitor.state='frozen'; monitor.apply(t)`.
 
@@ -117,6 +121,7 @@ src/scene/lamp.js     boot logo: lamp drawn at 112×76 px, palette-quantized, sc
 tools/blender/check_monitor.py  imports the .glb and reports parts poking through the housing shell + corner renders
 tools/blender/monitor.py  Blender script that builds + exports the monitor (and renders previews)
 public/models/monitor.glb generated, committed (~0.55 MB) so the repo deploys as-is
+src/sequence/reveal.js Reveal: power-up timeline (REVEAL timings, fluorescentStrike/lampStrike curves, events)
 src/scene/supercomputer.js original supercomputer (dais, C-ring cabinets, bench, lathe core, bands, face panel) + core lights
 docs/references.md    written notes on the reference videos (timeline, style)
 reference/            (gitignored) extracted frames, contact sheets, spectrogram
@@ -148,11 +153,11 @@ reference/            (gitignored) extracted frames, contact sheets, spectrogram
 - Light colors: `PALETTE.fluorescent` (aged tube, faint green cast) for room lighting in both
   rooms, `PALETTE.lightWhite` (cool) only for the supercomputer spots so it stands out.
 - Emissives that are "off" must be pure black (any small floor value shows as glowing outlines).
-- Server-room power: `power.core` and `power.room` (0..1), applied by `applyPower()` in
-  main.js to the light intensities (`max` values in serverRoom.js/supercomputer.js) and
-  fixture/band emissive colors. LED groups: `cmd`, `desk` (on from start), `core`, `banks`,
-  `racks` (off until the reveal). `leds.setGroup(name, on, time, cascade)` cascades
-  by each LED's `delay`.
+- Server-room power is owned by `Reveal` (sequence/reveal.js). `apply(core, row(r), dip, band(i))` sets
+  core spots + ring + per-band emissives, per-row fixture materials (`m.serverFixtureRows[0..3]`, 0 =
+  nearest the window) with the room RectAreaLights tagged by `row`, and the command-room surge dip
+  (lights + panel emissives scaled from their base). LED groups: `cmd`, `desk` (on from start), `core`,
+  `banks`, `racks` (off until the reveal). `leds.setGroup(name, on, time, cascade)` cascades by each LED's `delay`.
 - Bloom: UnrealBloom strength 0.38, radius 0.5, threshold 0.95. Tone mapping is ACES via OutputPass.
 
 ## Performance baseline
@@ -218,6 +223,13 @@ Starts when `walk.t >= walk.duration - MONITOR.total` (~4.1 s into the 8.1 s wal
 the walk ends. Doors open 0 to 0.9 s, the arm descends 0.55 to 3.95 s (stowed attach y 4.08 to final 1.81:
 screen center ~1.40 m), screen power-on at 1.1 s, tilt to -0.17 rad over the last 40% of the drop,
 then a damped spring/sway. Stage 3 will tie the server-room reveal to this same clock.
+
+## Power-up timing (sequence/reveal.js REVEAL; seconds on the monitor clock)
+Starts with the monitor (~4.1 s into the walk). Breaker 1 at 1.2 s: core spots `lampStrike` (fast flutter, then
+climb), ring light, bands climb (0.12 s + 0.11 s × i), core LEDs cascade over 0.9 s. Breaker 2 at 2.35 s:
+command room dips 40 % for 0.24 s, fixture rows `fluorescentStrike` 0.3 s apart nearest-first, back wash
++0.25 s, banks cascade over 1.9 s, racks +0.25 s over 1.3 s. Events: `breaker` {index, strength}, `fans`
+(stage-4 audio hooks). State becomes `lit` 4 s after breaker 2.
 
 ## Open design questions (for the user's change-request round)
 - **Composition:** from the standing position the monitor arm lines up exactly with the supercomputer
