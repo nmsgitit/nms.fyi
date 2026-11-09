@@ -47,14 +47,17 @@ Reference sites the user likes: iqbalsurya.com (usable retro desktop), hydeforce
 (Three.js 3D world). We're NOT giving movement controls like HydeForce.
 
 **Work in stages with pauses for user feedback.** Ask before large design decisions.
+The user plans a round of **change requests for sequence and design after all stages are
+done**, so build each stage completely and keep a list of open design questions (below)
+instead of blocking on them.
 
 ## Stage plan / status
 
 | Stage | Content | Status |
 |---|---|---|
 | 0 | Reference capture, project scaffold, repo | ✅ done 2026-11-09 |
-| 1 | Rough 3D version: command room, glass wall, server room, supercomputer, desk + keyboard, walking camera, palette/lighting | ✅ first pass 2026-11-09, **awaiting user feedback** |
-| 2 | Overhead monitor model (bulbous; likely Blender-scripted .glb) + ceiling hatch + descent animation | todo |
+| 1 | Rough 3D version: command room, glass wall, server room, supercomputer, desk + keyboard, walking camera, palette/lighting | ✅ 2026-11-09 |
+| 2 | Overhead monitor (Blender-scripted bulbous CRT .glb), ceiling hatch doors + shaft, 3-stage telescoping arm, descent synced to the walk, CRT warm-up + placeholder boot card | ✅ 2026-11-09 |
 | 3 | Reveal timeline: core lights, then room ~1 s later; LED cascade; fixtures | todo (power hooks exist) |
 | 4 | Sound: footsteps, breaker clunks, fan hum, monitor motor, CRT whine | todo |
 | 5 | Boot screen on the monitor (oil lamp + serif title), rendered to a canvas texture | todo |
@@ -82,8 +85,10 @@ npm start          # serves dist/ on $PORT (default 3000)
 - `?skip`: start at the desk, no gate, no walk.
 - `?lit`: server room fully powered (preview the layout).
 - `?debug`: orbit camera + HUD (fps, draw calls, camera position).
-- Keys: **L** toggles server power, **R** restarts the walk, **O** orbit cam, **H** HUD.
-- In dev, `window.scene/camera/renderer/walk/setLit/power/applyPower/leds` are exposed.
+- Keys: **L** toggles server power, **R** restarts the walk, **M** replays the monitor drop, **O** orbit cam, **H** HUD.
+- In dev, `window.scene/camera/renderer/walk/setLit/power/applyPower/leds/monitor` are exposed.
+- Screenshots stall rAF in the Claude-in-Chrome tab, so wall-clock timing checks are unreliable there.
+  Freeze and step instead: set `walk.state='idle'`, call `walk.apply(t)`, and `monitor.state='frozen'; monitor.apply(t)`.
 
 ## Code map
 
@@ -103,6 +108,10 @@ src/scene/commandRoom.js  room geometry + command-room lights
 src/scene/desk.js     command desk, side wings, button decks, indicator row; places the keyboard
 src/scene/keyboard.js full-size Model M-style QWERTY + nav cluster + numpad (layout table -> keycaps + one legend decal)
 src/scene/serverRoom.js   hall shell, window surround, trusses, fixtures, catwalks, data banks, racks, room lights
+src/scene/monitor.js  MonitorRig: hatch doors, shaft, telescoping arm, loads public/models/monitor.glb, descent timeline
+src/scene/screen.js   MonitorScreen: canvas -> emissive CanvasTexture (off / CRT warm-up / boot card; stage 5-6 extend)
+tools/blender/monitor.py  Blender script that builds + exports the monitor (and renders previews)
+public/models/monitor.glb generated, committed (~0.55 MB) so the repo deploys as-is
 src/scene/supercomputer.js original supercomputer (dais, C-ring cabinets, bench, lathe core, bands, face panel) + core lights
 docs/references.md    written notes on the reference videos (timeline, style)
 reference/            (gitignored) extracted frames, contact sheets, spectrogram
@@ -148,11 +157,23 @@ Pixel ratio is capped at 1.5.
 
 ## Asset policy
 - Procedural geometry lives in code (committed).
-- For bulbous/high-poly pieces (the monitor especially), use **Blender driven by Python
-  scripts** (user approved this). Commit the **scripts** (e.g. `tools/blender/*.py`), and keep
-  generated `.glb`/`.blend` files in `assets-src/` (gitignored, too large for GitHub)
-  or `public/models/` if small. Blender is not installed yet; the likely route is
-  apt in claudebox, or the Flathub version on the host.
+- For bulbous/high-poly pieces use **Blender driven by Python scripts** (user approved).
+  Commit the scripts (`tools/blender/*.py`). Commit small generated `.glb`s (< ~2 MB) to
+  `public/models/` so the site deploys from the repo. Keep big sources, previews and `.blend`
+  files in `assets-src/` (gitignored).
+- **Blender 5.2.2 is RPM-layered on the host** (the user wants to inspect models themselves).
+  Run it from claudebox:
+  ```bash
+  distrobox-host-exec blender -b --factory-startup -P "$PWD/tools/blender/monitor.py" -- \
+      --out "$PWD/public/models/monitor.glb" --preview "$PWD/assets-src/previews/monitor"
+  ```
+  Fedora packaging bug: Blender's OCIO config (v2.5) is newer than Fedora's OpenColorIO (2.4),
+  so only the "Standard" view transform exists (no AgX/Filmic). Scripts must fall back. Exports are unaffected.
+  `distrobox-host-exec` does NOT forward stdin (no heredocs into host commands).
+- Monitor model contract: origin = arm attachment; the `Tilt` empty sits at the hub axis (the site
+  rotates `Tilt.x`); material names `housing, bezel, grille, screen, led, yoke, steel, knob` are remapped to
+  site materials in monitor.js; the `Screen` mesh has 0..1 UVs (canvas texture needs `flipY = false`).
+  Gotcha: `bmesh.ops.create_grid(calc_uvs=True)` only writes UVs if a UV layer exists first.
 - Sounds: synthesize with Web Audio or use CC0 sources. **Never rip audio from the
   reference videos.** Record sources and licenses in `docs/assets.md` when added.
 - Original designs only: take mood/pacing from references, never copy their models,
@@ -178,8 +199,20 @@ ffmpeg -ss 22 -i "$A" -t 9.5 -vf fps=2 -q:v 2 reference/apollo/frames/apollo_%02
 Contact sheets with timestamps are in `reference/*/sheet_*.jpg`. The terminal still is
 `reference/apollo/terminal_still.webp`.
 
-## Known rough edges (stage 1)
-- The desk wing button decks read as thin dark blades from the standing position; rework with the monitor stage.
+## Monitor timing (monitor.js MONITOR)
+Starts when `walk.t >= walk.duration - MONITOR.total` (~4.1 s into the 8.1 s walk), so it arrives as
+the walk ends. Doors open 0 to 0.9 s, the arm descends 0.55 to 3.95 s (stowed attach y 4.08 to final 1.81:
+screen center ~1.40 m), screen power-on at 1.1 s, tilt to -0.17 rad over the last 40% of the drop,
+then a damped spring/sway. Stage 3 will tie the server-room reveal to this same clock.
+
+## Open design questions (for the user's change-request round)
+- **Composition:** from the standing position the monitor arm lines up exactly with the supercomputer
+  core column, so the monitor plus arm hide the core's center. Options: offset hatch/monitor sideways,
+  shift the camera end point, lower the monitor, or redesign the core silhouette (wider top).
+- The monitor first emerges above the frame (you're looking ahead). Possibly a scripted glance up as it drops.
+- Fluorescent warmth/greenness, bloom strength, walk speed (8.1 s).
+
+## Known rough edges
 - A faint reflection glow stays on the center pane in the dark state.
 - No sound yet (footstep events are already emitted by walk.js).
 - No mobile/low-end fallback yet. WebGL2-missing shows a message on the gate.

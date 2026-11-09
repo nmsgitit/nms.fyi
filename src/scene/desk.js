@@ -47,17 +47,19 @@ export function buildDesk(m, leds) {
   // Angled side wings with button decks (soft, rounded take on the pod-console look).
   for (const s of [-1, 1]) {
     const wx = s * (W / 2 + 0.05);
-    b.rbox(m.beige, 0.34, 0.5, D - 0.04, 0.08, wx, top + 0.18, z, [0, 0, -s * 0.18]);
-    // button deck plate, tilted toward the user
-    const deckRot = [-0.5, 0, -s * 0.18];
-    b.rbox(m.taupeDark, 0.24, 0.025, 0.46, 0.01, wx - s * 0.03, top + 0.445, z + 0.02, deckRot);
-    for (let r = 0; r < 4; r++) {
+    // The wing's top face leans inward, toward the user at the center.
+    const wingRot = [0, 0, s * 0.22];
+    const wingPos = new THREE.Vector3(wx, top + 0.18, z);
+    const wingEuler = new THREE.Euler(...wingRot);
+    const onWing = (lx, ly, lz) => new THREE.Vector3(lx, ly, lz).applyEuler(wingEuler).add(wingPos).toArray();
+    b.rbox(m.beige, 0.34, 0.5, D - 0.04, 0.08, wx, top + 0.18, z, wingRot);
+    // Button panel set into the wing top (local y = 0.25 is the top face).
+    b.rbox(m.taupeDark, 0.23, 0.014, 0.54, 0.006, ...onWing(0, 0.247, 0), wingRot);
+    for (let r = 0; r < 5; r++) {
       for (let c = 0; c < 3; c++) {
-        const bz = z - 0.15 + r * 0.1;
-        const by = top + 0.455 - (r - 1.5) * 0.05;
-        const bx = wx - s * 0.03 + (c - 1) * 0.065;
-        const amber = (r === 0 && c === (s > 0 ? 2 : 0));
-        b.rbox(amber ? m.amberKey : m.beigeLight, 0.045, 0.03, 0.05, 0.008, bx, by, bz, deckRot, 2);
+        const amber = (r === 0 && c === (s > 0 ? 2 : 0)) || (r === 3 && c === 1);
+        const [bx, by, bz] = onWing((c - 1) * 0.066, 0.262, -0.2 + r * 0.1);
+        b.rbox(amber ? m.amberKey : m.beigeLight, 0.048, 0.022, 0.06, 0.007, bx, by, bz, wingRot, 2);
       }
     }
   }

@@ -19,8 +19,15 @@ export function buildCommandRoom(m, leds) {
   b.span(m.taupeDark, xMin, xMin + 0.03, 0, 0.1, 0, zBack);
   b.span(m.taupeDark, xMax - 0.03, xMax, 0, 0.1, 0, zBack);
 
-  // ---- ceiling, light panels, monitor hatch
-  b.span(m.ceiling, xMin, xMax, H, H + 0.1, zTop, zBack + 0.2);
+  // ---- ceiling (with an opening for the monitor hatch), light panels
+  {
+    const hx0 = HATCH.x - HATCH.w / 2, hx1 = HATCH.x + HATCH.w / 2;
+    const hz0 = HATCH.z - HATCH.d / 2, hz1 = HATCH.z + HATCH.d / 2;
+    b.span(m.ceiling, xMin, xMax, H, H + 0.1, zTop, hz0);
+    b.span(m.ceiling, xMin, xMax, H, H + 0.1, hz1, zBack + 0.2);
+    b.span(m.ceiling, xMin, hx0, H, H + 0.1, hz0, hz1);
+    b.span(m.ceiling, hx1, xMax, H, H + 0.1, hz0, hz1);
+  }
   const panels = [];
   for (const x of [-3, 0, 3]) for (const z of [3.1, 5.9]) panels.push([x, z, 2.2, 0.9]);
   panels.push([-3, 1.35, 2.2, 0.7], [3, 1.35, 2.2, 0.7]);
@@ -32,11 +39,9 @@ export function buildCommandRoom(m, leds) {
     b.span(m.beige, x - w / 2 - 0.06, x - w / 2, H - 0.03, H - 0.013, z - d / 2, z + d / 2);
     b.span(m.beige, x + w / 2, x + w / 2 + 0.06, H - 0.03, H - 0.013, z - d / 2, z + d / 2);
   }
-  // Hatch (closed for now; the monitor drops through it in stage 2).
+  // Hatch trim frame. The doors, shaft and monitor rig live in monitor.js.
   const hx0 = HATCH.x - HATCH.w / 2, hx1 = HATCH.x + HATCH.w / 2;
   const hz0 = HATCH.z - HATCH.d / 2, hz1 = HATCH.z + HATCH.d / 2;
-  b.span(m.taupe, hx0, hx1, H - 0.02, H, hz0, hz1);
-  b.span(m.grille, hx0 - 0.02, hx1 + 0.02, H - 0.025, H - 0.02, HATCH.z - 0.005, HATCH.z + 0.005); // door seam
   b.span(m.trim, hx0 - 0.07, hx1 + 0.07, H - 0.03, H - 0.01, hz0 - 0.07, hz0);
   b.span(m.trim, hx0 - 0.07, hx1 + 0.07, H - 0.03, H - 0.01, hz1, hz1 + 0.07);
   b.span(m.trim, hx0 - 0.07, hx0, H - 0.03, H - 0.01, hz0, hz1);
