@@ -311,7 +311,7 @@ function frame() {
   focus.update(dt);
   if (focus.paused3D) { requestAnimationFrame(frame); return; } // desktop covers the screen: skip 3D work
   look.update(dt);
-  intro.update(dt, elapsed);
+  intro.update(dt);
   if (!debug.orbitActive()) walk.update(dt);
   if (monitor.state === 'stowed' && walk.state === 'walking' && walk.t >= monitorTrigger) {
     monitor.start();

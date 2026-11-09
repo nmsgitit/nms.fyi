@@ -12,8 +12,9 @@ export const ROOM = {
 };
 
 // Corridor is as tall as the room so the sign fits above the (lower) hydraulic door.
-export const CORRIDOR = { halfW: 1.2, height: 3.2, zStart: 8.2, zEnd: 12 };
-export const DOOR = { halfW: 1.12, height: 2.3, z: 8.1 }; // hydraulic door (door.js) sits in the back wall at z 8.1
+export const CORRIDOR = { halfW: 1.2, height: 3.5, zStart: 8.2, zEnd: 12 };
+// Entrance door (door.js, Alien: Isolation-style octagonal panel in a chamfered frame) in the back wall at z 8.1.
+export const DOOR = { halfW: 0.65, height: 2.1, z: 8.1, chamfer: 0.3, frameHalfW: 0.95, frameHeight: 2.42 };
 
 export const SERVER = {
   floorY: -4.5,

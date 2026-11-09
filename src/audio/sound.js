@@ -340,13 +340,6 @@ export class SoundDesign {
     }
   }
 
-  /** One heavy locking bolt: deep thunk + metallic clack. */
-  bolt(t, k = 1, dest = this.fx) {
-    this.thump(t, { f0: 85, f1: 42, dur: 0.22, peak: 0.5 * k, dest });
-    this.burst(t, { dur: 0.05, freq: 1300, Q: 2.2, peak: 0.35 * k, decay: 0.045, dest });
-    this.burst(t + 0.008, { dur: 0.03, freq: 3400, Q: 3, peak: 0.12 * k, decay: 0.025, dest });
-  }
-
   /** Hydraulic hiss: a noise burst with a pressure-release attack, shaped by an envelope. */
   hiss(t, { dur, peak, freq = 1800, attack = 0.03, dest = this.fx }) {
     const c = this.ctx;
@@ -365,57 +358,37 @@ export class SoundDesign {
     src.start(t, rand(0, 2)); src.stop(t + dur + 0.05);
   }
 
-  /** Low hydraulic rumble + metal grinding while the heavy leaves slide (dur seconds). */
-  slideRumble(t, dur, peak = 1, dest = this.fx) {
-    const c = this.ctx;
-    const o = c.createOscillator(); o.type = 'sawtooth';
-    o.frequency.setValueAtTime(38, t);
-    o.frequency.linearRampToValueAtTime(52, t + dur * 0.5);
-    o.frequency.linearRampToValueAtTime(40, t + dur);
-    const lp = c.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 220;
-    const g = c.createGain();
-    g.gain.value = 0.0001;
-    g.gain.setValueAtTime(0.0001, t);
-    g.gain.linearRampToValueAtTime(0.16 * peak, t + 0.25);
-    g.gain.setValueAtTime(0.14 * peak, t + dur - 0.2);
-    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-    o.connect(lp).connect(g).connect(dest);
-    o.start(t); o.stop(t + dur + 0.05);
-    // Grinding: low noise with a slow wobble.
-    const src = c.createBufferSource(); src.buffer = this.noise; src.loop = true;
-    const bp = c.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 420; bp.Q.value = 1.4;
-    const ng = c.createGain();
-    ng.gain.value = 0.0001;
-    ng.gain.setValueAtTime(0.0001, t);
-    ng.gain.linearRampToValueAtTime(0.09 * peak, t + 0.3);
-    ng.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-    const lfo = c.createOscillator(); lfo.frequency.value = 7;
-    const lg = c.createGain(); lg.gain.value = 120;
-    lfo.connect(lg).connect(bp.frequency);
-    src.connect(bp).connect(ng).connect(dest);
-    src.start(t, rand(0, 2)); src.stop(t + dur + 0.05); lfo.start(t); lfo.stop(t + dur + 0.05);
-  }
-
-  /** Hydraulic door opening (intro.js DOOR_TIMING): bolts, pressure hiss, slide, end stop. */
+  /**
+   * Entrance door opening (intro.js DOOR_TIMING): three affirmative chirps (the green light
+   * flashes with them), then a brief pneumatic hiss as the panel slides up, and a light clunk.
+   */
   doorOpen(D, t0 = this.now()) {
-    D.bolts.forEach((bt, i) => this.bolt(t0 + bt, 0.8 + i * 0.1));
-    this.hiss(t0 + D.hiss, { dur: D.openDur + 0.9, peak: 0.32, attack: 0.02 });
-    this.slideRumble(t0 + D.openStart, D.openDur);
+    const c = this.ctx, dest = this.fx;
+    [1480, 1760, 2090].forEach((f, i) => {
+      const t = t0 + D.chirps[i];
+      for (const [type, amp] of [['sine', 0.16], ['square', 0.018]]) {
+        const o = c.createOscillator(); o.type = type;
+        o.frequency.setValueAtTime(f, t);
+        o.frequency.linearRampToValueAtTime(f * 1.04, t + 0.06);
+        const g = c.createGain();
+        this.env(g.gain, t, 0.004, amp, 0.075);
+        o.connect(g).connect(dest);
+        o.start(t); o.stop(t + 0.12);
+      }
+    });
+    this.hiss(t0 + D.hiss, { dur: 0.5, peak: 0.26, freq: 2400, attack: 0.015 });
     const te = t0 + D.openStart + D.openDur;
-    this.thump(te, { f0: 62, f1: 34, dur: 0.4, peak: 0.6, dest: this.fx });
-    this.burst(te, { dur: 0.08, freq: 900, Q: 1.6, peak: 0.22, decay: 0.07, dest: this.fx });
+    this.thump(te, { f0: 130, f1: 70, dur: 0.14, peak: 0.12, dest });
+    this.burst(te, { dur: 0.04, freq: 1800, Q: 2, peak: 0.07, decay: 0.035, dest });
   }
 
-  /** Hydraulic door closing behind the visitor: hiss + slide, heavy slam, bolts relock. */
+  /** Entrance door closing behind the visitor: brief hiss, then a soft thud. */
   doorClose(D, t0 = this.now()) {
-    this.hiss(t0, { dur: D.closeDur + 0.3, peak: 0.24, freq: 1500, attack: 0.04 });
-    this.slideRumble(t0, D.closeDur, 0.9);
+    const dest = this.fx;
+    this.hiss(t0, { dur: 0.45, peak: 0.22, freq: 2200, attack: 0.02 });
     const ts = t0 + D.closeDur;
-    this.thump(ts, { f0: 55, f1: 28, dur: 0.7, peak: 0.85, dest: this.fx });
-    this.burst(ts, { dur: 0.12, freq: 700, Q: 1.2, peak: 0.3, decay: 0.11, dest: this.fx });
-    this.burst(ts + 0.01, { dur: 0.05, freq: 2600, Q: 2.5, peak: 0.16, decay: 0.045, dest: this.fx });
-    this.bolt(ts + 0.18, 0.7);
-    this.bolt(ts + 0.3, 0.6);
+    this.thump(ts, { f0: 95, f1: 50, dur: 0.25, peak: 0.26, dest });
+    this.burst(ts, { dur: 0.06, freq: 700, Q: 1.3, peak: 0.1, decay: 0.05, dest });
   }
 
   /** CRT power-on: degauss "bwoom", static crackle, then a faint flyback whine. */

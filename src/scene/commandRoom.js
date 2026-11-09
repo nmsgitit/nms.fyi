@@ -93,18 +93,17 @@ export function buildCommandRoom(m, leds) {
   b.span(m.trim, hx1, hx1 + 0.07, H - 0.03, H - 0.01, hz0, hz1);
 
   // ---- back wall with door opening
-  const dw = CORRIDOR.halfW;
-  b.span(m.wallUpper, xMin, -dw, 0, H, zBack, zBack + 0.2);
-  b.span(m.wallUpper, dw, xMax, 0, H, zBack, zBack + 0.2);
-  b.span(m.wallUpper, -dw, dw, DOOR.height, H, zBack, zBack + 0.2); // above the door (sign side faces the corridor)
-  b.span(m.wallLower, xMin, -dw - 0.25, 0, RAIL_Y0, zBack - 0.025, zBack);
-  b.span(m.wallLower, dw + 0.25, xMax, 0, RAIL_Y0, zBack - 0.025, zBack);
-  b.span(m.beigeLight, xMin, -dw - 0.25, RAIL_Y0, RAIL_Y1, zBack - 0.035, zBack);
-  b.span(m.beigeLight, dw + 0.25, xMax, RAIL_Y0, RAIL_Y1, zBack - 0.035, zBack);
-  // Chunky slab door frame (rounded-over jambs + header).
-  const jambW = 0.34;
-  for (const s of [-1, 1]) b.rbox(m.beige, jambW, DOOR.height + 0.3, 0.55, 0.09, s * (DOOR.halfW + jambW / 2), (DOOR.height + 0.3) / 2, zBack + 0.1);
-  b.rbox(m.beige, DOOR.halfW * 2 + jambW * 2, 0.34, 0.55, 0.09, 0, DOOR.height + 0.17, zBack + 0.1);
+  // The opening is only as wide as the door panel; door.js adds the octagonal frame that
+  // covers the opening's corners.
+  const dw = CORRIDOR.halfW, ow = DOOR.halfW, fw = DOOR.frameHalfW + 0.02;
+  b.span(m.wallUpper, xMin, -ow, 0, H, zBack, zBack + 0.2);
+  b.span(m.wallUpper, ow, xMax, 0, H, zBack, zBack + 0.2);
+  b.span(m.wallUpper, -ow, ow, DOOR.height, H, zBack, zBack + 0.2); // above the door
+  b.span(m.wallUpper, -dw, dw, H, CORRIDOR.height, zBack, zBack + 0.2); // corridor side above room height (sign wall)
+  b.span(m.wallLower, xMin, -fw, 0, RAIL_Y0, zBack - 0.025, zBack);
+  b.span(m.wallLower, fw, xMax, 0, RAIL_Y0, zBack - 0.025, zBack);
+  b.span(m.beigeLight, xMin, -fw, RAIL_Y0, RAIL_Y1, zBack - 0.035, zBack);
+  b.span(m.beigeLight, fw, xMax, RAIL_Y0, RAIL_Y1, zBack - 0.035, zBack);
 
   // ---- side walls
   const panelGeom = roundedSlab(1.24, 0.86, 0.11, PANEL_T);
@@ -191,6 +190,15 @@ export function buildCommandRoom(m, leds) {
   return group;
 }
 
+function pointShadow(light, size) {
+  light.castShadow = true;
+  light.shadow.mapSize.set(size, size);
+  light.shadow.camera.near = 0.1;
+  light.shadow.camera.far = light.distance;
+  light.shadow.bias = -0.001;
+  light.shadow.normalBias = 0.02;
+}
+
 /** Command-room lighting: sterile, even, cool white. */
 export function buildCommandLights() {
   const group = new THREE.Group();
@@ -221,11 +229,15 @@ export function buildCommandLights() {
   // Fill: range-limited so it fades out before reaching the server-room floor (~9.4 m away).
   const fill = new THREE.PointLight(white, 9, 8.5, 1.2);
   fill.position.set(0, 2.8, 5.0);
+  // Point lights pass through walls unless they cast shadows: without these, the fill lit the
+  // corridor side of the closed door and the corridor light leaked into the room.
+  pointShadow(fill, 512);
   group.add(fill);
 
   // Corridor wash (range-limited).
   const cor = new THREE.PointLight(white, 3, 4, 1.5);
-  cor.position.set(0, CORRIDOR.height - 0.3, 10.4);
+  cor.position.set(0, CORRIDOR.height - 0.4, 10.2);
+  pointShadow(cor, 256);
   group.add(cor);
   return group;
 }

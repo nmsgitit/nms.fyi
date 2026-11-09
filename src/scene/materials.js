@@ -98,6 +98,8 @@ export function createMaterials(maxAnisotropy = 4) {
   };
   m.keycap = std(0xe4dccb, 0.5); // alphanumeric caps: light beige
   m.keycapMod = std(0x9d9484, 0.5); // modifier/function caps: darker taupe-gray (Model M two-tone)
+  m.doorIndicator = new THREE.MeshBasicMaterial({ color: new THREE.Color(0xbfe9ff).multiplyScalar(1.3), toneMapped: false });
+  m.doorGlass = new THREE.MeshStandardMaterial({ color: 0x23302d, roughness: 0.08, transparent: true, opacity: 0.35, depthWrite: false, side: THREE.DoubleSide });
   m.mouseBody = std(0xdcd8cf, 0.45); // pale warm gray, like late-80s mice
   m.mouseButton = std(0xcfcac0, 0.4);
   m.mousePad = std(0x3a3a40, 0.9);
@@ -112,5 +114,11 @@ export function createMaterials(maxAnisotropy = 4) {
   m.coreFixture = new THREE.MeshBasicMaterial({ color: 0x000000, toneMapped: false });
   // One material per light band on the core column (0 = lowest) so they climb in sequence.
   m.coreBands = [0, 1, 2, 3, 4, 5].map(() => new THREE.MeshBasicMaterial({ color: 0x000000, toneMapped: false }));
+  // Shadow maps record FRONT faces. The default (back faces) put each wall's shadow at its far
+  // side, so in corners where another wall starts exactly there (corridor walls vs. the back
+  // wall) light slipped through within the shadow bias and the fill light glowed behind the door.
+  for (const mat of Object.values(m)) {
+    if (mat?.isMeshStandardMaterial && !mat.transparent) mat.shadowSide = THREE.FrontSide;
+  }
   return m;
 }

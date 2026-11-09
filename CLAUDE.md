@@ -129,8 +129,8 @@ public/models/monitor.glb generated, committed (~0.55 MB) so the repo deploys as
 src/audio/sound.js    SoundDesign: all sounds synthesized with Web Audio (no files); room / server (glass) / fx buses
 src/scene/mouse.js    late-80s two-button mouse (unbranded, PS/2-era style), pad, cable into a desk grommet
 src/ui/hotkeys.js     HotkeyPanel: bottom "TAB Open Hotkey Menu" button + the hotkey menu (top-left), dims inapplicable keys
-src/scene/door.js     HydraulicDoor: stepped-seam sliding leaves, status light bars, "Command Room / Lamplight Data Center" sign
-src/sequence/intro.js DoorIntro: corridor door sequence (DOOR_TIMING), starts the walk, closes the door behind
+src/scene/door.js     entrance door (Alien: Isolation-style per the user's reference): octagonal panel with a see-through hex window, chamfered riveted frame, status LEDs, "Command Room / Lamplight Mainframe" sign
+src/sequence/intro.js DoorIntro: corridor door sequence (DOOR_TIMING: chirps + green flashes, hiss, slide up), starts the walk, closes the door behind
 src/sequence/lookAround.js LookAround (F): turn your head with the mouse from the desk (pointer lock; drag fallback)
 src/sequence/focus.js TerminalFocus: E / monitor click / prompt tap -> camera glide into the screen -> DesktopOS; Exit reverses
 src/os/desktopModel.js  the desktop apps + text (PLACEHOLDERS): single source for the HTML desktop and the monitor drawing
@@ -150,8 +150,9 @@ reference/            (gitignored) extracted frames, contact sheets, spectrogram
 - +x right, +y up, camera looks toward -z.
 - Command room: x -5..5, z 0..8, height 3.2. Glass wall at front: bottom edge y 0.95 at z 0,
   top edge y 3.2 at z -0.6 (tilts outward). Mullions at x ±1.8 keep the center pane clear.
-- Corridor behind the back-wall door: z 8.2..12, ceiling 3.2 (as tall as the room, for the sign). The hydraulic door
-  is 2.24 × 2.3 m at z 8.1. The walk starts at z 11.2 facing it, looking slightly up so the sign is in view.
+- Corridor behind the back-wall door: z 8.2..12, ceiling 3.5 (taller than the room so the sign has breathing room).
+  Entrance door: 1.3 × 2.1 m octagonal panel at z 8.1 in a 1.9 × 2.42 m chamfered frame (`DOOR` in layout.js); the
+  back-wall opening is only as wide as the panel. The walk starts at z 11.2 facing it, looking slightly up so the sign is in view.
 - Server room: floor y -4.5, ceiling y 9, x -16..16, z -28..-0.6. Catwalks at y -1.0.
 - Supercomputer center (0, -14). Desk center z 1.15, top 0.78. Ceiling hatch for the monitor
   at (0, 3.2, 1.05), 1.3 × 1.0.
@@ -160,6 +161,10 @@ reference/            (gitignored) extracted frames, contact sheets, spectrogram
 
 ## Lighting rules (learned the hard way)
 
+- **Point lights shadow too** (fill + corridor, `pointShadow()` in commandRoom.js): without shadows the fill lit the
+  corridor side of the closed door (user saw glows behind the door). All opaque standard materials use
+  `shadowSide = FrontSide` (materials.js): with the default back-face shadows, light leaked through wall corners where
+  another wall starts at the occluder's far face. Point shadows cost nothing visible (still 180 fps here).
 - **RectAreaLights can't be occluded** in three.js. They light through walls and glass,
   so they would light the "dark" server room. Don't use them in the command room.
   The command room uses **shadow-casting SpotLights** whose cones are aimed and sized
@@ -310,14 +315,20 @@ nearest-first (tube sounds at 100/60/40 % per row), back wash +0.3 s, fans fade 
   launcher containing the pixel lamp.
 
 ## Door intro, look-around, keys (change round 3, 2026-11-09)
-- **Door intro** (`sequence/intro.js`, DOOR_TIMING; seconds after Enter): bolts 0 / 0.2 / 0.4, status bar blinks amber,
-  then green at 0.62, hiss 0.6, leaves slide 0.75 to 2.35 (`heavy()` ease: hesitation, then a slide), walk starts at 1.75.
-  The door closes when the walk distance reaches 3.35 m (camera ~0.25 m past the doorway): 0.6 s slide, slam, bolts relock,
-  status red. Heard, not seen. Sounds: `sound.doorOpen(D)` / `doorClose(D)` (bolt, hiss, slideRumble helpers; fx bus).
-  Peaks: bolts 0.57, end stop 0.60, slam 0.70.
+- **Door intro** (`sequence/intro.js`, DOOR_TIMING; seconds after Enter). The user supplied a reference (Alien:
+  Isolation's Sevastopol doors) and asked for that style, NOT heavy blast doors: the green LED on the door flashes with
+  three rising affirmative chirps (0.15 / 0.32 / 0.49), then it's steady green, a brief hiss (0.64), and the panel slides UP into the
+  wall/ceiling cavity (0.66 to 1.21); the walk starts at 0.95. When the walk distance reaches 3.35 m (~0.25 m past the
+  doorway) it slides down (0.5 s) with a brief hiss and a soft thud, and the LED turns red. Sounds: `sound.doorOpen(D)` /
+  `doorClose(D)` (chirps, `hiss()` helper; fx bus). Peaks: chirps ~0.24, hiss 0.36, closing thud 0.35. The user didn't
+  say which way these doors open; "up" was my call (offer sideways if asked).
+- **Door model** (door.js): octagonal panel (chamfer 0.3) with a hexagonal window that is a real hole with tinted glass
+  (`m.doorGlass`; you can see into the room), raised border/central plates, a status housing with green + red LEDs, three
+  rounded slots at the bottom; frame = extruded octagon ring (outer minus inner) with rivets and two lit indicator panels.
+  Palette: panel beigeLight, plates beige, frame taupe.
 - **Sign** (door.js, corridor side above the door): monotone lamp logo (`getLampSprite('mono')`: all palette entries,
-  flame included, mapped to one warm off-white's tones), "Command Room", and "Lamplight Data Center" smaller, on a softly
-  backlit dark panel. Exact wording and case from the user.
+  flame included, mapped to one warm off-white's tones), "Command Room", and "Lamplight Mainframe" smaller (user renamed it
+  from "Lamplight Data Center"), on a softly backlit dark panel, ~0.35 m clear of the frame and ~0.3 m below the ceiling.
 - **Timeline after the door** (walk times): door slam 4.41, monitor hatch latch 5.10, breaker 1 7.4, breaker 2 8.5,
   monitor lands 9.9 = walk end. Keep big sound moments at least ~0.6 s apart (the user complained about overlap before).
 - **F = look around** (`sequence/lookAround.js`): stays at the desk; pointer lock, mouse turns the head (yaw unlimited,
