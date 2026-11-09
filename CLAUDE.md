@@ -88,8 +88,8 @@ npm start          # serves dist/ on $PORT (default 3000)
 
 ### URL flags (development)
 - `?full`, `?light`, `?mobile`: force a version (skip the chooser / mobile detection).
-- `?skip`: skip the intro: at the desk, server room powered, terminal still up in the ceiling. Add `?dark` to keep it
-  unpowered. `?down`: also with the terminal lowered and booted (wall CRTs live).
+- `?skip`: skip to the end state: at the desk, server room powered, terminal down and booted, wall CRTs live.
+  `?skip&up` keeps the terminal in the ceiling; `?skip&dark` keeps the room unpowered (and the terminal up).
 - `?lit`: server room fully powered (preview the layout).
 - `?os`: skip straight into the desktop (development).
 - `/dev/os-preview.html` (dev server only): the HTML desktop alone, no WebGL needed (handy for phone-size checks in
@@ -373,15 +373,14 @@ nearest-first (tube sounds at 100/60/40 % per row), back wash +0.3 s, fans fade 
   tilt (`[-tilt, 0, 0]`) and centered on the glass top edge, so it reads as the glass's own head rail, not a level beam.
 
 ## Change round 7 (2026-11-09): north bay, new sequence, living wall CRTs
-- **Sequence:** the terminal NO LONGER drops during the walk; otherwise the power-up keeps its ORIGINAL timing (user
-  liked everything coming online a couple of steps before stopping): `reveal.start()` fires when `walk.t >=
-  walk.duration - MONITOR.total` (walk 5.1 s; breaker 1 at 7.4, breaker 2 at 8.5, walk ends 9.9). When the walk ends,
-  **free look (the F mode) switches on by itself**. Plain mouse movement turns the head; a click captures the pointer
-  (browsers only allow pointer lock from a gesture). F or Esc turns back to the desk and it STAYS off until F again
-  (`freeLook` flag in full.js; LookAround emits 'exit'). E suspends it; leaving the desktop restores the visitor's choice.
-  (A cursor-position "glance" mode was tried and rejected by the user: no half modes.) The visitor lowers the terminal
-  with **Q** (handwritten desk note: "Note to Mainframe Operators: For terminal control, press Q on the keyboard."),
-  then E uses it.
+- **Sequence (final, user-tuned):** the power-up keeps its ORIGINAL timing (everything comes online a couple of steps
+  before the visitor stops): `reveal.start()` fires when `walk.t >= walk.duration - MONITOR.total` (walk 5.1 s; breaker
+  1 at 7.4, breaker 2 at 8.5, walk ends 9.9). The reveal emits `lit` 4 s after breaker 2; **2 s later the terminal
+  descends on its own** (`AUTO_DESCEND_AFTER_LIT`, via `lowerMonitor()`, once per intro run), so visitors who don't
+  treat it like a game still get the terminal. Q raises/lowers it afterwards (the handwritten desk note explains Q).
+  **Free look is NOT on by default**: F toggles the original pointer-lock look-around (drag fallback), as in round 3.
+  Rejected along the way: a cursor-position "glance" mode, free look switched on automatically after the walk, and the
+  power-up waiting until the visitor stopped.
 - **Wall CRTs** (wallCrt.js, rewritten): asleep = the bouncing-lamp screensaver (user confirmed: keep the screensaver as
   the sleep state, not dark screens). Monitor emits `screenOn` -> they warm up one by one and show the LAMPLIGHT OS boot screen
   (+ NODE number); `desktop` -> live: each alternates on its own timer (6 to 12 s) between a monochrome CCTV feed (OSD:

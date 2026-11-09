@@ -1,11 +1,8 @@
-// Free look: the visitor stays standing at the desk and turns their head with the mouse, e.g. to
-// watch the power-up or look behind them. No movement (the user explicitly did not want a
-// free-flying camera). It switches on by itself when the walk ends (full.js); F toggles it.
-// Moving the mouse turns the view right away. Browsers only grant pointer lock from a click, so
-// until the visitor clicks, the cursor stays visible (and stops at the screen edges); a click
-// captures it for unlimited turning.
-// F, or Escape (which also releases pointer lock), turns the view back to the desk and leaves it
-// off ('exit' event) until F is pressed again.
+// Look around (F): the visitor stays standing at the desk and turns their head with the mouse,
+// e.g. to look behind them or at the wall CRTs. No movement (the user explicitly did not
+// want a free-flying camera). The mouse is captured (pointer lock) so moving it turns the
+// view; if the browser refuses pointer lock, click-and-drag works instead.
+// F again, or Escape (which also releases pointer lock), turns the view back to the desk.
 import * as THREE from 'three';
 
 const easeInOutCubic = (k) => (k < 0.5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2);
@@ -26,26 +23,33 @@ export class LookAround {
     this._e = new THREE.Euler(0, 0, 0, 'YXZ');
     this.listeners = {};
 
-    // Mouse movement turns the head, captured or not.
+    // Pointer-locked mouse movement turns the head.
     document.addEventListener('mousemove', (e) => {
-      if (!this.active) return;
-      this.turn(e.movementX || 0, e.movementY || 0);
+      if (!this.active || document.pointerLockElement !== canvas) return;
+      this.turn(e.movementX, e.movementY);
     });
-    // A click captures the mouse (browsers need a user gesture for pointer lock).
-    canvas.addEventListener('click', () => { if (this.active && !this.locked) this.lock(); });
     // Escape releases pointer lock in the browser itself: treat that as "stop looking".
     document.addEventListener('pointerlockchange', () => {
       if (this.active && this.locked && document.pointerLockElement !== canvas) this.exit();
       this.locked = document.pointerLockElement === canvas;
     });
     window.addEventListener('keydown', (e) => { if (this.active && e.code === 'Escape') this.exit(); });
-  }
 
-  lock() {
-    try {
-      const req = this.canvas.requestPointerLock?.();
-      if (req?.catch) req.catch(() => {}); // refused: plain mouse movement still turns the view
-    } catch { /* pointer lock unavailable */ }
+    // Fallback: click and drag (no pointer lock).
+    let drag = null;
+    canvas.addEventListener('pointerdown', (e) => {
+      if (!this.active || this.locked || e.button !== 0) return;
+      drag = { x: e.clientX, y: e.clientY };
+      canvas.setPointerCapture(e.pointerId);
+    });
+    canvas.addEventListener('pointermove', (e) => {
+      if (!drag) return;
+      this.turn(e.clientX - drag.x, e.clientY - drag.y);
+      drag = { x: e.clientX, y: e.clientY };
+    });
+    const end = () => { drag = null; };
+    canvas.addEventListener('pointerup', end);
+    canvas.addEventListener('pointercancel', end);
   }
 
   on(evt, fn) { (this.listeners[evt] ||= []).push(fn); }
@@ -67,15 +71,17 @@ export class LookAround {
     this.pitch = this._e.x;
     this.walk.state = 'idle'; // hold still (no breathing sway) while looking around
     this.active = true;
-    this.lock(); // only succeeds when entered from a key press or click
+    try {
+      const req = this.canvas.requestPointerLock?.();
+      if (req?.catch) req.catch(() => {}); // refused: drag-to-look still works
+    } catch { /* pointer lock unavailable: drag-to-look */ }
     this.emit('change');
   }
 
-  /** Turn the view back to the desk (the visitor switched free look off: F or Escape). */
+  /** Turn the view back to the desk. */
   exit() {
     if (!this.active) return;
     this.release();
-    this.emit('exit');
     this.fromQ.copy(this.camera.quaternion);
     const pos = this.camera.position.clone();
     this.walk.apply(this.walk.duration);

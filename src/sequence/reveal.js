@@ -9,7 +9,7 @@
 //                command-room lights dip from the surge, ceiling fixture rows strike like
 //                old fluorescent tubes (nearest the window first), room light follows
 //                each row, and the data-bank and rack indicators sweep on
-// Emits 'breaker' {index, strength} and 'fans' so stage-4 audio can hook in.
+// Emits 'breaker' {index, strength}, 'row', 'fans' (audio hooks) and 'lit' when fully powered.
 
 export const REVEAL = {
   breaker1: 2.3, // s after the monitor starts (after the CRT degauss at 1.4 has died away)
@@ -115,7 +115,10 @@ export class Reveal {
     if (t2 > 0 && t2 < R.dipDuration) dip = 1 - R.dipDepth * (Math.sin(t2 * 90) > -0.3 ? 1 : 0.4);
     this.apply(core, row, dip, band);
 
-    if (t2 > 4) this.state = 'lit';
+    if (t2 > 4) {
+      this.state = 'lit';
+      this.emit('lit'); // fully powered (full.js lowers the terminal 2 s later)
+    }
   }
 
   /**

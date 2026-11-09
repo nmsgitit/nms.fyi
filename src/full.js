@@ -188,14 +188,14 @@ walk.on('step', (e) => {
   if (sound.ready) sound.footstep(e);
 });
 // The power-up runs on its original clock (user: everything comes online a couple of steps
-// before the visitor stops): it starts MONITOR.total before the walk ends, as when it shared the
-// terminal's descent clock (breaker 1 at walk 7.4 s, breaker 2 at 8.5 s, walk ends 9.9 s). Only
-// the terminal stays up now.
+// before the visitor stops): it starts MONITOR.total before the walk ends (breaker 1 at walk 7.4 s,
+// breaker 2 at 8.5 s, walk ends 9.9 s). The terminal then descends ON ITS OWN 2 s after the
+// server room is fully powered (reveal 'lit', 4 s after breaker 2), so nobody has to know about Q.
 const revealTrigger = Math.max(0, walk.duration - MONITOR.total);
-walk.on('arrive', () => {
-  debug?.log?.('arrived');
-  if (freeLook) look.enter(); // hand the mouse over as soon as the walk is done
-});
+const AUTO_DESCEND_AFTER_LIT = 2.0;
+let autoDescendAt = 0, autoDescended = false;
+walk.on('arrive', () => debug?.log?.('arrived'));
+reveal.on('lit', () => { if (!autoDescended) autoDescendAt = elapsed + AUTO_DESCEND_AFTER_LIT; });
 const intro = new DoorIntro({ door, walk, sound }); // corridor door opening sequence
 
 const debug = createDebug({ params, renderer, scene, camera, walk, setLit, leds });
@@ -216,11 +216,6 @@ const look = new LookAround({
   isBlocked: () => os.isOpen || ['zoomingIn', 'zoomingOut', 'open'].includes(focus.state),
 });
 focus.isLooking = () => look.active;
-// Free look is ON by default once the walk ends. F toggles it, and once the visitor switches it
-// off (F or Escape) it stays off until they press F again. Using the terminal (E) suspends it;
-// stepping back out restores whatever the visitor had.
-let freeLook = true;
-look.on('exit', () => { freeLook = false; });
 const _focusIn = focus.focusIn.bind(focus);
 focus.focusIn = () => {
   if (focus.state !== 'ready') return;
@@ -232,8 +227,8 @@ const _focusExit = focus.exit.bind(focus);
 focus.exit = () => { _focusExit(); hotkeys.setBarVisible(true); };
 window.addEventListener('keydown', (e) => {
   if (e.key.toLowerCase() !== 'f' || e.repeat || os.isOpen || !gateEl.classList.contains('hidden')) return;
-  if (look.active) look.exit(); // also sets freeLook = false
-  else if (look.canEnter()) { look.enter(); freeLook = true; }
+  if (look.active) look.exit();
+  else look.enter();
 });
 monitor.on('desktop', () => {
   focus.enable();
@@ -280,18 +275,19 @@ window.addEventListener('keydown', (e) => {
 });
 
 if (params.has('lit')) setLit(true);
-// ?skip = skip the intro: at the desk, room powered (?dark keeps it unpowered), terminal still
-// up in the ceiling. ?down = also with the terminal lowered and booted. ?os = straight into the desktop.
-if (params.has('skip') || params.has('os') || params.has('down')) {
+// ?skip = skip the intro: the end state (at the desk, room powered, terminal down and booted,
+// wall CRTs live). ?skip&up keeps the terminal in the ceiling; ?dark keeps the room unpowered
+// (and the terminal up). ?os = straight into the desktop.
+if (params.has('skip') || params.has('os')) {
   walk.jumpToEnd();
+  autoDescended = true;
   if (!params.has('dark')) reveal.finish();
-  if (params.has('os') || params.has('down')) {
+  if (params.has('os') || !(params.has('up') || params.has('dark'))) {
     monitor.setDown();
     wallCrts.setLiveNow();
     focus.enable();
   }
   if (params.has('os')) { focus.focusIn(); focus.t = focus.dur; }
-  else look.enter(); // free look is on by default at the desk
 }
 // Dev replay keys: only in `npm run dev` or with ?debug (never for normal visitors).
 const devKeys = params.has('debug') || import.meta.env.DEV;
@@ -304,6 +300,7 @@ window.addEventListener('keydown', (e) => {
   if (k === 'p') { sound.resetServer(); reveal.start(elapsed); } // replay the power-up
   if (k === 'r') { // replay the whole intro from the corridor
     look.cancel(); sound.resetMonitor(); sound.resetServer(); monitor.reset(); reveal.reset(); wallCrts.sleepNow();
+    autoDescendAt = 0; autoDescended = false;
     walk.placeAtStart(); intro.reset(); intro.start();
   }
 });
@@ -331,7 +328,6 @@ if (params.has('skip') || params.has('debug') || params.has('os')) {
 // ---------------------------------------------------------------- loop
 const timer = new THREE.Timer();
 let elapsed = 0;
-let prevFocusState = focus.state;
 function frame() {
   timer.update();
   // Clamp only big gaps (tab switches). A tighter clamp would play the intro in slow
@@ -353,9 +349,11 @@ function frame() {
   look.update(dt);
   intro.update(dt);
   if (!debug.orbitActive()) walk.update(dt);
-  // Back from the terminal: restore free look if the visitor had it on.
-  if (prevFocusState === 'zoomingOut' && focus.state === 'ready' && freeLook) look.enter();
-  prevFocusState = focus.state;
+  if (autoDescendAt && elapsed >= autoDescendAt) {
+    autoDescendAt = 0;
+    autoDescended = true;
+    lowerMonitor(); // same as pressing Q (no-op if the visitor already lowered it)
+  }
   if (reveal.state === 'dark' && walk.state === 'walking' && walk.t >= revealTrigger) reveal.start(elapsed);
   monitor.update(dt);
   wallCrts.update(dt);
