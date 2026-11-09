@@ -241,8 +241,11 @@ export function buildCommandLights() {
   spot(0, 2.6, 0, 1.8, 20, 0.55, 0.6); // desk light; glass is ~36° off its axis, cone 31.5°
 
   // Fill: range-limited so it fades out before reaching the server-room floor (~9.4 m away).
-  const fill = new THREE.PointLight(white, 9, 8.5, 1.2);
-  fill.position.set(0, 2.8, 5.0);
+  // decay 0: no inverse-distance falloff inside its range (three only fades it out near the 8.5 m
+  // cutoff), so it lifts every surface evenly. With decay 1.2 it burned a harsh hot spot onto
+  // whatever was nearest, the ceiling between the fixtures (user report, 2026-11-09).
+  const fill = new THREE.PointLight(white, 1.7, 8.5, 0);
+  fill.position.set(0, 1.9, 5.0);
   // Point lights pass through walls unless they cast shadows: without these, the fill lit the
   // corridor side of the closed door and the corridor light leaked into the room.
   pointShadow(fill, 512);

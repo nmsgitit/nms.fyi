@@ -403,6 +403,10 @@ nearest-first (tube sounds at 100/60/40 % per row), back wash +0.3 s, fans fade 
   dots): dot lamp (with flame) left, "COMMAND ROOM" double-size, "LAMPLIGHT MAINFRAME" single-size, two overlapping
   gears right (small gear in front with a one-dot gap). Unlit dots stay faintly visible. Corridor side y 2.97, room side
   y 2.8 (between the frame top and the ceiling). Face color 1.35 so the lit dots bloom.
+- **Ceiling hot spot fixed** (user screenshot): the bright blob on the ceiling between the fixtures was the fill
+  PointLight (0, 2.8, 5), 0.4 m under the ceiling with decay 1.2. It's now at y 1.9 with **decay 0** and intensity 1.7: even
+  light inside its 8.5 m range (three's smooth cutoff still keeps it off the server floor), same overall brightness.
+  Keep fill lights at decay 0; a falling-off fill always hot-spots the nearest surface.
 - **Ceiling lights softened**: panels went from flat 1.5× white to 1.08× (corridor 0.95×) with a prismatic diffuser
   texture (tube bands, diamond prisms, darker edges). Only the panels' look changed; the actual lights are unchanged.
 
