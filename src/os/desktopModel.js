@@ -6,7 +6,7 @@
 
 export const OS_NAME = 'LAMPLIGHT OS';
 export const OS_VERSION = 'Version 1.0';
-export const USER_NAME = 'NMS';
+export const USER_NAME = 'USER'; // generic: whoever is using the terminal (user request)
 export const USER_TAGLINE = 'Welcome. Pick something to open.';
 
 /**
