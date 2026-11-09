@@ -379,8 +379,8 @@ nearest-first (tube sounds at 100/60/40 % per row), back wash +0.3 s, fans fade 
   power-up starts 0.6 s after arriving (`POWERUP_DELAY`), breaker 1 one second after that (`reveal.start(elapsed - 1.3)`).
   The visitor lowers the terminal with **Q** (a handwritten note on the desk says so: "Note to Mainframe Operators: For
   terminal control, press Q on the keyboard."), then E uses it. MONITOR/RAISE timelines are unchanged.
-- **Wall CRTs** (wallCrt.js, rewritten): asleep = the bouncing-lamp screensaver (my reading of "sleep"; switch to dark
-  screens if the user prefers). Monitor emits `screenOn` -> they warm up one by one and show the LAMPLIGHT OS boot screen
+- **Wall CRTs** (wallCrt.js, rewritten): asleep = the bouncing-lamp screensaver (user confirmed: keep the screensaver as
+  the sleep state, not dark screens). Monitor emits `screenOn` -> they warm up one by one and show the LAMPLIGHT OS boot screen
   (+ NODE number); `desktop` -> live: each alternates on its own timer (6 to 12 s) between a monochrome CCTV feed (OSD:
   camera, time, REC) and made-up readouts (green LAMPLIGHT MAINFRAME: CPU, core temp, banks, I/O, jobs, uptime; amber
   LAMPLIGHT FACILITY: power buses, coolant, humidity, CCTV, catwalk doors, fire suppression), static burst at each switch.
