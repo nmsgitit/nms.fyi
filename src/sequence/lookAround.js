@@ -1,8 +1,11 @@
-// Look around (F): the visitor stays standing at the desk and turns their head with the mouse,
-// e.g. to look behind them or at the wall CRTs. No movement (the user explicitly did not
-// want a free-flying camera). The mouse is captured (pointer lock) so moving it turns the
-// view; if the browser refuses pointer lock, click-and-drag works instead.
-// F again, or Escape (which also releases pointer lock), turns the view back to the desk.
+// Free look: the visitor stays standing at the desk and turns their head with the mouse, e.g. to
+// watch the power-up or look behind them. No movement (the user explicitly did not want a
+// free-flying camera). It switches on by itself when the walk ends (full.js); F toggles it.
+// Moving the mouse turns the view right away. Browsers only grant pointer lock from a click, so
+// until the visitor clicks, the cursor stays visible (and stops at the screen edges); a click
+// captures it for unlimited turning.
+// F, or Escape (which also releases pointer lock), turns the view back to the desk and leaves it
+// off ('exit' event) until F is pressed again.
 import * as THREE from 'three';
 
 const easeInOutCubic = (k) => (k < 0.5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2);
@@ -23,33 +26,26 @@ export class LookAround {
     this._e = new THREE.Euler(0, 0, 0, 'YXZ');
     this.listeners = {};
 
-    // Pointer-locked mouse movement turns the head.
+    // Mouse movement turns the head, captured or not.
     document.addEventListener('mousemove', (e) => {
-      if (!this.active || document.pointerLockElement !== canvas) return;
-      this.turn(e.movementX, e.movementY);
+      if (!this.active) return;
+      this.turn(e.movementX || 0, e.movementY || 0);
     });
+    // A click captures the mouse (browsers need a user gesture for pointer lock).
+    canvas.addEventListener('click', () => { if (this.active && !this.locked) this.lock(); });
     // Escape releases pointer lock in the browser itself: treat that as "stop looking".
     document.addEventListener('pointerlockchange', () => {
       if (this.active && this.locked && document.pointerLockElement !== canvas) this.exit();
       this.locked = document.pointerLockElement === canvas;
     });
     window.addEventListener('keydown', (e) => { if (this.active && e.code === 'Escape') this.exit(); });
+  }
 
-    // Fallback: click and drag (no pointer lock).
-    let drag = null;
-    canvas.addEventListener('pointerdown', (e) => {
-      if (!this.active || this.locked || e.button !== 0) return;
-      drag = { x: e.clientX, y: e.clientY };
-      canvas.setPointerCapture(e.pointerId);
-    });
-    canvas.addEventListener('pointermove', (e) => {
-      if (!drag) return;
-      this.turn(e.clientX - drag.x, e.clientY - drag.y);
-      drag = { x: e.clientX, y: e.clientY };
-    });
-    const end = () => { drag = null; };
-    canvas.addEventListener('pointerup', end);
-    canvas.addEventListener('pointercancel', end);
+  lock() {
+    try {
+      const req = this.canvas.requestPointerLock?.();
+      if (req?.catch) req.catch(() => {}); // refused: plain mouse movement still turns the view
+    } catch { /* pointer lock unavailable */ }
   }
 
   on(evt, fn) { (this.listeners[evt] ||= []).push(fn); }
@@ -71,17 +67,15 @@ export class LookAround {
     this.pitch = this._e.x;
     this.walk.state = 'idle'; // hold still (no breathing sway) while looking around
     this.active = true;
-    try {
-      const req = this.canvas.requestPointerLock?.();
-      if (req?.catch) req.catch(() => {}); // refused: drag-to-look still works
-    } catch { /* pointer lock unavailable: drag-to-look */ }
+    this.lock(); // only succeeds when entered from a key press or click
     this.emit('change');
   }
 
-  /** Turn the view back to the desk. */
+  /** Turn the view back to the desk (the visitor switched free look off: F or Escape). */
   exit() {
     if (!this.active) return;
     this.release();
+    this.emit('exit');
     this.fromQ.copy(this.camera.quaternion);
     const pos = this.camera.position.clone();
     this.walk.apply(this.walk.duration);
@@ -122,45 +116,3 @@ export class LookAround {
   }
 }
 
-/**
- * Glance: once the walk ends, the visitor steers their head with the mouse, without clicking or
- * pointer lock (user request: control of the mouse while watching the power-up). The cursor's
- * position across the window sets a yaw/pitch offset from the desk view, eased so it feels like a
- * head turning. F (LookAround) still gives a full turn; Glance pauses while that or the terminal
- * glide is in control.
- */
-export class Glance {
-  constructor({ canvas }) {
-    this.enabled = false;
-    this.yaw = 0; this.pitch = 0; // current offsets (radians)
-    this.ty = 0; this.tp = 0; // targets
-    this._q = new THREE.Quaternion();
-    this._e = new THREE.Euler(0, 0, 0, 'YXZ');
-    window.addEventListener('pointermove', (e) => {
-      if (e.pointerType === 'touch') return;
-      const nx = (e.clientX / window.innerWidth) * 2 - 1;
-      const ny = (e.clientY / window.innerHeight) * 2 - 1;
-      const curve = (v) => Math.sign(v) * Math.pow(Math.min(1, Math.abs(v)), 1.25); // calmer near the center
-      this.ty = -curve(nx) * THREE.MathUtils.degToRad(55);
-      this.tp = ny < 0 ? -curve(ny) * THREE.MathUtils.degToRad(28) : -curve(ny) * THREE.MathUtils.degToRad(34);
-    });
-    document.addEventListener('mouseleave', () => { this.ty = 0; this.tp = 0; });
-    void canvas;
-  }
-
-  /** Snap back to the plain desk view (after the terminal glide or a full look-around). */
-  recenter() { this.yaw = 0; this.pitch = 0; }
-
-  /** Apply after the walk has posed the camera for this frame. */
-  update(dt, camera) {
-    if (!this.enabled) return;
-    const k = 1 - Math.exp(-dt * 3.2);
-    this.yaw += (this.ty - this.yaw) * k;
-    this.pitch += (this.tp - this.pitch) * k;
-    // Yaw about world up, pitch about the camera's own right axis.
-    this._e.setFromQuaternion(camera.quaternion, 'YXZ');
-    this._e.y += this.yaw;
-    this._e.x = THREE.MathUtils.clamp(this._e.x + this.pitch, -1.35, 1.35);
-    camera.quaternion.setFromEuler(this._e);
-  }
-}

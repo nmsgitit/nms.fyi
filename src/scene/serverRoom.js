@@ -113,11 +113,18 @@ export function buildServerRoom(m) {
 
   // ---- ceiling trusses (evenly spaced, one over each fixture row and one between) and fixtures
   for (const z of TRUSS_Z) b.span(m.taupeDark, xMin, xMax, C - 0.75, C, z - 0.18, z + 0.18);
-  // The bay: a ring beam and four radial beams (clear of the supercomputer's ceiling collar).
-  arcStrip(b, m.taupeDark, 11.5, 0, Math.PI, C - 0.75, C, 0.36, 4);
+  // The bay: radial beams, and on each side a ring beam over the catwalk carrying a curved strip
+  // fixture. Both stop at the 58° radial beam, short of the supercomputer, which has its own
+  // lights (ceiling ring light, collar downlights, key spot, wall washes) and no fluorescents.
+  // (The old full-circle ring beam also ran straight through the core's ceiling collar.)
   for (const a of [28, 58, 122, 152]) {
     const [x, z] = arcPt(R / 2, a * DEG);
     b.box(m.taupeDark, R, 0.75, 0.3, x, C - 0.375, z, [0, a * DEG, 0]); // local x along the radius
+  }
+  for (const [a0, a1] of BAY_STRIPS) {
+    arcStrip(b, m.taupeDark, BAY_RING_R, a0 - 2 * DEG, a1 + 2 * DEG, C - 0.75, C, 0.36, 3);
+    arcStrip(b, m.taupe, BAY_RING_R, a0, a1, C - 0.95, C - 0.75, 0.5, 3);
+    arcStrip(b, m.serverBayStrip, BAY_RING_R, a0 + 0.3 * DEG, a1 - 0.3 * DEG, C - 0.97, C - 0.95, 0.42, 3);
   }
   for (const [x, z, row] of FIXTURES) {
     b.span(m.taupe, x - 0.5, x + 0.5, C - 0.95, C - 0.75, z - 1.5, z + 1.5);
@@ -175,14 +182,14 @@ export function buildServerRoom(m) {
   return { builder: b };
 }
 
-// Ceiling fixtures on an even grid: 5 columns 6 m apart, 4 rows 6.8 m apart (row index = reveal
-// order, nearest the window first), plus two in the bay. Trusses run over each row and midway.
+// Hall fixtures on an even grid: 5 columns 6 m apart, 4 rows 6.8 m apart (row index = reveal
+// order, nearest the window first). Trusses run over each row and midway. The bay gets curved
+// strips over its catwalks instead of rectangular panels (they didn't fit the round end).
 const ROW_Z = [-4.6, -11.4, -18.2, -25.0];
 const TRUSS_Z = [-4.6, -8.0, -11.4, -14.8, -18.2, -21.6, -25.0];
-const FIXTURES = [
-  ...ROW_Z.flatMap((z, row) => [-12, -6, 0, 6, 12].map((x) => [x, z, row])),
-  [-8.5, -33.5, 3], [8.5, -33.5, 3],
-];
+const FIXTURES = ROW_Z.flatMap((z, row) => [-12, -6, 0, 6, 12].map((x) => [x, z, row]));
+const BAY_RING_R = 13.4; // over the catwalks' inner edge
+const BAY_STRIPS = [[5 * DEG, 54 * DEG], [126 * DEG, 175 * DEG]];
 
 export function populateServerRoom(b, m, leds) {
   const { xMin, xMax, zMin, zMax } = SERVER;
@@ -241,24 +248,32 @@ export function buildServerLights(m) {
   group.name = 'serverLights';
   const room = [];
   const white = PALETTE.fluorescent;
-  for (const x of [-8.25, 8.25]) {
-    for (const [z, row] of [[-8.0, 0], [-21.6, 2]]) {
-      const r = new THREE.RectAreaLight(white, 0, 6, 10);
-      r.position.set(x, C - 1, z);
-      r.rotation.x = -Math.PI / 2;
-      group.add(r);
-      room.push({ light: r, max: 2.2, row }); // follows the fixture rows above it
-    }
+  // The light comes from where the fixtures are: one area light under each fixture row (spanning
+  // its five panels), striking with that row in the reveal...
+  ROW_Z.forEach((z, row) => {
+    const r = new THREE.RectAreaLight(white, 0, 25, 3);
+    r.position.set(0, C - 0.98, z);
+    r.rotation.x = -Math.PI / 2;
+    group.add(r);
+    room.push({ light: r, max: 1.7, row });
+  });
+  // ...and one under each curved bay strip, along its chord (strikes with the last row).
+  for (const [a0, a1] of BAY_STRIPS) {
+    const ac = (a0 + a1) / 2;
+    const chord = 2 * BAY_RING_R * Math.sin((a1 - a0) / 2);
+    const r = new THREE.RectAreaLight(white, 0, chord, 2.4);
+    const [x, z] = arcPt(BAY_RING_R * Math.cos((a1 - a0) / 2), ac);
+    r.position.set(x, C - 0.98, z);
+    r.rotation.order = 'YXZ';
+    r.rotation.set(-Math.PI / 2, ac - Math.PI / 2, 0); // face down, width along the chord
+    group.add(r);
+    room.push({ light: r, max: 2.4, row: 3 });
   }
-  // Bay wash so the curved banks and the supercomputer's wall read.
-  const back = new THREE.RectAreaLight(white, 0, 24, 3);
-  back.position.set(0, C - 1.3, SERVER.zMin - 2);
-  back.lookAt(0, -1.5, SERVER.zBack);
-  group.add(back);
-  room.push({ light: back, max: 1.3, row: 3 });
 
   // Fixture faces: diffuser texture, so a lower level than the old flat white (2.4) reads as lit
   // without glaring (user: same treatment as the command-room panels).
   const fixtureMax = new THREE.Color(white).multiplyScalar(1.3);
-  return { group, room, fixtures: m.serverFixtureRows.map((mat, row) => ({ mat, max: fixtureMax, row })) };
+  const fixtures = m.serverFixtureRows.map((mat, row) => ({ mat, max: fixtureMax, row }));
+  fixtures.push({ mat: m.serverBayStrip, max: fixtureMax, row: 3 });
+  return { group, room, fixtures };
 }

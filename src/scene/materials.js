@@ -161,6 +161,8 @@ export function createMaterials(maxAnisotropy = 4) {
   // Server-room fixtures get the same prismatic diffuser as the command room (tubes run along z).
   const serverDiffuser = diffuserTexture(512, 152, { rotate: true });
   m.serverFixtureRows = [0, 1, 2, 3].map(() => new THREE.MeshBasicMaterial({ color: 0x000000, map: serverDiffuser, toneMapped: false }));
+  // Curved strip fixtures around the north bay (chord pieces whose long axis is the texture's u).
+  m.serverBayStrip = new THREE.MeshBasicMaterial({ color: 0x000000, map: diffuserTexture(512, 110), toneMapped: false });
   m.coreFixture = new THREE.MeshBasicMaterial({ color: 0x000000, toneMapped: false });
   // One material per light band on the core column (0 = lowest) so they climb in sequence.
   m.coreBands = [0, 1, 2, 3, 4, 5].map(() => new THREE.MeshBasicMaterial({ color: 0x000000, toneMapped: false }));

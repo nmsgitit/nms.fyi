@@ -373,12 +373,15 @@ nearest-first (tube sounds at 100/60/40 % per row), back wash +0.3 s, fans fade 
   tilt (`[-tilt, 0, 0]`) and centered on the glass top edge, so it reads as the glass's own head rail, not a level beam.
 
 ## Change round 7 (2026-11-09): north bay, new sequence, living wall CRTs
-- **Sequence (supersedes "Monitor timing" / "Power-up timing" triggers below):** the terminal NO LONGER drops during the
-  walk. The visitor arrives, gets mouse control (`Glance`, lookAround.js: the cursor position turns the head, ±55° yaw,
-  +28°/-34° pitch, eased; no click or pointer lock; F still does the full pointer-lock look-around), and the server-room
-  power-up starts 0.6 s after arriving (`POWERUP_DELAY`), breaker 1 one second after that (`reveal.start(elapsed - 1.3)`).
-  The visitor lowers the terminal with **Q** (a handwritten note on the desk says so: "Note to Mainframe Operators: For
-  terminal control, press Q on the keyboard."), then E uses it. MONITOR/RAISE timelines are unchanged.
+- **Sequence:** the terminal NO LONGER drops during the walk; otherwise the power-up keeps its ORIGINAL timing (user
+  liked everything coming online a couple of steps before stopping): `reveal.start()` fires when `walk.t >=
+  walk.duration - MONITOR.total` (walk 5.1 s; breaker 1 at 7.4, breaker 2 at 8.5, walk ends 9.9). When the walk ends,
+  **free look (the F mode) switches on by itself**. Plain mouse movement turns the head; a click captures the pointer
+  (browsers only allow pointer lock from a gesture). F or Esc turns back to the desk and it STAYS off until F again
+  (`freeLook` flag in full.js; LookAround emits 'exit'). E suspends it; leaving the desktop restores the visitor's choice.
+  (A cursor-position "glance" mode was tried and rejected by the user: no half modes.) The visitor lowers the terminal
+  with **Q** (handwritten desk note: "Note to Mainframe Operators: For terminal control, press Q on the keyboard."),
+  then E uses it.
 - **Wall CRTs** (wallCrt.js, rewritten): asleep = the bouncing-lamp screensaver (user confirmed: keep the screensaver as
   the sleep state, not dark screens). Monitor emits `screenOn` -> they warm up one by one and show the LAMPLIGHT OS boot screen
   (+ NODE number); `desktop` -> live: each alternates on its own timer (6 to 12 s) between a monochrome CCTV feed (OSD:
@@ -399,8 +402,13 @@ nearest-first (tube sounds at 100/60/40 % per row), back wash +0.3 s, fans fade 
   banks are gone.
 - **Catwalk doors** moved onto **landings** (4.6 × 2.65 m, railed) at the near ends of the side catwalks, door centers
   3.3 m from the side walls, so they're well clear of the wall banks.
-- **Server fixtures:** even grid (x -12/-6/0/6/12 × z -4.6/-11.4/-18.2/-25.0, plus two in the bay), trusses over each
-  row and midway (3.4 m), prismatic diffuser texture (rotated, tubes along z), max 1.3 instead of flat 2.4.
+- **Server lighting:** hall fixtures on an even grid (x -12/-6/0/6/12 × z -4.6/-11.4/-18.2/-25.0), trusses over each
+  row and midway (3.4 m), prismatic diffuser texture (rotated, tubes along z), max 1.3 instead of flat 2.4. The light
+  comes from where the fixtures are: one RectAreaLight (25 × 3) under each row, striking with it. The bay has NO
+  rectangular panels (the user found them out of place): a curved strip fixture under a ring beam over each side's
+  catwalk (5° to 54°, r 13.4, `m.serverBayStrip`) with a chord-aligned RectAreaLight each, striking with the last row.
+  The supercomputer section has only its own lights (ring light, collar downlights, key spot, wall washes). The ring
+  beam no longer spans the whole bay (it used to run through the core's ceiling collar).
 
 ## Change round 6 (2026-11-09): versions, cameras, LED signs
 - **Version chooser** (`src/main.js`, `#chooser` in index.html): Full experience vs Light version. The user's GPU sat at

@@ -48,6 +48,7 @@ export class HotkeyPanel {
       row(['F'], looking ? 'Stop looking around' : 'Look around with the mouse', canLook || looking) +
       '<p class="hk-sub">While looking around</p>' +
       row(['Mouse'], 'Turn your head', looking) +
+      row(['Click'], 'Capture the mouse (no screen edges)', looking) +
       row(['F', 'Esc'], 'Turn back to the desk', looking) +
       row(['Tab'], 'Close this menu', true) +
       '<p class="hk-note">Inside the terminal, use Exit in the lamp menu to step back.</p>';

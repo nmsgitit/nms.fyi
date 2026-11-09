@@ -20,8 +20,7 @@ import { WallCRTs } from './scene/wallCrt.js';
 import { DesktopOS } from './os/os.js';
 import { TerminalFocus } from './sequence/focus.js';
 import { HotkeyPanel } from './ui/hotkeys.js';
-import { LookAround, Glance } from './sequence/lookAround.js';
-import { REVEAL } from './sequence/reveal.js';
+import { LookAround } from './sequence/lookAround.js';
 import { buildDeskNote } from './scene/deskNote.js';
 import { HydraulicDoor } from './scene/door.js';
 import { DoorIntro } from './sequence/intro.js';
@@ -188,12 +187,14 @@ walk.on('step', (e) => {
   debug?.log?.(`step ${e.index} ${e.foot}`);
   if (sound.ready) sound.footstep(e);
 });
-// The power-up starts shortly after the walk ends, so the whole sequence plays through the window.
-const POWERUP_DELAY = 0.6, BREAKER1_AFTER_START = 1.0; // s after arriving / after the power-up starts
-let revealAt = 0;
+// The power-up runs on its original clock (user: everything comes online a couple of steps
+// before the visitor stops): it starts MONITOR.total before the walk ends, as when it shared the
+// terminal's descent clock (breaker 1 at walk 7.4 s, breaker 2 at 8.5 s, walk ends 9.9 s). Only
+// the terminal stays up now.
+const revealTrigger = Math.max(0, walk.duration - MONITOR.total);
 walk.on('arrive', () => {
   debug?.log?.('arrived');
-  if (reveal.state === 'dark') revealAt = elapsed + POWERUP_DELAY;
+  if (freeLook) look.enter(); // hand the mouse over as soon as the walk is done
 });
 const intro = new DoorIntro({ door, walk, sound }); // corridor door opening sequence
 
@@ -215,9 +216,11 @@ const look = new LookAround({
   isBlocked: () => os.isOpen || ['zoomingIn', 'zoomingOut', 'open'].includes(focus.state),
 });
 focus.isLooking = () => look.active;
-// Mouse steers the head once the walk is over (no click needed); F still turns all the way round.
-const glance = new Glance({ canvas });
-look.on('change', () => { if (!look.active && !look.gliding) glance.recenter(); });
+// Free look is ON by default once the walk ends. F toggles it, and once the visitor switches it
+// off (F or Escape) it stays off until they press F again. Using the terminal (E) suspends it;
+// stepping back out restores whatever the visitor had.
+let freeLook = true;
+look.on('exit', () => { freeLook = false; });
 const _focusIn = focus.focusIn.bind(focus);
 focus.focusIn = () => {
   if (focus.state !== 'ready') return;
@@ -226,11 +229,11 @@ focus.focusIn = () => {
   _focusIn();
 };
 const _focusExit = focus.exit.bind(focus);
-focus.exit = () => { _focusExit(); glance.recenter(); hotkeys.setBarVisible(true); };
+focus.exit = () => { _focusExit(); hotkeys.setBarVisible(true); };
 window.addEventListener('keydown', (e) => {
   if (e.key.toLowerCase() !== 'f' || e.repeat || os.isOpen || !gateEl.classList.contains('hidden')) return;
-  if (look.active) look.exit();
-  else look.enter();
+  if (look.active) look.exit(); // also sets freeLook = false
+  else if (look.canEnter()) { look.enter(); freeLook = true; }
 });
 monitor.on('desktop', () => {
   focus.enable();
@@ -288,6 +291,7 @@ if (params.has('skip') || params.has('os') || params.has('down')) {
     focus.enable();
   }
   if (params.has('os')) { focus.focusIn(); focus.t = focus.dur; }
+  else look.enter(); // free look is on by default at the desk
 }
 // Dev replay keys: only in `npm run dev` or with ?debug (never for normal visitors).
 const devKeys = params.has('debug') || import.meta.env.DEV;
@@ -297,10 +301,10 @@ window.addEventListener('keydown', (e) => {
   if (k === 'm' || k === 'r') focus.disable();
   // M: replay the terminal drop + boot (and the wall CRTs waking).
   if (k === 'm') { sound.resetMonitor(); monitor.reset(); wallCrts.sleepNow(); monitor.start(); }
-  if (k === 'p') { sound.resetServer(); reveal.start(elapsed - (REVEAL.breaker1 - BREAKER1_AFTER_START)); } // replay the power-up
+  if (k === 'p') { sound.resetServer(); reveal.start(elapsed); } // replay the power-up
   if (k === 'r') { // replay the whole intro from the corridor
     look.cancel(); sound.resetMonitor(); sound.resetServer(); monitor.reset(); reveal.reset(); wallCrts.sleepNow();
-    revealAt = 0; walk.placeAtStart(); intro.reset(); intro.start();
+    walk.placeAtStart(); intro.reset(); intro.start();
   }
 });
 
@@ -327,6 +331,7 @@ if (params.has('skip') || params.has('debug') || params.has('os')) {
 // ---------------------------------------------------------------- loop
 const timer = new THREE.Timer();
 let elapsed = 0;
+let prevFocusState = focus.state;
 function frame() {
   timer.update();
   // Clamp only big gaps (tab switches). A tighter clamp would play the intro in slow
@@ -348,12 +353,10 @@ function frame() {
   look.update(dt);
   intro.update(dt);
   if (!debug.orbitActive()) walk.update(dt);
-  glance.enabled = walk.state === 'arrived' && !look.active && !look.gliding && ['ready', 'unavailable'].includes(focus.state) && !debug.orbitActive();
-  glance.update(dt, camera);
-  if (revealAt && elapsed >= revealAt) {
-    revealAt = 0;
-    reveal.start(elapsed - (REVEAL.breaker1 - BREAKER1_AFTER_START)); // breaker 1 a second from now
-  }
+  // Back from the terminal: restore free look if the visitor had it on.
+  if (prevFocusState === 'zoomingOut' && focus.state === 'ready' && freeLook) look.enter();
+  prevFocusState = focus.state;
+  if (reveal.state === 'dark' && walk.state === 'walking' && walk.t >= revealTrigger) reveal.start(elapsed);
   monitor.update(dt);
   wallCrts.update(dt);
   wallCrts.renderFeeds(renderer, scene); // CCTV feeds for the wall CRTs that show one
