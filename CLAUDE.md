@@ -33,6 +33,9 @@ Apollo Core styling) and must be read before visual work.
    plus **faint server fan noise** from beyond the glass.
 6. While descending, the monitor shows the **supercomputer booting**: a **boot image of
    a bronze oil lamp** (Aladdin-style genie lamp, but our own design, not Disney's)
+   **with a flame coming out of the spout** (part of the logo, needn't animate), drawn
+   **simple, like 1980s computer graphics, NOT a modern render** (user feedback: we use
+   low-res pixel art, a limited flat palette, a 1 px outline, no gradients),
    with **serif** text beneath: "NMS FYI OS", with "Version 1.0" on its own line below,
    slightly smaller.
 7. When the monitor is fully down, after a **couple of seconds' gap**, the boot screen
@@ -60,7 +63,7 @@ instead of blocking on them.
 | 2 | Overhead monitor (Blender-scripted bulbous CRT .glb), ceiling hatch doors + shaft, 3-stage telescoping arm, descent synced to the walk, CRT warm-up + placeholder boot card | ✅ 2026-11-09 |
 | 3 | Reveal timeline: core lights, then room ~1 s later; LED cascade; fixtures | todo (power hooks exist) |
 | 4 | Sound: footsteps, breaker clunks, fan hum, monitor motor, CRT whine | todo |
-| 5 | Boot screen on the monitor (oil lamp + serif title), rendered to a canvas texture | todo |
+| 5 | Boot screen on the monitor: 1980s pixel-art bronze oil lamp with a lit flame (lamp.js), serif title, progress bar | ✅ 2026-11-09 (the boot to OS hand-off comes in stage 6) |
 | 6 | Mock OS: XP-like desktop, lamp launcher, Exit; E to focus/fullscreen | todo; needs discussion |
 | 7 | Polish: film grain, fluorescent flicker, mobile/low-GPU fallback, accessibility (skip intro, reduced motion), loading screen | todo |
 | 8 | Deploy to Infomaniak Node.js hosting | todo; confirm their Node version and how they run apps |
@@ -109,7 +112,9 @@ src/scene/desk.js     command desk, side wings, button decks, indicator row; pla
 src/scene/keyboard.js full-size Model M-style QWERTY + nav cluster + numpad (layout table -> keycaps + one legend decal)
 src/scene/serverRoom.js   hall shell, window surround, trusses, fixtures, catwalks, data banks, racks, room lights
 src/scene/monitor.js  MonitorRig: hatch doors, shaft, telescoping arm, loads public/models/monitor.glb, descent timeline
-src/scene/screen.js   MonitorScreen: canvas -> emissive CanvasTexture (off / CRT warm-up / boot card; stage 5-6 extend)
+src/scene/screen.js   MonitorScreen: canvas -> emissive CanvasTexture (off / CRT warm-up / boot screen; stage 6 adds the OS)
+src/scene/lamp.js     boot logo: lamp drawn at 112×76 px, palette-quantized, scaled up nearest-neighbor (static, cached)
+tools/blender/check_monitor.py  imports the .glb and reports parts poking through the housing shell + corner renders
 tools/blender/monitor.py  Blender script that builds + exports the monitor (and renders previews)
 public/models/monitor.glb generated, committed (~0.55 MB) so the repo deploys as-is
 src/scene/supercomputer.js original supercomputer (dais, C-ring cabinets, bench, lathe core, bands, face panel) + core lights
@@ -174,6 +179,15 @@ Pixel ratio is capped at 1.5.
   rotates `Tilt.x`); material names `housing, bezel, grille, screen, led, yoke, steel, knob` are remapped to
   site materials in monitor.js; the `Screen` mesh has 0..1 UVs (canvas texture needs `flipY = false`).
   Gotcha: `bmesh.ops.create_grid(calc_uvs=True)` only writes UVs if a UV layer exists first.
+- Monitor modeling lessons (user caught clashes at the top corners):
+  * Shells use `pillow()`: a 2-segment support bevel, Catmull-Clark subdivision, then a gentle cast. Casting onto a
+    many-segment bevel folded the corners into stair-step bands.
+  * The rear hood must pass through the body's FLAT back area (|x|<0.195, |z|<0.145); a wider hood poked out the corners.
+  * Raised parts on domed surfaces stick out at their ends: cut real slots (boolean) instead.
+  * Never paint faces by x/z position alone (it also hit the back panel); recess color comes from `BezelPlate`.
+  * Coincident outer faces flicker (yoke bar vs arms): offset them.
+  * Run `check_monitor.py` after every model change. Expected flags are only surface-mounted parts
+    (knobs, LED, hubs, screen in the recess, chin vents).
 - Sounds: synthesize with Web Audio or use CC0 sources. **Never rip audio from the
   reference videos.** Record sources and licenses in `docs/assets.md` when added.
 - Original designs only: take mood/pacing from references, never copy their models,
@@ -209,6 +223,8 @@ then a damped spring/sway. Stage 3 will tie the server-room reveal to this same 
 - **Composition:** from the standing position the monitor arm lines up exactly with the supercomputer
   core column, so the monitor plus arm hide the core's center. Options: offset hatch/monitor sideways,
   shift the camera end point, lower the monitor, or redesign the core silhouette (wider top).
+- CRT glass glare: the desk spot makes a bright highlight in the middle of the screen. Consider moving the desk light,
+  a rougher screen, or a glass-reflection map so the boot logo stays clean.
 - The monitor first emerges above the frame (you're looking ahead). Possibly a scripted glance up as it drops.
 - Fluorescent warmth/greenness, bloom strength, walk speed (8.1 s).
 

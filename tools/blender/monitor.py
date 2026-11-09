@@ -107,6 +107,19 @@ def soften(obj, bevel, segments=6, subdiv=2, cast=0.0):
         c.cast_type = "SPHERE"; c.factor = cast
     apply_all(obj)
 
+def pillow(obj, support, levels=3, cast=0.0):
+    """Clean pillowy shell: two-segment support bevel, then Catmull-Clark subdivision,
+    then an optional gentle spherical cast on the now-dense, even mesh.
+    (Casting straight onto a many-segment bevel folded the corners: stair-step bands.)"""
+    b = obj.modifiers.new("support", "BEVEL")
+    b.width = support; b.segments = 2; b.limit_method = "NONE"; b.profile = 0.5
+    s = obj.modifiers.new("subdiv", "SUBSURF")
+    s.subdivision_type = "CATMULL_CLARK"; s.levels = levels; s.render_levels = levels
+    if cast:
+        c = obj.modifiers.new("cast", "CAST")
+        c.cast_type = "SPHERE"; c.factor = cast
+    apply_all(obj)
+
 def smooth(obj, angle=38):
     with bpy.context.temp_override(object=obj, active_object=obj, selected_objects=[obj], selected_editable_objects=[obj]):
         try:
@@ -135,7 +148,7 @@ def cylinder(name, r, depth, loc, mat, rot=(0, 0, 0), verts=32):
 
 # ------------------------------------------------------------------ front housing
 body = mesh_obj("Body", box_bm(W, DF, H), "housing")
-soften(body, bevel=0.105, segments=7, subdiv=2, cast=0.16)
+pillow(body, support=0.085, levels=3, cast=0.07)
 
 # Screen recess: boolean-cut a rounded slot into the front; recess walls get the bezel material.
 cutter = mesh_obj("Cutter", box_bm(SCREEN_W + 0.035, 0.2, SCREEN_H + 0.035), "bezel")
@@ -149,29 +162,36 @@ except Exception:
     pass
 apply_all(body)
 bpy.data.objects.remove(cutter, do_unlink=True)
-# Paint the recess walls with the darker bezel material (don't rely on boolean material transfer).
+# Recess face painting is disabled: the BezelPlate gives the dark ring, and painting by
+# face position left sliver faces with mismatched color at the recess corners.
+PAINT_RECESS = False
 if "bezel" not in [m.name for m in body.data.materials]:
     body.data.materials.append(MAT["bezel"])
 bezel_idx = [m.name for m in body.data.materials].index("bezel")
 half_w, half_h = (SCREEN_W + 0.035) / 2 + 0.002, (SCREEN_H + 0.035) / 2 + 0.002
 for p in body.data.polygons:
     c = p.center
-    in_recess = abs(c.x) < half_w and abs(c.z - SCREEN_CZ) < half_h
+    # Front of the housing only: without the y limit this also painted the back panel.
+    in_recess = abs(c.x) < half_w and abs(c.z - SCREEN_CZ) < half_h and c.y < FRONT_Y + RECESS + 0.01
     is_wall = p.normal.y > -0.7
     is_floor = c.y >= FRONT_Y + RECESS - 0.02 - 0.003  # the cut floor behind the screen
-    if in_recess and (is_wall or is_floor):
+    if PAINT_RECESS and in_recess and (is_wall or is_floor):
         p.material_index = bezel_idx
-smooth(body, 50)
+smooth(body, 80)  # shells are Catmull-smooth; only the near-90° recess/slot edges stay sharp
 
 # ------------------------------------------------------------------ rear hood (CRT bulge), tapered
+# The hood's front must stay INSIDE the body everywhere. The body's flat back face only
+# spans |x| < 0.195, |z| < 0.145 (W/2 or H/2 minus the 0.105 bevel), so the hood is
+# sized to pass through that flat area and never reach the rounded corners. (An earlier,
+# wider hood poked out of the body's top-left/right corners. check_monitor.py guards this.)
 bm = box_bm(1, 1, 1)
 for v in bm.verts:
-    if v.co.y < 0:   # front of hood, tucked inside the body
-        v.co.x *= 0.52; v.co.z *= 0.44; v.co.y = 0.02
+    if v.co.y < 0:   # front of hood, buried inside the body
+        v.co.x *= 0.38; v.co.z *= 0.27; v.co.y = 0.0
     else:            # back of hood
-        v.co.x *= 0.30; v.co.z *= 0.27; v.co.y = 0.42; v.co.z -= 0.025
+        v.co.x *= 0.28; v.co.z *= 0.23; v.co.y = 0.42; v.co.z -= 0.02
 hood = mesh_obj("Hood", bm, "housing")
-soften(hood, bevel=0.1, segments=6, subdiv=2, cast=0.2)
+pillow(hood, support=0.07, levels=3, cast=0.05)
 smooth(hood, 34)
 
 # ------------------------------------------------------------------ surface probes (the faces are puffed, so measure them)
@@ -203,9 +223,9 @@ for p in screen.data.polygons:
 # Bezel plate: a thin taupe plate on the recess floor, behind the screen, so the ring
 # around the glass reads darker than the housing. Its corners are rounded in the XZ plane
 # (only the four depth edges are beveled) to match the recess cut.
-bm = box_bm(SCREEN_W + 0.035 - 0.003, 0.003, SCREEN_H + 0.035 - 0.003)
+bm = box_bm(SCREEN_W + 0.035 - 0.014, 0.003, SCREEN_H + 0.035 - 0.014)
 depth_edges = [e for e in bm.edges if abs(e.verts[0].co.y - e.verts[1].co.y) > 1e-4]
-bmesh.ops.bevel(bm, geom=depth_edges, offset=0.038, segments=6, affect="EDGES", profile=0.5)
+bmesh.ops.bevel(bm, geom=depth_edges, offset=0.046, segments=8, affect="EDGES", profile=0.5)
 plate = mesh_obj("BezelPlate", bm, "bezel")
 plate.location = (0, recess_floor_y - 0.0016, SCREEN_CZ)
 
@@ -219,16 +239,32 @@ for i, x in enumerate((0.13, 0.18)):
 cylinder("Led", 0.006, 0.01, (0.235, surface_y(0.235, chin_z) - 0.002, chin_z), "led", rot=(math.radians(90), 0, 0), verts=16)
 
 # ------------------------------------------------------------------ top vents
-for i in range(9):
-    x = -0.16 + i * 0.04
-    rbox(f"TopVent{i}", (0.022, 0.10, 0.012), (x, 0.03, surface_z(x, 0.03) - 0.0055), "grille", 0.005, 2)
+# Real slots cut into the domed top (raised bars on a curved surface stuck up at their
+# ends). Each slot gets a dark backing strip at its floor so it reads as a vent.
+SLOT_Y0, SLOT_Y1, SLOT_DEPTH = -0.035, 0.045, 0.011
+slot_x = [-0.15 + i * 0.05 for i in range(7)]
+slot_floor = {}
+for i, x in enumerate(slot_x):
+    zmin = min(surface_z(x, y) for y in (SLOT_Y0, (SLOT_Y0 + SLOT_Y1) / 2, SLOT_Y1))
+    floor = zmin - SLOT_DEPTH
+    slot_floor[x] = floor
+    c = mesh_obj(f"SlotCutter{i}", box_bm(0.016, SLOT_Y1 - SLOT_Y0, 0.08), "grille")
+    c.location = (x, (SLOT_Y0 + SLOT_Y1) / 2, floor + 0.04)
+    soften(c, bevel=0.0075, segments=4, subdiv=0)
+    mod = body.modifiers.new(f"slot{i}", "BOOLEAN")
+    mod.operation = "DIFFERENCE"; mod.object = c; mod.solver = "EXACT"
+    apply_all(body)
+    bpy.data.objects.remove(c, do_unlink=True)
+smooth(body, 80)  # shells are Catmull-smooth; only the near-90° recess/slot edges stay sharp
+for i, x in enumerate(slot_x):
+    rbox(f"TopVent{i}", (0.02, SLOT_Y1 - SLOT_Y0 + 0.004, 0.008), (x, (SLOT_Y0 + SLOT_Y1) / 2, slot_floor[x] - 0.001), "grille", 0.003, 2)
 
 # ------------------------------------------------------------------ yoke (U-bracket) + arm mount
 hub_x = W / 2 + 0.012
 for s in (-1, 1):
     cylinder(f"Hub{'L' if s < 0 else 'R'}", 0.055, 0.03, (s * hub_x, 0.0, 0.0), "steel", rot=(0, math.radians(90), 0), verts=36)
     rbox(f"YokeArm{'L' if s < 0 else 'R'}", (0.05, 0.085, YOKE_TOP + 0.03), (s * (hub_x + 0.034), 0.0, YOKE_TOP / 2), "yoke", 0.022, 5)
-rbox("YokeBar", (2 * (hub_x + 0.034) + 0.05, 0.085, 0.056), (0, 0.0, YOKE_TOP), "yoke", 0.024, 5)
+rbox("YokeBar", (2 * (hub_x + 0.034) + 0.064, 0.085, 0.056), (0, 0.0, YOKE_TOP), "yoke", 0.024, 5)  # wider than the arms: coincident faces flickered
 cylinder("Mount", 0.075, 0.07, (0, 0.0, YOKE_TOP + 0.035), "steel", verts=40)
 
 # ------------------------------------------------------------------ origin at the attachment point; parent everything

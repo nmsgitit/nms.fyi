@@ -1,9 +1,12 @@
 // The monitor's screen: a canvas drawn in 2D and used as an emissive CanvasTexture.
-// Stage 2 covers power states and a CRT warm-up with a placeholder boot card.
-// Stage 5 replaces drawBoot() with the oil-lamp boot image, and stage 6 adds the OS.
+// Power states: off -> CRT warm-up -> boot screen (bronze oil lamp, serif title,
+// progress bar). Stage 6 adds the OS desktop after the boot.
 import * as THREE from 'three';
+import { drawLamp } from './lamp.js';
 
 export class MonitorScreen {
+  static BOOT_SECONDS = 4.5; // progress bar fill time (from boot-screen start)
+
   constructor(width = 1024, height = 780) {
     this.canvas = document.createElement('canvas');
     this.canvas.width = width;
@@ -70,22 +73,16 @@ export class MonitorScreen {
     this.texture.needsUpdate = true;
   }
 
-  /** Placeholder boot card. Stage 5 replaces this with the bronze oil-lamp image. */
+  /** Boot screen: 1980s pixel-art oil lamp (lamp.js), serif title, progress bar. */
   drawBoot(t) {
     const { ctx, canvas: c } = this;
     const W = c.width, H = c.height;
     const fade = Math.min(1, t / 0.6);
-    const bg = ctx.createRadialGradient(W / 2, H / 2, 10, W / 2, H / 2, W * 0.7);
-    bg.addColorStop(0, `rgba(30,24,16,${fade})`);
-    bg.addColorStop(1, `rgba(6,5,4,${fade})`);
+    const bg = `rgba(10,8,6,${fade})`; // flat near-black: no soft modern gradients
     ctx.fillStyle = bg;
     ctx.fillRect(0, 0, W, H);
     ctx.globalAlpha = fade;
-    // Lamp placeholder silhouette (simple, to be replaced).
-    ctx.fillStyle = '#b07a3a';
-    ctx.beginPath();
-    ctx.ellipse(W / 2, H * 0.4, W * 0.13, H * 0.06, 0, 0, Math.PI * 2);
-    ctx.fill();
+    drawLamp(ctx, W / 2, H * 0.37, W * 0.46);
     ctx.fillStyle = '#ead9b0';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
@@ -94,6 +91,17 @@ export class MonitorScreen {
     ctx.font = `${Math.round(H * 0.05)}px Georgia, "Times New Roman", serif`;
     ctx.fillStyle = '#c9b792';
     ctx.fillText('Version 1.0', W / 2, H * 0.75);
+
+    // Boot progress: a slim segmented bar that fills over BOOT_SECONDS.
+    const segs = 24, bw = W * 0.34, bh = H * 0.018, bx = W / 2 - bw / 2, by = H * 0.84;
+    const filled = Math.floor(segs * Math.min(1, t / MonitorScreen.BOOT_SECONDS));
+    ctx.strokeStyle = 'rgba(201,183,146,0.6)';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(bx - 4, by - 4, bw + 8, bh + 8);
+    for (let i = 0; i < filled; i++) {
+      ctx.fillStyle = i === filled - 1 && filled < segs ? '#f3dfaa' : '#c9a55e';
+      ctx.fillRect(bx + (i * bw) / segs + 1, by, bw / segs - 3, bh);
+    }
     ctx.globalAlpha = 1;
   }
 
