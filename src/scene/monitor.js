@@ -135,10 +135,17 @@ export class MonitorRig {
     return this;
   }
 
+  on(evt, fn) {
+    this.listeners ||= {};
+    (this.listeners[evt] ||= []).push(fn);
+  }
+  emit(evt, data) { (this.listeners?.[evt] || []).forEach((fn) => fn(data)); }
+
   start() {
     this.state = 'running';
     this.t = 0;
     this.screen.powerOff();
+    this.emit('start'); // audio schedules the whole hatch/motor/CRT soundtrack from MONITOR timings
   }
 
   reset() {

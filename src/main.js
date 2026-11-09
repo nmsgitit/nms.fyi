@@ -2,7 +2,7 @@
 // Stage 1: command room, server room, supercomputer, walking camera.
 // Stage 2: overhead monitor (Blender model) dropping from a ceiling hatch during the walk.
 // Stage 3: server-room power-up (sequence/reveal.js) on the monitor's clock.
-// Stage 5: boot screen. Next: sound (stage 4), OS (stage 6).
+// Stage 4: procedural sound (audio/sound.js). Stage 5: boot screen. Next: OS (stage 6).
 import * as THREE from 'three';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
@@ -19,6 +19,7 @@ import { buildSupercomputer, buildCoreLights } from './scene/supercomputer.js';
 import { WALK } from './scene/layout.js';
 import { MonitorRig, MONITOR } from './scene/monitor.js';
 import { Reveal } from './sequence/reveal.js';
+import { SoundDesign } from './audio/sound.js';
 import { Walk } from './camera/walk.js';
 import { createDebug } from './debug.js';
 
@@ -126,6 +127,32 @@ const reveal = new Reveal({ coreLights, serverLights, commandLights, panelMats: 
 reveal.on('breaker', (e) => debug?.log?.(`breaker ${e.index}`));
 const setLit = (on) => (on ? reveal.finish() : reveal.reset()); // debug L key, ?lit
 
+// ---------------------------------------------------------------- sound (stage 4)
+// The AudioContext can only start from a user gesture: the Enter click (or, with ?skip,
+// the first click anywhere). Every hook is a no-op until then.
+const sound = new SoundDesign();
+reveal.on('breaker', (e) => sound.ready && sound.breaker(e.strength));
+reveal.on('row', (e) => sound.ready && sound.tubeStrike(e.row));
+reveal.on('fans', () => sound.ready && sound.fans());
+monitor.on('start', () => sound.ready && sound.monitorSequence(MONITOR));
+
+const muteBtn = document.getElementById('mute');
+function applyMute(muted) {
+  sound.setMuted(muted);
+  muteBtn.setAttribute('aria-pressed', String(muted));
+  muteBtn.textContent = muted ? 'Sound off' : 'Sound on';
+  try { localStorage.setItem('nms-muted', muted ? '1' : '0'); } catch { /* storage unavailable */ }
+}
+let startMuted = false;
+try { startMuted = localStorage.getItem('nms-muted') === '1'; } catch { /* storage unavailable */ }
+applyMute(startMuted);
+muteBtn.addEventListener('click', () => applyMute(!sound.muted));
+async function startSound() {
+  await sound.start();
+  sound.ambience();
+  if (reveal.state === 'lit') sound.serverAmbience();
+}
+
 // ---------------------------------------------------------------- post-processing
 const composer = new EffectComposer(renderer);
 composer.addPass(new RenderPass(scene, camera));
@@ -136,7 +163,10 @@ composer.addPass(new OutputPass());
 // ---------------------------------------------------------------- camera walk
 const walk = new Walk(camera, WALK);
 walk.placeAtStart();
-walk.on('step', (e) => debug?.log?.(`step ${e.index} ${e.foot}`));
+walk.on('step', (e) => {
+  debug?.log?.(`step ${e.index} ${e.foot}`);
+  if (sound.ready) sound.footstep(e);
+});
 walk.on('arrive', () => debug?.log?.('arrived'));
 
 const debug = createDebug({ params, renderer, scene, camera, walk, setLit, leds });
@@ -152,21 +182,28 @@ if (params.has('skip')) {
 window.addEventListener('keydown', (e) => {
   const k = e.key.toLowerCase();
   // M: replay the monitor drop together with the power-up (they share a clock).
-  if (k === 'm') { monitor.reset(); monitor.start(); reveal.start(elapsed); }
-  if (k === 'p') reveal.start(elapsed); // replay just the power-up
-  if (k === 'r') { monitor.reset(); reveal.reset(); } // the walk restart re-triggers both
+  if (k === 'm') { sound.resetMonitor(); sound.resetServer(); monitor.reset(); monitor.start(); reveal.start(elapsed); }
+  if (k === 'p') { sound.resetServer(); reveal.start(elapsed); } // replay just the power-up
+  if (k === 'r') { sound.resetMonitor(); sound.resetServer(); monitor.reset(); reveal.reset(); } // walk restart re-triggers
 });
 
 // ---------------------------------------------------------------- gate
 function enter() {
   gateEl.classList.add('hidden');
   enterBtn.blur();
+  startSound(); // inside the click: browsers allow audio to start here
   if (!params.has('skip')) walk.begin();
 }
 enterBtn.addEventListener('click', enter);
 gateStatus.textContent = 'Ready';
 enterBtn.disabled = false;
-if (params.has('skip') || params.has('debug')) gateEl.classList.add('hidden');
+if (params.has('skip') || params.has('debug')) {
+  gateEl.classList.add('hidden');
+  // No gate click in these modes, so the first click or key anywhere unlocks sound.
+  const unlock = () => startSound();
+  window.addEventListener('pointerdown', unlock, { once: true });
+  window.addEventListener('keydown', unlock, { once: true });
+}
 
 // ---------------------------------------------------------------- loop
 const timer = new THREE.Timer();
@@ -201,4 +238,4 @@ window.addEventListener('resize', () => {
 });
 
 // Expose for console debugging in development.
-if (import.meta.env.DEV) Object.assign(window, { THREE, scene, camera, renderer, walk, setLit, leds, monitor, reveal });
+if (import.meta.env.DEV) Object.assign(window, { THREE, scene, camera, renderer, walk, setLit, leds, monitor, reveal, sound });

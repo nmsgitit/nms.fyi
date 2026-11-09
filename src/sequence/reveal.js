@@ -98,6 +98,13 @@ export class Reveal {
       this.leds.setGroup('banks', true, now, R.bankCascade);
       this.leds.setGroup('racks', true, now + R.rackDelay, R.rackCascade);
     }
+    // One 'row' event as each fixture row strikes (audio: tube tink + stutter buzz).
+    for (let r = 0; r < 3; r++) {
+      if (!this.fired['row' + r] && t >= R.breaker2 + r * R.rowStagger) {
+        this.fired['row' + r] = true;
+        this.emit('row', { row: r });
+      }
+    }
 
     const t1 = t - R.breaker1;
     const t2 = t - R.breaker2;

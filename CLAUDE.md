@@ -63,7 +63,7 @@ instead of blocking on them.
 | 1 | Rough 3D version: command room, glass wall, server room, supercomputer, desk + keyboard, walking camera, palette/lighting | ✅ 2026-11-09 |
 | 2 | Overhead monitor (Blender-scripted bulbous CRT .glb), ceiling hatch doors + shaft, 3-stage telescoping arm, descent synced to the walk, CRT warm-up + placeholder boot card | ✅ 2026-11-09 |
 | 3 | Server-room power-up on the monitor clock: breaker 1 core (spots, ring, climbing bands, core LEDs), breaker 2 ~1.15 s later room (surge dip, fluorescent row strikes, bank/rack LED cascades) | ✅ 2026-11-09 |
-| 4 | Sound: footsteps, breaker clunks, fan hum, monitor motor, CRT whine | todo |
+| 4 | Procedural Web Audio sound (audio/sound.js): footsteps, room tone, hatch + arm motor + arrival, CRT power-on, two breakers, tube strikes, transformer hum, faint fans behind glass; mute button | ✅ 2026-11-09 (not yet heard by the user) |
 | 5 | Boot screen on the monitor: 1980s pixel-art bronze oil lamp with a lit flame (lamp.js), serif title, progress bar | ✅ 2026-11-09 (the boot to OS hand-off comes in stage 6) |
 | 6 | Mock OS: XP-like desktop, lamp launcher, Exit; E to focus/fullscreen | todo; needs discussion |
 | 7 | Polish: film grain, fluorescent flicker, mobile/low-GPU fallback, accessibility (skip intro, reduced motion), loading screen | todo |
@@ -89,7 +89,7 @@ npm start          # serves dist/ on $PORT (default 3000)
 - `?skip`: skip the intro: at the desk, monitor down, server room powered. Add `?dark` to keep it unpowered.
 - `?lit`: server room fully powered (preview the layout).
 - `?debug`: orbit camera + HUD (fps, draw calls, camera position).
-- Keys: **L** toggles server power, **R** restarts the walk, **M** replays monitor drop + power-up together,
+- Sound is silent until the first user gesture (browser rule). Keys: **L** toggles server power, **R** restarts the walk, **M** replays monitor drop + power-up together,
   **P** replays just the power-up, **O** orbit cam, **H** HUD.
 - In dev, `window.scene/camera/renderer/walk/setLit/leds/monitor/reveal` are exposed.
 - Deterministic reveal stepping (screenshots stall rAF): replace `reveal.update` and `leds.update` with no-ops
@@ -121,6 +121,7 @@ src/scene/lamp.js     boot logo: lamp drawn at 112×76 px, palette-quantized, sc
 tools/blender/check_monitor.py  imports the .glb and reports parts poking through the housing shell + corner renders
 tools/blender/monitor.py  Blender script that builds + exports the monitor (and renders previews)
 public/models/monitor.glb generated, committed (~0.55 MB) so the repo deploys as-is
+src/audio/sound.js    SoundDesign: all sounds synthesized with Web Audio (no files); room / server (glass) / fx buses
 src/sequence/reveal.js Reveal: power-up timeline (REVEAL timings, fluorescentStrike/lampStrike curves, events)
 src/scene/supercomputer.js original supercomputer (dais, C-ring cabinets, bench, lathe core, bands, face panel) + core lights
 docs/references.md    written notes on the reference videos (timeline, style)
@@ -193,8 +194,8 @@ Pixel ratio is capped at 1.5.
   * Coincident outer faces flicker (yoke bar vs arms): offset them.
   * Run `check_monitor.py` after every model change. Expected flags are only surface-mounted parts
     (knobs, LED, hubs, screen in the recess, chin vents).
-- Sounds: synthesize with Web Audio or use CC0 sources. **Never rip audio from the
-  reference videos.** Record sources and licenses in `docs/assets.md` when added.
+- Sounds: currently 100 % synthesized (audio/sound.js). If CC0 recordings are ever added, record sources
+  and licenses in `docs/assets.md`. **Never rip audio from the reference videos.**
 - Original designs only: take mood/pacing from references, never copy their models,
   logos, or layouts. The oil lamp must be our own design (not Disney's Aladdin lamp).
 
@@ -224,6 +225,28 @@ the walk ends. Doors open 0 to 0.9 s, the arm descends 0.55 to 3.95 s (stowed at
 screen center ~1.40 m), screen power-on at 1.1 s, tilt to -0.17 rad over the last 40% of the drop,
 then a damped spring/sway. Stage 3 will tie the server-room reveal to this same clock.
 
+## Sound (audio/sound.js)
+- **All procedural** (Web Audio): no audio files, so nothing to license. Never rip audio from the references.
+- The AudioContext starts inside the Enter click (`startSound()` in main.js). With `?skip`/`?debug` (no gate),
+  the first pointer or key press unlocks it. All hooks are no-ops until `sound.ready`.
+- Buses: `room` (dry + 0.9 s synthetic reverb), `server` (1.4 kHz "glass" low-pass, then quiet dry + 3 s reverb),
+  `fx` (breakers: dry + big reverb) -> master -> compressor (note: Web Audio's compressor adds automatic
+  makeup gain) -> analyser -> out.
+- Hooks: `walk 'step'` -> footstep; `monitor 'start'` -> `monitorSequence(MONITOR)` schedules hatch latch,
+  pneumatic hiss, door stops, arm motor (pitch/level follow the eased descent speed via setValueCurveAtTime),
+  arrival clunk + spring, CRT degauss/crackle/15.7 kHz whine; `reveal 'breaker'` -> breaker(strength)
+  (breaker 2 adds a sub boom + transformer hum); `reveal 'row'` -> tube strike (same stutter as
+  fluorescentStrike) then hum; `reveal 'fans'` -> fans fade in over 3.5 s. Room tone (120 Hz buzz + air)
+  from the start. Skip mode uses `serverAmbience()`.
+- Mute button `#mute` (bottom-right) persists in localStorage key `nms-muted`.
+- Verified levels (offline renders, peak): footstep 0.51, latch 0.37, doors 0.46, CRT 0.39, motor 0.16,
+  arrival 0.31, breaker1 0.66, breaker2 0.81; fans steady RMS ~0.03 ("faint" per brief). No clipping.
+- **Gotcha:** a GainNode sits at 1.0 until its first automation event. `env()` sets `param.value = 0.0001`
+  first, otherwise any source started before its envelope blasts at full volume (this bit the spring and breaker buzz).
+- **Testing without ears:** in dev, `new sound.constructor()` + `start(new OfflineAudioContext(...))`, schedule
+  sounds at known times, `startRendering()`, then measure peak/RMS per window and Goertzel band energy.
+  Live: `sound.level()` reads the analyser RMS. Claude can't hear: the user must judge the actual sound.
+
 ## Power-up timing (sequence/reveal.js REVEAL; seconds on the monitor clock)
 Starts with the monitor (~4.1 s into the walk). Breaker 1 at 1.2 s: core spots `lampStrike` (fast flutter, then
 climb), ring light, bands climb (0.12 s + 0.11 s × i), core LEDs cascade over 0.9 s. Breaker 2 at 2.35 s:
@@ -242,6 +265,5 @@ command room dips 40 % for 0.24 s, fixture rows `fluorescentStrike` 0.3 s apart 
 
 ## Known rough edges
 - A faint reflection glow stays on the center pane in the dark state.
-- No sound yet (footstep events are already emitted by walk.js).
 - No mobile/low-end fallback yet. WebGL2-missing shows a message on the gate.
 - Supercomputer face panel sits low and is partly hidden behind the window sill from the desk.

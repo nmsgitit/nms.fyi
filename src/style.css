@@ -56,6 +56,27 @@ html, body {
 #gate-enter:disabled { opacity: 0.4; cursor: wait; }
 #gate-enter:focus-visible { outline: 2px solid var(--ink); outline-offset: 3px; }
 
+#mute {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  z-index: 15;
+  font: 12px/1 Georgia, 'Times New Roman', serif;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink);
+  background: rgba(20, 18, 15, 0.55);
+  border: 1px solid rgba(217, 207, 187, 0.35);
+  border-radius: 3px;
+  padding: 8px 12px;
+  cursor: pointer;
+  opacity: 0.7;
+  transition: opacity 200ms ease;
+}
+#mute:hover, #mute:focus-visible { opacity: 1; }
+#mute:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+#mute[aria-pressed='true'] { color: var(--dim); }
+
 #debug-hud {
   position: fixed;
   left: 8px;
