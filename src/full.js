@@ -20,7 +20,9 @@ import { WallCRTs } from './scene/wallCrt.js';
 import { DesktopOS } from './os/os.js';
 import { TerminalFocus } from './sequence/focus.js';
 import { HotkeyPanel } from './ui/hotkeys.js';
-import { LookAround } from './sequence/lookAround.js';
+import { LookAround, Glance } from './sequence/lookAround.js';
+import { REVEAL } from './sequence/reveal.js';
+import { buildDeskNote } from './scene/deskNote.js';
 import { HydraulicDoor } from './scene/door.js';
 import { DoorIntro } from './sequence/intro.js';
 import { CctvSystem } from './scene/cctv.js';
@@ -62,7 +64,7 @@ RectAreaLightUniformsLib.init();
 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x020203);
-scene.fog = new THREE.FogExp2(0x030304, 0.012);
+scene.fog = new THREE.FogExp2(0x030304, 0.009); // lighter: the supercomputer is now ~43 m from the desk
 
 const camera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.05, 140);
 
@@ -71,12 +73,12 @@ const m = createMaterials(renderer.capabilities.getMaxAnisotropy());
 // Only the glass gets an environment map (captured below). A scene-wide
 // environment would light the "dark" server room.
 const pmrem = new THREE.PMREMGenerator(renderer);
-m.serverFloor.map.repeat.set(32 / 0.6, 27.4 / 0.6);
+m.serverFloor.map.repeat.set(32 / 0.6, 43.4 / 0.6); // hall + half-circle bay (floor plane spans z -44..-0.6)
 
 const leds = new LedField(8000);
 const commandRoom = buildCommandRoom(m, leds);
 scene.add(commandRoom);
-const wallCrts = new WallCRTs(commandRoom.userData.crtSlots); // bouncing-lamp screens on the side walls
+const wallCrts = new WallCRTs(commandRoom.userData.crtSlots, { cctv: null }); // side-wall CRTs (cctv attached below)
 const door = new HydraulicDoor(m); // entrance door + "Command Room" sign
 scene.add(door.group);
 scene.add(wallCrts.group);
@@ -91,6 +93,8 @@ scene.add(serverBuilder.build({ name: 'serverRoom', castShadow: true, receiveSha
 scene.add(leds.build());
 const cctv = new CctvSystem(); // security cameras in the server room's four upper corners
 scene.add(cctv.group);
+wallCrts.cctv = cctv;
+scene.add(buildDeskNote()); // handwritten operator note next to the keyboard: "press Q" 
 const commandLights = buildCommandLights();
 scene.add(commandLights);
 const serverLights = buildServerLights(m);
@@ -134,8 +138,8 @@ try {
 } catch (err) {
   console.error('Monitor model failed to load', err);
 }
-// The descent starts so the monitor arrives as the walk ends.
-let monitorTrigger = 0;
+// The terminal no longer drops during the walk-in (user request): the visitor watches the
+// power-up through the window, then lowers it themselves with Q (the note on the desk says so).
 
 // ---------------------------------------------------------------- server-room power-up
 // Built after the glass capture (which briefly changes the panel colors).
@@ -184,7 +188,13 @@ walk.on('step', (e) => {
   debug?.log?.(`step ${e.index} ${e.foot}`);
   if (sound.ready) sound.footstep(e);
 });
-walk.on('arrive', () => debug?.log?.('arrived'));
+// The power-up starts shortly after the walk ends, so the whole sequence plays through the window.
+const POWERUP_DELAY = 0.6, BREAKER1_AFTER_START = 1.0; // s after arriving / after the power-up starts
+let revealAt = 0;
+walk.on('arrive', () => {
+  debug?.log?.('arrived');
+  if (reveal.state === 'dark') revealAt = elapsed + POWERUP_DELAY;
+});
 const intro = new DoorIntro({ door, walk, sound }); // corridor door opening sequence
 
 const debug = createDebug({ params, renderer, scene, camera, walk, setLit, leds });
@@ -205,6 +215,9 @@ const look = new LookAround({
   isBlocked: () => os.isOpen || ['zoomingIn', 'zoomingOut', 'open'].includes(focus.state),
 });
 focus.isLooking = () => look.active;
+// Mouse steers the head once the walk is over (no click needed); F still turns all the way round.
+const glance = new Glance({ canvas });
+look.on('change', () => { if (!look.active && !look.gliding) glance.recenter(); });
 const _focusIn = focus.focusIn.bind(focus);
 focus.focusIn = () => {
   if (focus.state !== 'ready') return;
@@ -213,7 +226,7 @@ focus.focusIn = () => {
   _focusIn();
 };
 const _focusExit = focus.exit.bind(focus);
-focus.exit = () => { _focusExit(); hotkeys.setBarVisible(true); };
+focus.exit = () => { _focusExit(); glance.recenter(); hotkeys.setBarVisible(true); };
 window.addEventListener('keydown', (e) => {
   if (e.key.toLowerCase() !== 'f' || e.repeat || os.isOpen || !gateEl.classList.contains('hidden')) return;
   if (look.active) look.exit();
@@ -221,14 +234,17 @@ window.addEventListener('keydown', (e) => {
 });
 monitor.on('desktop', () => {
   focus.enable();
+  wallCrts.goLive(); // the wall CRTs finish booting with it, then show feeds and readouts
   if (sound.ready) sound.startupChime();
 });
+monitor.on('screenOn', () => wallCrts.wake()); // they wake from sleep and boot alongside the terminal
+monitor.on('raise', () => wallCrts.sleep()); // and go back to sleep when it's put away
 
 // Tab: show/hide the controls list (3D view only; inside the desktop Tab moves keyboard focus).
 const hotkeys = new HotkeyPanel(() => ({
   canUse: focus.state === 'ready',
   canRaise: focus.state === 'ready' && monitor.state === 'down',
-  canLower: monitor.state === 'stowed' && (walk.state === 'arrived' || look.active),
+  canLower: monitor.state === 'stowed' && (walk.state === 'arrived' || look.active) && focus.state === 'unavailable',
   canLook: look.canEnter(),
   looking: look.active,
 }));
@@ -261,14 +277,16 @@ window.addEventListener('keydown', (e) => {
 });
 
 if (params.has('lit')) setLit(true);
-monitorTrigger = Math.max(0, walk.duration - MONITOR.total);
-// ?skip = skip the intro: at the desk, monitor down, room powered (?dark keeps it unpowered).
-// ?os = skip straight into the desktop (development).
-if (params.has('skip') || params.has('os')) {
+// ?skip = skip the intro: at the desk, room powered (?dark keeps it unpowered), terminal still
+// up in the ceiling. ?down = also with the terminal lowered and booted. ?os = straight into the desktop.
+if (params.has('skip') || params.has('os') || params.has('down')) {
   walk.jumpToEnd();
-  monitor.setDown();
   if (!params.has('dark')) reveal.finish();
-  focus.enable();
+  if (params.has('os') || params.has('down')) {
+    monitor.setDown();
+    wallCrts.setLiveNow();
+    focus.enable();
+  }
   if (params.has('os')) { focus.focusIn(); focus.t = focus.dur; }
 }
 // Dev replay keys: only in `npm run dev` or with ?debug (never for normal visitors).
@@ -277,12 +295,12 @@ window.addEventListener('keydown', (e) => {
   if (!devKeys || os.isOpen) return; // the desktop has the keyboard
   const k = e.key.toLowerCase();
   if (k === 'm' || k === 'r') focus.disable();
-  // M: replay the monitor drop together with the power-up (they share a clock).
-  if (k === 'm') { sound.resetMonitor(); sound.resetServer(); monitor.reset(); monitor.start(); reveal.start(elapsed); }
-  if (k === 'p') { sound.resetServer(); reveal.start(elapsed); } // replay just the power-up
+  // M: replay the terminal drop + boot (and the wall CRTs waking).
+  if (k === 'm') { sound.resetMonitor(); monitor.reset(); wallCrts.sleepNow(); monitor.start(); }
+  if (k === 'p') { sound.resetServer(); reveal.start(elapsed - (REVEAL.breaker1 - BREAKER1_AFTER_START)); } // replay the power-up
   if (k === 'r') { // replay the whole intro from the corridor
-    look.cancel(); sound.resetMonitor(); sound.resetServer(); monitor.reset(); reveal.reset();
-    walk.placeAtStart(); intro.reset(); intro.start();
+    look.cancel(); sound.resetMonitor(); sound.resetServer(); monitor.reset(); reveal.reset(); wallCrts.sleepNow();
+    revealAt = 0; walk.placeAtStart(); intro.reset(); intro.start();
   }
 });
 
@@ -330,12 +348,15 @@ function frame() {
   look.update(dt);
   intro.update(dt);
   if (!debug.orbitActive()) walk.update(dt);
-  if (monitor.state === 'stowed' && walk.state === 'walking' && walk.t >= monitorTrigger) {
-    monitor.start();
-    reveal.start(elapsed);
+  glance.enabled = walk.state === 'arrived' && !look.active && !look.gliding && ['ready', 'unavailable'].includes(focus.state) && !debug.orbitActive();
+  glance.update(dt, camera);
+  if (revealAt && elapsed >= revealAt) {
+    revealAt = 0;
+    reveal.start(elapsed - (REVEAL.breaker1 - BREAKER1_AFTER_START)); // breaker 1 a second from now
   }
   monitor.update(dt);
   wallCrts.update(dt);
+  wallCrts.renderFeeds(renderer, scene); // CCTV feeds for the wall CRTs that show one
   reveal.update(elapsed);
   leds.update(elapsed);
   debug.update(dt);

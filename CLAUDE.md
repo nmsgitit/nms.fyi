@@ -88,7 +88,8 @@ npm start          # serves dist/ on $PORT (default 3000)
 
 ### URL flags (development)
 - `?full`, `?light`, `?mobile`: force a version (skip the chooser / mobile detection).
-- `?skip`: skip the intro: at the desk, monitor down, server room powered. Add `?dark` to keep it unpowered.
+- `?skip`: skip the intro: at the desk, server room powered, terminal still up in the ceiling. Add `?dark` to keep it
+  unpowered. `?down`: also with the terminal lowered and booted (wall CRTs live).
 - `?lit`: server room fully powered (preview the layout).
 - `?os`: skip straight into the desktop (development).
 - `/dev/os-preview.html` (dev server only): the HTML desktop alone, no WebGL needed (handy for phone-size checks in
@@ -96,8 +97,8 @@ npm start          # serves dist/ on $PORT (default 3000)
 - `?debug`: orbit camera + HUD (fps, draw calls, camera position).
 - Sound is silent until the first user gesture (browser rule). Visitor keys (3D view): **E** use the terminal, **Q** raise/lower
   the monitor (only after exiting the desktop), **F** look around with the mouse, **Tab** hotkey menu. Dev keys (only
-  `npm run dev` or `?debug`; never for visitors): **L** toggles server power, **R** replays the whole intro from the corridor, **R** restarts the walk, **M** replays monitor drop + power-up together,
-  **P** replays just the power-up, **O** orbit cam, **H** HUD.
+  `npm run dev` or `?debug`; never for visitors): **L** toggles server power, **R** replays the whole intro from the corridor, **M** replays the terminal drop + boot (wall CRTs wake),
+  **P** replays the power-up, **O** orbit cam, **H** HUD.
 - In dev, `window.scene/camera/renderer/walk/setLit/leds/monitor/reveal` are exposed.
 - Deterministic reveal stepping (screenshots stall rAF): replace `reveal.update` and `leds.update` with no-ops
   driven by your own clock, `reveal.start(0)`, then call the original `update(T)` in small increments.
@@ -116,6 +117,7 @@ src/os/clock.js       taskbar clock text (kept out of scene/ so the desktop neve
 src/scene/cctv.js     CctvSystem: 4 corner CCTV cameras (bracket, pan head, tilt platform, housing), servo motion, patrol, lens cameras
 src/apps/cameras.js   Security Cameras app (full only): renders the CCTV views into the window, mouse pan, arrows switch, grain/OSD (cameras.css)
 src/scene/ledSign.js  amber LED dot-matrix board texture (5x7 font, dot lamp, two gears) for the door signs
+src/scene/deskNote.js handwritten operator note on the desk ("press Q"), Caveat font from @fontsource/caveat (OFL)
 src/debug.js          URL flags, orbit camera, HUD, keys
 src/style.css
 src/camera/walk.js    scripted first-person walk: speed profile, head bob/sway/roll, 'step' events
@@ -290,9 +292,8 @@ nearest-first (tube sounds at 100/60/40 % per row), back wash +0.3 s, fans fade 
 ## Open design questions (for the user's change-request round)
 - **Desktop contents (next up):** which apps/icons, what's in each (bio, projects with images, résumé + PDF,
   contact: email link vs. a form, which needs a Node endpoint), the user's display name and tagline, links.
-- **Composition:** from the standing position the monitor arm lines up exactly with the supercomputer
-  core column, so the monitor plus arm hide the core's center. Options: offset hatch/monitor sideways,
-  shift the camera end point, lower the monitor, or redesign the core silhouette (wider top).
+- ~~Composition (monitor hiding the core)~~: solved in round 7 (the terminal no longer drops on its own; the core moved
+  into the north bay).
 - CRT glass glare: the desk spot makes a bright highlight in the middle of the screen. Consider moving the desk light,
   a rougher screen, or a glass-reflection map so the boot logo stays clean.
 - The monitor first emerges above the frame (you're looking ahead). Possibly a scripted glance up as it drops.
@@ -370,6 +371,36 @@ nearest-first (tube sounds at 100/60/40 % per row), back wash +0.3 s, fans fade 
   and flickered against it above the sign. It now ends inside the wall (zBack + 0.1). Never end a slab on another face.
 - **Window top rail back** (the user re-requested it, suspecting the old angle was off): it's now rotated with the glass
   tilt (`[-tilt, 0, 0]`) and centered on the glass top edge, so it reads as the glass's own head rail, not a level beam.
+
+## Change round 7 (2026-11-09): north bay, new sequence, living wall CRTs
+- **Sequence (supersedes "Monitor timing" / "Power-up timing" triggers below):** the terminal NO LONGER drops during the
+  walk. The visitor arrives, gets mouse control (`Glance`, lookAround.js: the cursor position turns the head, ±55° yaw,
+  +28°/-34° pitch, eased; no click or pointer lock; F still does the full pointer-lock look-around), and the server-room
+  power-up starts 0.6 s after arriving (`POWERUP_DELAY`), breaker 1 one second after that (`reveal.start(elapsed - 1.3)`).
+  The visitor lowers the terminal with **Q** (a handwritten note on the desk says so: "Note to Mainframe Operators: For
+  terminal control, press Q on the keyboard."), then E uses it. MONITOR/RAISE timelines are unchanged.
+- **Wall CRTs** (wallCrt.js, rewritten): asleep = the bouncing-lamp screensaver (my reading of "sleep"; switch to dark
+  screens if the user prefers). Monitor emits `screenOn` -> they warm up one by one and show the LAMPLIGHT OS boot screen
+  (+ NODE number); `desktop` -> live: each alternates on its own timer (6 to 12 s) between a monochrome CCTV feed (OSD:
+  camera, time, REC) and made-up readouts (green LAMPLIGHT MAINFRAME: CPU, core temp, banks, I/O, jobs, uptime; amber
+  LAMPLIGHT FACILITY: power buses, coolant, humidity, CCTV, catwalk doors, fire suppression), static burst at each switch.
+  Never the desktop. `raise` -> collapse to a dot, dark, back to the screensaver. Screens are a ShaderMaterial (canvas +
+  feed, scanlines, vignette, static; linear output for the composer). Feeds: 4 HalfFloat 256×192 render targets, one
+  camera rendered per frame round-robin, only while a screen shows a feed; the CRT group is hidden during those renders.
+- **North bay:** the back wall is now a half circle (radius 16, centered on z -28, back at z -44; `SERVER.apseR/zBack`).
+  One floor/ceiling covers hall + bay. Wall = chord boxes (`arcStrip`). CAM 1/2 stay on the side walls at z -27.25.
+  Fog lowered to 0.009 (the core is ~43 m from the desk).
+- **Supercomputer** moved to `CORE (0, -40.5)`, back half set into the bay wall, plus `buildWallSection()`: memory towers
+  built into the wall (90° ± 25° of the arc, LEDs in the `core` group), pilasters, a fascia, five conduits from the core's
+  ceiling collar and two bus ducts from the cabinet ring into the wall, and two wash spots that ramp with the core.
+  Clearly visible from the desk now.
+- **Banks and catwalks** wrap around the bay from both sides and stop at 55° (`APSE.END_A`): several feet clear of the
+  supercomputer section and dais. Catwalk rails follow the curve with an end rail. The old back catwalk and back-wall
+  banks are gone.
+- **Catwalk doors** moved onto **landings** (4.6 × 2.65 m, railed) at the near ends of the side catwalks, door centers
+  3.3 m from the side walls, so they're well clear of the wall banks.
+- **Server fixtures:** even grid (x -12/-6/0/6/12 × z -4.6/-11.4/-18.2/-25.0, plus two in the bay), trusses over each
+  row and midway (3.4 m), prismatic diffuser texture (rotated, tubes along z), max 1.3 instead of flat 2.4.
 
 ## Change round 6 (2026-11-09): versions, cameras, LED signs
 - **Version chooser** (`src/main.js`, `#chooser` in index.html): Full experience vs Light version. The user's GPU sat at

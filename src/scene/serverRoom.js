@@ -1,6 +1,7 @@
-// The server room beyond the glass: a tall hall with tiers of data banks along the
-// walls (lower tier on the floor, upper tier on a catwalk), freestanding rack rows,
-// ceiling trusses with light fixtures, and the supercomputer at the center.
+// The server room beyond the glass: a tall hall with tiers of data banks along the walls (lower
+// tier on the floor, upper tier on a catwalk), freestanding rack rows, ceiling trusses with light
+// fixtures. The north end is a half-circle bay (apse) whose far wall holds the supercomputer
+// (supercomputer.js); the banks and catwalks follow the curve and stop short of it.
 import * as THREE from 'three';
 import { Builder } from './builder.js';
 import { SERVER, ROOM } from './layout.js';
@@ -10,9 +11,49 @@ const F = SERVER.floorY;
 const C = SERVER.ceilY;
 const CATWALK_Y = -1.0;
 const FRONT_WALL_Z0 = -0.95; // server-room face of the wall that holds the command-room glass
+const CW = 2.2; // catwalk depth
+const LANDING_W = 4.6, LANDING_D = 2.65; // door landings at the near ends of the side catwalks
+const DEG = Math.PI / 180;
+// The bay: angle a from the east (+x) side, 0..180°. Point at radius r: (r cos a, zMin - r sin a).
+// The banks and catwalks wrap from each side up to END_A (and 180 - END_A), which leaves several
+// feet of clear wall either side of the supercomputer's wall section (90 ± SUPER_HALF_A).
+export const APSE = { END_A: 55 * DEG, SUPER_HALF_A: 25 * DEG };
+const AZ = SERVER.zMin;
+const R = SERVER.apseR;
+const arcPt = (r, a) => [r * Math.cos(a), AZ - r * Math.sin(a)];
 
 const ledColor = (r) => (r < 0.07 ? PALETTE.ledAmber : r < 0.1 ? PALETTE.ledRed : r < 0.55 ? PALETTE.ledCool : PALETTE.ledCyan);
 const ledBlink = (r) => (r < 0.25 ? 0.4 + r * 6 : 0);
+
+/** Annular sector (r0..r1, angles a0..a1) as a horizontal slab, top at yTop. */
+function ringSlab(b, mat, r0, r1, a0, a1, yTop, thick) {
+  const sh = new THREE.Shape();
+  const N = Math.max(6, Math.ceil(((a1 - a0) / DEG) / 3));
+  for (let i = 0; i <= N; i++) {
+    const a = a0 + ((a1 - a0) * i) / N;
+    i === 0 ? sh.moveTo(r1 * Math.cos(a), r1 * Math.sin(a)) : sh.lineTo(r1 * Math.cos(a), r1 * Math.sin(a));
+  }
+  for (let i = N; i >= 0; i--) {
+    const a = a0 + ((a1 - a0) * i) / N;
+    sh.lineTo(r0 * Math.cos(a), r0 * Math.sin(a));
+  }
+  sh.closePath();
+  const g = new THREE.ExtrudeGeometry(sh, { depth: thick, bevelEnabled: false });
+  // Shape y -> world -z, extrusion -> world +y.
+  b.add(g, mat, [0, yTop - thick, AZ], [-Math.PI / 2, 0, 0]);
+}
+
+/** Thin piece following the arc at radius r (chord boxes), from a0 to a1. */
+function arcStrip(b, mat, r, a0, a1, y0, y1, depth, segDeg = 3.75) {
+  const n = Math.max(1, Math.ceil((a1 - a0) / (segDeg * DEG)));
+  const da = (a1 - a0) / n;
+  for (let i = 0; i < n; i++) {
+    const a = a0 + da * (i + 0.5);
+    const [x, z] = arcPt(r, a);
+    const len = 2 * r * Math.sin(da / 2) + 0.02;
+    b.box(mat, len, y1 - y0, depth, x, (y0 + y1) / 2, z, [0, a - Math.PI / 2, 0]); // local x along the tangent
+  }
+}
 
 /** One data-bank module: rounded beige shell, recessed dark face, grid of round lights. */
 function bank(b, m, leds, x, y, z, facing, group, delayBase) {
@@ -46,16 +87,17 @@ function rack(b, m, leds, x, z, group, delayBase) {
 
 export function buildServerRoom(m) {
   const b = new Builder();
-  const { xMin, xMax, zMin, zMax } = SERVER;
+  const { xMin, xMax, zMin, zMax, zBack } = SERVER;
 
-  // ---- shell
-  const floorGeom = new THREE.PlaneGeometry(xMax - xMin, zMax - zMin);
-  b.add(floorGeom, m.serverFloor, [(xMin + xMax) / 2, F, (zMin + zMax) / 2], [-Math.PI / 2, 0, 0]);
-  b.span(m.ceiling, xMin, xMax, C, C + 0.3, zMin, zMax);
-  b.span(m.wallUpper, xMin, xMax, F, C, zMin - 0.3, zMin); // back
+  // ---- shell: one floor and ceiling over the hall and the bay (the corners outside the curved
+  // wall are never seen), side walls, the curved bay wall.
+  const floorGeom = new THREE.PlaneGeometry(xMax - xMin, zMax - zBack);
+  b.add(floorGeom, m.serverFloor, [(xMin + xMax) / 2, F, (zBack + zMax) / 2], [-Math.PI / 2, 0, 0]);
+  b.span(m.ceiling, xMin, xMax, C, C + 0.3, zBack - 0.4, zMax);
   b.span(m.wallUpper, xMin - 0.3, xMin, F, C, zMin, zMax); // left
   b.span(m.wallUpper, xMax, xMax + 0.3, F, C, zMin, zMax); // right
-  b.span(m.wallLower, xMin, xMax, F, F + 0.6, zMin, zMin + 0.03);
+  arcStrip(b, m.wallUpper, R + 0.15, 0, Math.PI, F, C, 0.3, 2.5); // the bay wall
+  arcStrip(b, m.wallLower, R - 0.015, 0, Math.PI, F, F + 0.6, 0.03, 2.5); // its lower band
 
   // ---- front wall (server-room side), with the command-room window opening
   const wz0 = FRONT_WALL_Z0, wz1 = ROOM.glassTopZ; // wall slab just outside the glass
@@ -69,45 +111,78 @@ export function buildServerRoom(m) {
   b.rbox(m.beige, ox1 - ox0 + 0.5, 0.3, 0.4, 0.08, 0, ROOM.height + 0.25, wz0 - 0.05);
   for (const s of [-1, 1]) b.rbox(m.beige, 0.3, ROOM.height - ROOM.sill + 0.6, 0.4, 0.08, s * (ox1 + 0.1), (ROOM.sill + ROOM.height) / 2, wz0 - 0.05);
 
-  // ---- ceiling trusses and light fixtures
-  for (let z = zMax - 2.5; z > zMin + 1; z -= 3.6) {
-    b.span(m.taupeDark, xMin, xMax, C - 0.75, C, z - 0.18, z + 0.18);
+  // ---- ceiling trusses (evenly spaced, one over each fixture row and one between) and fixtures
+  for (const z of TRUSS_Z) b.span(m.taupeDark, xMin, xMax, C - 0.75, C, z - 0.18, z + 0.18);
+  // The bay: a ring beam and four radial beams (clear of the supercomputer's ceiling collar).
+  arcStrip(b, m.taupeDark, 11.5, 0, Math.PI, C - 0.75, C, 0.36, 4);
+  for (const a of [28, 58, 122, 152]) {
+    const [x, z] = arcPt(R / 2, a * DEG);
+    b.box(m.taupeDark, R, 0.75, 0.3, x, C - 0.375, z, [0, a * DEG, 0]); // local x along the radius
   }
-  const fixtures = [];
-  for (const x of [-11, -5.5, 5.5, 11]) {
-    let row = 0;
-    for (let z = zMax - 4.3; z > zMin + 2; z -= 7.2) fixtures.push([x, z, row++]);
-  }
-  for (const [x, z, row] of fixtures) {
+  for (const [x, z, row] of FIXTURES) {
     b.span(m.taupe, x - 0.5, x + 0.5, C - 0.95, C - 0.75, z - 1.5, z + 1.5);
     b.span(m.serverFixtureRows[row], x - 0.42, x + 0.42, C - 0.97, C - 0.95, z - 1.42, z + 1.42);
   }
 
-  // ---- catwalks along the side walls and back wall
-  const cwDepth = 2.2;
-  // Side decks run up to the front wall, where the catwalk doors are (addCatwalkDoors).
-  b.span(m.taupeDark, xMin, xMin + cwDepth, CATWALK_Y - 0.12, CATWALK_Y, zMin, wz0);
-  b.span(m.taupeDark, xMax - cwDepth, xMax, CATWALK_Y - 0.12, CATWALK_Y, zMin, wz0);
-  b.span(m.taupeDark, xMin, xMax, CATWALK_Y - 0.12, CATWALK_Y, zMin, zMin + cwDepth);
-  // railings
-  const rail = (x0, x1, z0, z1) => {
-    b.span(m.beigeLight, x0, x1, CATWALK_Y + 1.02, CATWALK_Y + 1.08, z0, z1);
-    b.span(m.beigeLight, x0, x1, CATWALK_Y + 0.5, CATWALK_Y + 0.54, z0, z1);
+  // ---- catwalks: along both side walls, around the bay (stopping short of the supercomputer),
+  // and widening into a landing at the near end of each side, where the catwalk doors are.
+  const deck = m.taupeDark;
+  const rail = m.beigeLight;
+  const post = (x, z) => b.span(rail, x - 0.03, x + 0.03, CATWALK_Y, CATWALK_Y + 1.08, z - 0.03, z + 0.03);
+  const railX = (x, z0, z1) => { // rails running along z at x
+    b.span(rail, x - 0.025, x + 0.025, CATWALK_Y + 1.02, CATWALK_Y + 1.08, z0, z1);
+    b.span(rail, x - 0.02, x + 0.02, CATWALK_Y + 0.5, CATWALK_Y + 0.54, z0, z1);
+    const n = Math.max(1, Math.round((z1 - z0) / 1.8));
+    for (let i = 0; i <= n; i++) post(x, z0 + ((z1 - z0) * i) / n);
   };
-  rail(xMin + cwDepth - 0.05, xMin + cwDepth, zMin + cwDepth, zMax - 0.5);
-  rail(xMax - cwDepth, xMax - cwDepth + 0.05, zMin + cwDepth, zMax - 0.5);
-  rail(xMin + cwDepth, xMax - cwDepth, zMin + cwDepth - 0.05, zMin + cwDepth);
-  for (let z = zMax - 0.5; z > zMin + cwDepth; z -= 1.8) {
-    b.span(m.beigeLight, xMin + cwDepth - 0.05, xMin + cwDepth, CATWALK_Y, CATWALK_Y + 1.08, z - 0.03, z + 0.03);
-    b.span(m.beigeLight, xMax - cwDepth, xMax - cwDepth + 0.05, CATWALK_Y, CATWALK_Y + 1.08, z - 0.03, z + 0.03);
+  const railZ = (z, x0, x1) => { // rails running along x at z
+    b.span(rail, x0, x1, CATWALK_Y + 1.02, CATWALK_Y + 1.08, z - 0.025, z + 0.025);
+    b.span(rail, x0, x1, CATWALK_Y + 0.5, CATWALK_Y + 0.54, z - 0.02, z + 0.02);
+    post(x0, z); post(x1, z);
+  };
+  const landZ = wz0 - LANDING_D;
+  for (const s of [-1, 1]) {
+    const wall = s < 0 ? xMin : xMax;
+    const inner = wall - s * CW, outer = wall - s * LANDING_W;
+    const [ax0, ax1] = [Math.min(wall, inner), Math.max(wall, inner)];
+    b.span(deck, ax0, ax1, CATWALK_Y - 0.12, CATWALK_Y, zMin, landZ); // side run
+    const [lx0, lx1] = [Math.min(wall, outer), Math.max(wall, outer)];
+    b.span(deck, lx0, lx1, CATWALK_Y - 0.12, CATWALK_Y, landZ, wz0); // landing
+    railX(inner, zMin, landZ);
+    railX(outer, landZ, wz0);
+    railZ(landZ, Math.min(inner, outer), Math.max(inner, outer));
+    // supports
+    for (let z = landZ - 1.5; z > zMin; z -= 5.4) b.span(m.steel, inner + s * 0.2 - 0.08, inner + s * 0.2 + 0.08, F, CATWALK_Y - 0.12, z - 0.08, z + 0.08);
+    b.span(m.steel, outer + s * 0.2 - 0.08, outer + s * 0.2 + 0.08, F, CATWALK_Y - 0.12, landZ + 0.2, landZ + 0.36);
   }
-  // catwalk support columns
-  for (let z = zMax - 2; z > zMin + cwDepth; z -= 5.4) {
-    for (const x of [xMin + cwDepth - 0.2, xMax - cwDepth + 0.2]) b.span(m.steel, x - 0.08, x + 0.08, F, CATWALK_Y - 0.12, z - 0.08, z + 0.08);
+  // Around the bay, both sides.
+  for (const [a0, a1] of [[0, APSE.END_A], [Math.PI - APSE.END_A, Math.PI]]) {
+    ringSlab(b, deck, R - CW, R, a0, a1, CATWALK_Y, 0.12);
+    arcStrip(b, rail, R - CW + 0.025, a0, a1, CATWALK_Y + 1.02, CATWALK_Y + 1.08, 0.05);
+    arcStrip(b, rail, R - CW + 0.025, a0, a1, CATWALK_Y + 0.5, CATWALK_Y + 0.54, 0.04);
+    const n = Math.round(((a1 - a0) * (R - CW)) / 1.8);
+    for (let i = 0; i <= n; i++) post(...arcPt(R - CW + 0.025, a0 + ((a1 - a0) * i) / n));
+    // End rail across the catwalk where it stops.
+    const aEnd = a0 === 0 ? a1 : a0;
+    const [x0, z0] = arcPt(R - CW, aEnd), [x1, z1] = arcPt(R, aEnd);
+    for (const y of [1.05, 0.52]) b.box(rail, CW, 0.05, 0.05, (x0 + x1) / 2, CATWALK_Y + y, (z0 + z1) / 2, [0, aEnd, 0]);
+    for (let i = 1; i < 5; i++) {
+      const [sx, sz] = arcPt(R - CW - 0.2, a0 + ((a1 - a0) * i) / 5);
+      b.span(m.steel, sx - 0.08, sx + 0.08, F, CATWALK_Y - 0.12, sz - 0.08, sz + 0.08);
+    }
   }
 
   return { builder: b };
 }
+
+// Ceiling fixtures on an even grid: 5 columns 6 m apart, 4 rows 6.8 m apart (row index = reveal
+// order, nearest the window first), plus two in the bay. Trusses run over each row and midway.
+const ROW_Z = [-4.6, -11.4, -18.2, -25.0];
+const TRUSS_Z = [-4.6, -8.0, -11.4, -14.8, -18.2, -21.6, -25.0];
+const FIXTURES = [
+  ...ROW_Z.flatMap((z, row) => [-12, -6, 0, 6, 12].map((x) => [x, z, row])),
+  [-8.5, -33.5, 3], [8.5, -33.5, 3],
+];
 
 export function populateServerRoom(b, m, leds) {
   const { xMin, xMax, zMin, zMax } = SERVER;
@@ -115,13 +190,21 @@ export function populateServerRoom(b, m, leds) {
   // near banks first, sweeping toward the back.
   for (const tierY of [F, CATWALK_Y]) {
     const tierDelay = tierY === F ? 0 : 0.12;
-    for (let z = zMax - 2.2; z > zMin + 1.6; z -= 1.25) {
-      const k = (zMax - z) / (zMax - zMin);
+    for (let z = zMax - 2.2; z > zMin + 0.6; z -= 1.25) {
+      const k = (zMax - z) / 44;
       bank(b, m, leds, xMin + 0.5, tierY, z, [1, 0, 0], 'banks', k * 0.8 + tierDelay);
       bank(b, m, leds, xMax - 0.5, tierY, z, [-1, 0, 0], 'banks', k * 0.8 + tierDelay + 0.03);
     }
-    for (let x = xMin + 2.6; x < xMax - 2.5; x += 1.25) {
-      bank(b, m, leds, x, tierY, zMin + 0.5, [0, 0, 1], 'banks', 0.85 + Math.abs(x) / 60 + tierDelay);
+    // Around the bay, facing its center, up to a few feet short of the supercomputer.
+    const step = 1.25 / (R - 0.5);
+    const half = 0.6 / (R - 0.5);
+    for (let a = 0.02 + half; a <= APSE.END_A - half; a += step) {
+      for (const side of [1, -1]) {
+        const ang = side > 0 ? a : Math.PI - a;
+        const [x, z] = arcPt(R - 0.5, ang);
+        const k = (zMax - z) / 44;
+        bank(b, m, leds, x, tierY, z, [-Math.cos(ang), 0, Math.sin(ang)], 'banks', k * 0.8 + tierDelay + (side > 0 ? 0.03 : 0));
+      }
     }
   }
   // Freestanding rack rows on the floor.
@@ -131,49 +214,51 @@ export function populateServerRoom(b, m, leds) {
 }
 
 /**
- * Two closed prop doors in the entry door's style on the server-room face of the glass wall, at
- * the near ends of the two side catwalks (well clear of the window surround at x ±5.5): the way
- * people would reach the upper catwalks. Returns the door objects (add their .group to the scene).
+ * Two closed prop doors in the entry door's style on the server-room face of the glass wall, one on
+ * each catwalk landing, well clear of the data banks along the side walls and of the window
+ * surround: the way people would reach the catwalks. Returns the doors (add their .group).
  */
 export function addCatwalkDoors(m, b, HydraulicDoor) {
   const { xMin, xMax } = SERVER;
-  const wallFace = FRONT_WALL_Z0; // server-room face of the front wall
+  const wallFace = FRONT_WALL_Z0;
   const doors = [];
   for (const s of [-1, 1]) {
-    const x = s > 0 ? xMax - 1.1 : xMin + 1.1; // centered on the catwalk deck (2.2 m wide)
+    const x = s > 0 ? xMax - 3.3 : xMin + 3.3; // centered between the side-wall banks and the landing rail
     const d = new HydraulicDoor(m, { signs: false });
     d.group.position.set(x, CATWALK_Y, wallFace - 0.06); // panel just proud of the wall face
     d.group.rotation.y = Math.PI; // its front faces into the server room
     d.group.name = 'catwalkDoor';
     doors.push(d);
-    // Landing plinth under the door: hides the frame's lower band below the catwalk deck.
+    // Landing plinth under the door: hides the frame's lower band below the deck.
     b.span(m.taupeDark, x - 1.0, x + 1.0, CATWALK_Y - 0.36, CATWALK_Y - 0.12, wallFace - 0.36, wallFace);
   }
   return doors;
 }
 
-/** Server-room lights. All start at 0. The reveal (stage 2) raises them; debug can force them. */
+/** Server-room lights. All start at 0. The reveal raises them; debug can force them. */
 export function buildServerLights(m) {
   const group = new THREE.Group();
   group.name = 'serverLights';
   const room = [];
   const white = PALETTE.fluorescent;
   for (const x of [-8.25, 8.25]) {
-    for (const z of [-7.5, -20]) {
+    for (const [z, row] of [[-8.0, 0], [-21.6, 2]]) {
       const r = new THREE.RectAreaLight(white, 0, 6, 10);
       r.position.set(x, C - 1, z);
       r.rotation.x = -Math.PI / 2;
       group.add(r);
-      room.push({ light: r, max: 2.2, row: z > -12 ? 0 : 2 }); // follows the fixture rows above it
+      room.push({ light: r, max: 2.2, row }); // follows the fixture rows above it
     }
   }
-  // Back-wall wash so the far data banks read.
-  const back = new THREE.RectAreaLight(white, 0, 26, 3);
-  back.position.set(0, C - 1.5, SERVER.zMin + 6);
-  back.lookAt(0, -1, SERVER.zMin);
+  // Bay wash so the curved banks and the supercomputer's wall read.
+  const back = new THREE.RectAreaLight(white, 0, 24, 3);
+  back.position.set(0, C - 1.3, SERVER.zMin - 2);
+  back.lookAt(0, -1.5, SERVER.zBack);
   group.add(back);
-  room.push({ light: back, max: 1.2, row: 3 });
+  room.push({ light: back, max: 1.3, row: 3 });
 
-  const fixtureMax = new THREE.Color(white).multiplyScalar(2.4);
+  // Fixture faces: diffuser texture, so a lower level than the old flat white (2.4) reads as lit
+  // without glaring (user: same treatment as the command-room panels).
+  const fixtureMax = new THREE.Color(white).multiplyScalar(1.3);
   return { group, room, fixtures: m.serverFixtureRows.map((mat, row) => ({ mat, max: fixtureMax, row })) };
 }

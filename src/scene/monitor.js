@@ -195,6 +195,7 @@ export class MonitorRig {
       if (this.t >= MONITOR.screenOn && this.screen.state === 'off') {
         this.screen.powerOn();
         this.ledMat.color.set(PALETTE.ledCyan).multiplyScalar(2);
+        this.emit('screenOn'); // the wall CRTs wake and boot along with it
       }
       if (this.t >= MONITOR.desktopAt && this.screen.state === 'boot') {
         this.screen.showDesktop();

@@ -3,11 +3,86 @@
 // ring at its base. Inside the ring, a tall white bulbous core column rises to a
 // ceiling collar, wrapped by light bands and cable conduits. A dark "face" panel full
 // of lights looks out through the ring's opening toward the viewer.
+// It stands at the far end of the half-circle bay with its back half set INTO the curved wall
+// (user request: integrated into the wall's structure, in clear view from the desk): a section of
+// tall memory towers built into the wall behind it, framed by pilasters and a fascia, with
+// conduits from the core's ceiling collar and bus ducts from the cabinet ring running into it.
 import * as THREE from 'three';
 import { SERVER, CORE } from './layout.js';
 import { PALETTE } from './palette.js';
 
 const F = SERVER.floorY;
+const DEG = Math.PI / 180;
+export const SUPER_HALF_A = 25 * DEG; // the wall section spans 90° ± this on the bay's arc
+const arcPt = (r, a) => [r * Math.cos(a), SERVER.zMin - r * Math.sin(a)];
+
+/** Cylinder between two points. */
+function rod(b, mat, r, p0, p1, seg = 12) {
+  const a = new THREE.Vector3(...p0), c = new THREE.Vector3(...p1);
+  const len = a.distanceTo(c);
+  const g = new THREE.CylinderGeometry(r, r, len, seg);
+  const q = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), c.clone().sub(a).normalize());
+  g.applyQuaternion(q);
+  const mid = a.add(c).multiplyScalar(0.5);
+  b.add(g, mat, mid.toArray());
+}
+
+/** The wall section the machine is built into (towers, pilasters, fascia, conduits, ducts). */
+function buildWallSection(b, m, leds) {
+  const R = SERVER.apseR, C = SERVER.ceilY;
+  const a0 = Math.PI / 2 - SUPER_HALF_A, a1 = Math.PI / 2 + SUPER_HALF_A;
+  const towerTop = C - 1.25;
+  const step = 0.98 / 15.6;
+  const n = Math.floor((a1 - a0 - 2 * 0.9 / 15.6) / step);
+  const start = Math.PI / 2 - ((n - 1) * step) / 2;
+  for (let i = 0; i < n; i++) {
+    const a = start + i * step;
+    const [x, z] = arcPt(15.6, a);
+    const onDais = Math.hypot(x - CORE.x, z - CORE.z) < 6.15;
+    const y0 = onDais ? F + 0.5 : F;
+    const h = towerTop - y0;
+    const nx = -Math.cos(a), nz = Math.sin(a);
+    b.rbox(m.beige, 0.9, h, 0.8, 0.06, x, y0 + h / 2, z, [0, Math.atan2(nx, nz), 0]);
+    const fx = x + nx * 0.401, fz = z + nz * 0.401;
+    b.box(m.grille, 0.66, h - 1.2, 0.02, fx, y0 + h / 2 + 0.2, fz, [0, Math.atan2(nx, nz), 0]);
+    b.box(m.taupeDark, 0.66, 0.3, 0.02, fx, y0 + 0.35, fz, [0, Math.atan2(nx, nz), 0]); // vent band
+    leds.grid([fx + nx * 0.012, y0 + h / 2 + 0.2, fz + nz * 0.012], [nz, 0, -nx], [0, 1, 0], [nx, 0, nz], 3, Math.floor((h - 1.6) / 0.3), 0.18, 0.3,
+      { size: 0.04, color: (q) => (q < 0.12 ? PALETTE.ledAmber : PALETTE.ledCyan), blink: (q) => (q < 0.3 ? 0.5 + q * 4 : 0), group: 'core', delay: 0.15 + Math.abs(i - (n - 1) / 2) / n, intensity: 1.6 }, 0.85);
+  }
+  // Pilasters framing the section, floor to ceiling.
+  for (const a of [a0, a1]) {
+    const [x, z] = arcPt(15.35, a);
+    const ry = Math.atan2(-Math.cos(a), Math.sin(a));
+    b.rbox(m.beigeLight, 1.0, C - F, 1.3, 0.1, x, (F + C) / 2, z, [0, ry, 0]);
+    b.rbox(m.taupe, 0.3, C - F - 1.2, 0.04, x - Math.cos(a) * 0.66, (F + C) / 2, z + Math.sin(a) * 0.66, [0, ry, 0], 2);
+  }
+  // Fascia band over the towers, following the arc.
+  const segs = 14;
+  for (let i = 0; i < segs; i++) {
+    const a = a0 + ((a1 - a0) * (i + 0.5)) / segs;
+    const [x, z] = arcPt(15.3, a);
+    const len = 2 * 15.3 * Math.sin((a1 - a0) / segs / 2) + 0.03;
+    b.box(m.taupe, len, 1.0, 1.4, x, C - 0.75, z, [0, a - Math.PI / 2, 0]);
+  }
+  // Conduits from the core's ceiling collar along the ceiling into the fascia.
+  for (const deg of [68, 79, 90, 101, 112]) {
+    const a = deg * DEG;
+    const [wx, wz] = arcPt(14.7, a);
+    const dx = wx - CORE.x, dz = wz - CORE.z, d = Math.hypot(dx, dz);
+    rod(b, m.steel, 0.11, [CORE.x + (dx / d) * 3.3, C - 0.42, CORE.z + (dz / d) * 3.3], [wx, C - 0.42, wz]);
+  }
+  // Bus ducts from the cabinet ring's flanks into the towers.
+  for (const deg of [72, 108]) {
+    const a = deg * DEG;
+    const [wx, wz] = arcPt(15.2, a);
+    const dx = wx - CORE.x, dz = wz - CORE.z, d = Math.hypot(dx, dz);
+    const sx = CORE.x + (dx / d) * 4.6, sz = CORE.z + (dz / d) * 4.6;
+    const len = Math.hypot(wx - sx, wz - sz);
+    for (const y of [F + 3.4, F + 4.0]) {
+      b.rbox(m.taupeDark, len, 0.36, 0.5, 0.06, (sx + wx) / 2, y, (sz + wz) / 2, [0, -Math.atan2(wz - sz, wx - sx), 0]);
+    }
+  }
+}
 
 function sectorShape(r0, r1, a0, a1) {
   // Annular sector in XY. We later map shape (x, y) -> world (x, -z), so use
@@ -32,6 +107,7 @@ export function buildSupercomputer(b, m, leds) {
   const P = (x, y, z) => [cx + x, y, cz + z];
 
   // ---- dais (two steps) with a light ring around its edge
+  buildWallSection(b, m, leds);
   b.add(new THREE.CylinderGeometry(6.0, 6.1, 0.25, 72), m.taupe, P(0, F + 0.125, 0));
   b.add(new THREE.CylinderGeometry(5.2, 5.25, 0.25, 72), m.beigeLight, P(0, F + 0.375, 0));
   for (let i = 0; i < 96; i++) {
@@ -135,6 +211,16 @@ export function buildCoreLights(m) {
     s.target = t;
     group.add(s, t);
     lights.push({ light: s, max: 55 });
+  }
+  // Wash on the tower wall either side of the core (no shadows; ramps up with the core).
+  for (const s of [-1, 1]) {
+    const w = new THREE.SpotLight(white, 0, 0, 0.5, 0.8, 1.6);
+    w.position.set(CORE.x + s * 4.5, SERVER.ceilY - 1.1, CORE.z + 6);
+    const t = new THREE.Object3D();
+    t.position.set(CORE.x + s * 6.5, F + 3, CORE.z - 2);
+    w.target = t;
+    group.add(w, t);
+    lights.push({ light: w, max: 30 });
   }
   return {
     group,

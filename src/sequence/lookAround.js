@@ -121,3 +121,46 @@ export class LookAround {
     if (this.active) this.camera.quaternion.setFromEuler(this._e.set(this.pitch, this.yaw, 0, 'YXZ'));
   }
 }
+
+/**
+ * Glance: once the walk ends, the visitor steers their head with the mouse, without clicking or
+ * pointer lock (user request: control of the mouse while watching the power-up). The cursor's
+ * position across the window sets a yaw/pitch offset from the desk view, eased so it feels like a
+ * head turning. F (LookAround) still gives a full turn; Glance pauses while that or the terminal
+ * glide is in control.
+ */
+export class Glance {
+  constructor({ canvas }) {
+    this.enabled = false;
+    this.yaw = 0; this.pitch = 0; // current offsets (radians)
+    this.ty = 0; this.tp = 0; // targets
+    this._q = new THREE.Quaternion();
+    this._e = new THREE.Euler(0, 0, 0, 'YXZ');
+    window.addEventListener('pointermove', (e) => {
+      if (e.pointerType === 'touch') return;
+      const nx = (e.clientX / window.innerWidth) * 2 - 1;
+      const ny = (e.clientY / window.innerHeight) * 2 - 1;
+      const curve = (v) => Math.sign(v) * Math.pow(Math.min(1, Math.abs(v)), 1.25); // calmer near the center
+      this.ty = -curve(nx) * THREE.MathUtils.degToRad(55);
+      this.tp = ny < 0 ? -curve(ny) * THREE.MathUtils.degToRad(28) : -curve(ny) * THREE.MathUtils.degToRad(34);
+    });
+    document.addEventListener('mouseleave', () => { this.ty = 0; this.tp = 0; });
+    void canvas;
+  }
+
+  /** Snap back to the plain desk view (after the terminal glide or a full look-around). */
+  recenter() { this.yaw = 0; this.pitch = 0; }
+
+  /** Apply after the walk has posed the camera for this frame. */
+  update(dt, camera) {
+    if (!this.enabled) return;
+    const k = 1 - Math.exp(-dt * 3.2);
+    this.yaw += (this.ty - this.yaw) * k;
+    this.pitch += (this.tp - this.pitch) * k;
+    // Yaw about world up, pitch about the camera's own right axis.
+    this._e.setFromQuaternion(camera.quaternion, 'YXZ');
+    this._e.y += this.yaw;
+    this._e.x = THREE.MathUtils.clamp(this._e.x + this.pitch, -1.35, 1.35);
+    camera.quaternion.setFromEuler(this._e);
+  }
+}

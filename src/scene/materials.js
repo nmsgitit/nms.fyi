@@ -23,7 +23,7 @@ function noiseTexture(size = 256, strength = 18, seed = 1) {
   return t;
 }
 
-function diffuserTexture(w = 512, h = 232) {
+function diffuserTexture(w = 512, h = 232, { rotate = false } = {}) {
   // Prismatic acrylic diffuser of a 1980s fluorescent troffer: soft brighter bands where the tubes
   // sit behind it, a fine diamond prism texture, and darker edges toward the metal frame. Makes the
   // panels read as fixtures instead of flat blown-out white rectangles (user: "not as harsh").
@@ -52,7 +52,17 @@ function diffuserTexture(w = 512, h = 232) {
     }
   }
   ctx.putImageData(img, 0, 0);
-  const t = new THREE.CanvasTexture(c);
+  let out = c;
+  if (rotate) { // tubes along the texture's v axis (fixtures that run along z)
+    out = document.createElement('canvas');
+    out.width = h;
+    out.height = w;
+    const o = out.getContext('2d');
+    o.translate(h / 2, w / 2);
+    o.rotate(Math.PI / 2);
+    o.drawImage(c, -w / 2, -h / 2);
+  }
+  const t = new THREE.CanvasTexture(out);
   t.colorSpace = THREE.SRGBColorSpace;
   t.anisotropy = 8;
   return t;
@@ -148,7 +158,9 @@ export function createMaterials(maxAnisotropy = 4) {
   m.screenGlow = new THREE.MeshBasicMaterial({ color: new THREE.Color(0x0f2a22), toneMapped: false });
   // Server-room fixture lenses: start dark and are brightened by the reveal.
   // One material per fixture row (0 = nearest the window) so rows can strike in sequence.
-  m.serverFixtureRows = [0, 1, 2, 3].map(() => new THREE.MeshBasicMaterial({ color: 0x000000, toneMapped: false }));
+  // Server-room fixtures get the same prismatic diffuser as the command room (tubes run along z).
+  const serverDiffuser = diffuserTexture(512, 152, { rotate: true });
+  m.serverFixtureRows = [0, 1, 2, 3].map(() => new THREE.MeshBasicMaterial({ color: 0x000000, map: serverDiffuser, toneMapped: false }));
   m.coreFixture = new THREE.MeshBasicMaterial({ color: 0x000000, toneMapped: false });
   // One material per light band on the core column (0 = lowest) so they climb in sequence.
   m.coreBands = [0, 1, 2, 3, 4, 5].map(() => new THREE.MeshBasicMaterial({ color: 0x000000, toneMapped: false }));
