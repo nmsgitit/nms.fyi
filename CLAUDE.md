@@ -112,7 +112,7 @@ src/scene/materials.js shared materials + procedural canvas textures (grain, flo
 src/scene/builder.js  Builder: merges primitives per material -> few draw calls (box/span/rbox/add)
 src/scene/leds.js     LedField: every indicator LED as one InstancedMesh; groups, cascades, blink
 src/scene/commandRoom.js  room geometry + command-room lights
-src/scene/desk.js     command desk, side wings, button decks, indicator row; places the keyboard
+src/scene/desk.js     command desk (no side wings), indicator row; places the keyboard
 src/scene/keyboard.js full-size Model M-style QWERTY + nav cluster + numpad (layout table -> keycaps + one legend decal)
 src/scene/serverRoom.js   hall shell, window surround, trusses, fixtures, catwalks, data banks, racks, room lights
 src/scene/monitor.js  MonitorRig: hatch doors, shaft, telescoping arm, loads public/models/monitor.glb, descent timeline
