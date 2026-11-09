@@ -92,7 +92,8 @@ npm start          # serves dist/ on $PORT (default 3000)
 - `/dev/os-preview.html` (dev server only): the HTML desktop alone, no WebGL needed (handy for phone-size checks in
   the built-in browser pane, which has no WebGL).
 - `?debug`: orbit camera + HUD (fps, draw calls, camera position).
-- Sound is silent until the first user gesture (browser rule). Keys: **L** toggles server power, **R** restarts the walk, **M** replays monitor drop + power-up together,
+- Sound is silent until the first user gesture (browser rule). Visitor keys (3D view): **E** use the terminal, **F** raise/lower
+  the monitor (only after exiting the desktop), **Tab** show/hide the controls panel. Dev keys: **L** toggles server power, **R** restarts the walk, **M** replays monitor drop + power-up together,
   **P** replays just the power-up, **O** orbit cam, **H** HUD.
 - In dev, `window.scene/camera/renderer/walk/setLit/leds/monitor/reveal` are exposed.
 - Deterministic reveal stepping (screenshots stall rAF): replace `reveal.update` and `leds.update` with no-ops
@@ -125,6 +126,8 @@ tools/blender/check_monitor.py  imports the .glb and reports parts poking throug
 tools/blender/monitor.py  Blender script that builds + exports the monitor (and renders previews)
 public/models/monitor.glb generated, committed (~0.55 MB) so the repo deploys as-is
 src/audio/sound.js    SoundDesign: all sounds synthesized with Web Audio (no files); room / server (glass) / fx buses
+src/scene/mouse.js    late-80s two-button mouse (unbranded, PS/2-era style), pad, cable into a desk grommet
+src/ui/hotkeys.js     HotkeyPanel: Tab shows/hides the controls list; one-time "Tab Controls" hint
 src/sequence/focus.js TerminalFocus: E / monitor click / prompt tap -> camera glide into the screen -> DesktopOS; Exit reverses
 src/os/desktopModel.js  the desktop apps + text (PLACEHOLDERS): single source for the HTML desktop and the monitor drawing
 src/os/art.js         wallpaper (original desert dusk) + 32 px pixel icons, drawn in code, also as data URLs
@@ -301,6 +304,25 @@ nearest-first (tube sounds at 100/60/40 % per row), back wash +0.3 s, fans fade 
 - Desktop icons: double-click with a mouse; single tap on touch; Enter from the keyboard.
 - Original artwork only: desert-at-dusk wallpaper (not XP's hill photo), our own pixel icons, a green "pill"
   launcher containing the pixel lamp.
+
+## Desk, controls & monitor stowing (change round 2, 2026-11-09)
+- **Mouse:** `scene/mouse.js`: an unbranded two-button mouse in the spirit of IBM's PS/2-era mouse (to go with the
+  Model M): boxy, pale gray, top sloping toward the hand, buttons split by a groove, on a dark pad right of the keyboard.
+  The cable runs a short tidy path into a **round desk grommet** behind the pad. The user rejected the cable trailing
+  off the back of the desk as messy, so keep cable management clean.
+- **Click sound:** `sound.uiClick('press' | 'release')` on every pointer down/up inside the desktop (`DesktopOS` onClick).
+  It plays on a separate `ui` bus straight into the compressor, so it is NOT ducked while the desktop is open; it still
+  follows mute. Peaks: press ~0.23, release ~0.12.
+- **F key:** after exiting the desktop (`focus.state === 'ready'`, monitor 'down'), F calls `monitor.raise()`:
+  RAISE timeline (monitor.js) = CRT collapse-to-dot power-off (`screen.shutdown()`, 0.6 s), housing levels
+  (0.3 to 1.0 s), arm retracts (0.7 to 4.1 s), doors close (4.15 to 4.95 s), then 'stowed'. Sound: `sound.monitorRaise(RAISE)`
+  (zap, servo blip, motor at 1.12x pitch, hiss, door thump, latch). F again runs `monitor.start()`: full descent + boot
+  to the desktop, which re-enables E. Descent and raise share `applyPose()`. Keyboard only (no F on touch).
+  Bonus: with the monitor stowed, the supercomputer is fully visible.
+- **Controls UI:** no persistent key prompts on keyboard devices (user: cleaner). **Tab** toggles the controls panel
+  (`ui/hotkeys.js`, right side). Inapplicable keys are dimmed and it live-refreshes on monitor events. A small "Tab Controls" hint
+  fades in once, the first time the terminal becomes usable. Tab is only captured in the 3D view (gate gone, desktop
+  closed); inside the desktop Tab keeps normal focus navigation. Touch devices keep the "Tap to use the terminal" button.
 
 ## Command room details (change round 1, 2026-11-09)
 - Walkway mat ends in a rounded tip at z 2.1 (ExtrudeGeometry stadium end). The trim is straight side strips plus a half RingGeometry.
