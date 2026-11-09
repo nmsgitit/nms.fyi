@@ -1,0 +1,39 @@
+// World layout (meters). +x right, +y up, the camera looks toward -z.
+// The command room spans z 0..8. The glass wall is at its front (z ~ 0), tilted outward
+// at the top. The server room lies beyond the glass with its floor well below the
+// command room, so the command room overlooks it.
+
+export const ROOM = {
+  xMin: -5, xMax: 5,
+  zFront: 0, zBack: 8,
+  height: 3.2,
+  sill: 0.95, // bottom edge of the glass
+  glassTopZ: -0.6, // the glass leans outward 0.6 m at the top
+};
+
+export const CORRIDOR = { halfW: 1.2, height: 2.6, zStart: 8.2, zEnd: 12 };
+export const DOOR = { halfW: 1.12, height: 2.6 };
+
+export const SERVER = {
+  floorY: -4.5,
+  ceilY: 9,
+  xMin: -16, xMax: 16,
+  zMin: -28, zMax: ROOM.glassTopZ,
+};
+
+export const DESK = { z: 1.15, top: 0.78, width: 2.8 };
+export const HATCH = { x: 0, z: 1.05, w: 1.3, d: 1.0 }; // ceiling hatch the monitor will drop from (stage 2)
+
+export const CORE = { x: 0, z: -14 }; // supercomputer center
+
+export const EYE_HEIGHT = 1.65;
+
+// Camera walk: from the corridor, through the door, to the desk.
+export const WALK = {
+  start: [0, EYE_HEIGHT, 10.4],
+  end: [0, EYE_HEIGHT, 2.55],
+  lookStart: [0, 1.55, -10],
+  lookEnd: [0, 0.85, -2.5], // ~9° down: keyboard at the bottom edge, monitor drop zone mid-low, core above
+  speed: 1.15, // m/s cruising, slow deliberate walk
+  stepLength: 0.72,
+};

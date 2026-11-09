@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>NMS FYI</title>
+    <meta name="description" content="NMS FYI" />
+    <link rel="stylesheet" href="/src/style.css" />
+  </head>
+  <body>
+    <canvas id="view" aria-label="3D command room"></canvas>
+
+    <!-- Click-to-enter gate: browsers only allow audio after a user gesture,
+         so the walk-in (with footsteps) starts from this click. -->
+    <div id="gate" role="dialog" aria-labelledby="gate-title">
+      <div class="gate-box">
+        <p id="gate-title" class="gate-title">NMS FYI</p>
+        <p class="gate-sub" id="gate-status">Loading…</p>
+        <button id="gate-enter" type="button" disabled>Enter</button>
+        <p class="gate-hint">Best with sound on</p>
+      </div>
+    </div>
+
+    <div id="debug-hud" hidden></div>
+    <noscript>This site needs JavaScript and WebGL.</noscript>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>

@@ -1,0 +1,99 @@
+// Command desk at the glass: a soft-edged 1980s console in beige and taupe,
+// with angled side wings and button decks, a keyboard, and a row of indicator buttons.
+import * as THREE from 'three';
+import { Builder } from './builder.js';
+import { DESK } from './layout.js';
+import { PALETTE } from './palette.js';
+
+function deskTopShape(w, d, r) {
+  // Rounded rectangle with a gently bowed back edge (toward the user).
+  const s = new THREE.Shape();
+  const x0 = -w / 2, x1 = w / 2, y0 = -d / 2, y1 = d / 2;
+  s.moveTo(x0 + r, y0);
+  s.lineTo(x1 - r, y0);
+  s.quadraticCurveTo(x1, y0, x1, y0 + r);
+  s.lineTo(x1, y1 - r);
+  s.quadraticCurveTo(x1, y1, x1 - r, y1);
+  s.quadraticCurveTo(0, y1 + 0.16, x0 + r, y1); // bowed user-facing edge
+  s.quadraticCurveTo(x0, y1, x0, y1 - r);
+  s.lineTo(x0, y0 + r);
+  s.quadraticCurveTo(x0, y0, x0 + r, y0);
+  return s;
+}
+
+export function buildDesk(m, leds) {
+  const b = new Builder();
+  const z = DESK.z;
+  const top = DESK.top;
+  const W = DESK.width;
+  const D = 0.78;
+
+  // Desk top slab: extruded, beveled, rotated so the extrusion runs along +y.
+  const slab = new THREE.ExtrudeGeometry(deskTopShape(W, D, 0.12), {
+    depth: 0.045, bevelEnabled: true, bevelThickness: 0.018, bevelSize: 0.018, bevelSegments: 3, curveSegments: 16,
+  });
+  // Rotating +90° about x maps shape +y to world +z (toward the user) and the
+  // extrusion direction to world -y. With the bevel, the slab spans y in
+  // [pos + 0.018, pos - 0.063], so pos = top - 0.018 puts its upper face at `top`.
+  b.add(slab, m.beigeLight, [0, top - 0.018, z], [Math.PI / 2, 0, 0]);
+
+  // Body: two pedestals plus a modesty panel, slightly inset from the top.
+  for (const s of [-1, 1]) b.rbox(m.taupe, 0.62, top - 0.08, D - 0.12, 0.05, s * (W / 2 - 0.4), (top - 0.08) / 2, z);
+  b.rbox(m.taupeDark, W - 1.4, top - 0.2, 0.06, 0.02, 0, (top - 0.2) / 2 + 0.08, z - D / 2 + 0.12);
+  // kick plates
+  for (const s of [-1, 1]) b.span(m.grille, s * (W / 2 - 0.4) - 0.28, s * (W / 2 - 0.4) + 0.28, 0, 0.06, z + D / 2 - 0.08, z + D / 2 - 0.05);
+
+  // Angled side wings with button decks (soft, rounded take on the pod-console look).
+  for (const s of [-1, 1]) {
+    const wx = s * (W / 2 + 0.05);
+    b.rbox(m.beige, 0.34, 0.5, D - 0.04, 0.08, wx, top + 0.18, z, [0, 0, -s * 0.18]);
+    // button deck plate, tilted toward the user
+    const deckRot = [-0.5, 0, -s * 0.18];
+    b.rbox(m.taupeDark, 0.24, 0.025, 0.46, 0.01, wx - s * 0.03, top + 0.445, z + 0.02, deckRot);
+    for (let r = 0; r < 4; r++) {
+      for (let c = 0; c < 3; c++) {
+        const bz = z - 0.15 + r * 0.1;
+        const by = top + 0.455 - (r - 1.5) * 0.05;
+        const bx = wx - s * 0.03 + (c - 1) * 0.065;
+        const amber = (r === 0 && c === (s > 0 ? 2 : 0));
+        b.rbox(amber ? m.amberKey : m.beigeLight, 0.045, 0.03, 0.05, 0.008, bx, by, bz, deckRot, 2);
+      }
+    }
+  }
+
+  // Row of round indicator buttons across the back of the deck.
+  for (let i = 0; i < 14; i++) {
+    const x = -0.62 + i * (1.24 / 13);
+    b.add(new THREE.CylinderGeometry(0.016, 0.018, 0.012, 14), m.beigeLight, [x, top + 0.006, z - 0.2]);
+    leds.add([x, top + 0.0135, z - 0.2], [0, 1, 0], {
+      size: 0.011, color: i === 12 ? PALETTE.ledCyan : PALETTE.ledWarm, group: 'desk', delay: i / 13, intensity: i === 12 ? 2.2 : 1.1,
+      blink: i % 5 === 2 ? 0.7 : 0,
+    });
+  }
+
+  // ---- keyboard
+  const kz = z + 0.2;
+  const kTilt = -0.07;
+  const kbW = 0.66, kbD = 0.24;
+  b.rbox(m.beige, kbW, 0.035, kbD, 0.014, 0, top + 0.0175, kz, [kTilt, 0, 0]);
+  b.rbox(m.taupeDark, kbW - 0.04, 0.01, kbD - 0.05, 0.004, 0, top + 0.034, kz + 0.005, [kTilt, 0, 0]);
+  const key = 0.034, pitch = 0.039;
+  const rowsSpec = [
+    { n: 15, off: 0 }, { n: 14, off: 0.25 }, { n: 13, off: 0.5 }, { n: 12, off: 0.75 },
+  ];
+  const keyGeom = new THREE.BoxGeometry(key, 0.016, key);
+  rowsSpec.forEach((row, ri) => {
+    const rz = kz - 0.07 + ri * pitch;
+    for (let i = 0; i < row.n; i++) {
+      const x = -kbW / 2 + 0.04 + (i + row.off) * pitch;
+      if (x > kbW / 2 - 0.04) continue;
+      const y = top + 0.044 - Math.sin(kTilt) * (rz - kz) + (ri === 0 ? 0.004 : 0); // sculpted rows
+      const accent = (ri === 0 && (i === 0 || i === 14)) ? m.amberKey : (ri === 3 && i === 11) ? m.cyanKey : m.keycap;
+      b.add(keyGeom, accent, [x, y, rz], [kTilt, 0, 0]);
+    }
+  });
+  // space bar
+  b.add(new THREE.BoxGeometry(0.24, 0.016, key), m.keycap, [-0.02, top + 0.044 - Math.sin(kTilt) * (kz + 0.09 - kz), kz + 0.09], [kTilt, 0, 0]);
+
+  return b.build({ name: 'desk', castShadow: true, receiveShadow: true });
+}
