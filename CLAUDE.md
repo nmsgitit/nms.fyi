@@ -324,8 +324,13 @@ nearest-first (tube sounds at 100/60/40 % per row), back wash +0.3 s, fans fade 
   say which way these doors open; "up" was my call (offer sideways if asked).
 - **Door model** (door.js): octagonal panel (chamfer 0.3) with a hexagonal window that is a real hole with tinted glass
   (`m.doorGlass`; you can see into the room), raised border/central plates, a status housing with green + red LEDs, three
-  rounded slots at the bottom; frame = extruded octagon ring (outer minus inner) with rivets and two lit indicator panels.
-  Palette: panel beigeLight, plates beige, frame taupe.
+  rounded slots at the bottom. Frame = a **uniform 0.3 m band**: the door octagon offset outward on every side by
+  `offsetOct()` (a diagonal offset needs chamfer c + e(2 - √2)), continuing below the floor so the bottom corners match
+  the top. Trim (user: symmetric, retro; no rivets, no side indicator buttons): two pinstripe rings, mirrored vent slots
+  on both sides, three slots centered on top. Palette: panel beigeLight, plates beige, frame taupe.
+  Gotcha: never put a shape hole inside another hole (the border ring had the window cutout inside its inner hole: odd
+  triangulation, a pale blob on the panel).
+- **Back wall band/rail** stop at x = ±0.70, i.e. behind the door frame, so they meet its outline at every height.
 - **Sign** (door.js, corridor side above the door): monotone lamp logo (`getLampSprite('mono')`: all palette entries,
   flame included, mapped to one warm off-white's tones), "Command Room", and "Lamplight Mainframe" smaller (user renamed it
   from "Lamplight Data Center"), on a softly backlit dark panel, ~0.35 m clear of the frame and ~0.3 m below the ceiling.
@@ -336,6 +341,18 @@ nearest-first (tube sounds at 100/60/40 % per row), back wash +0.3 s, fans fade 
   While looking, clicks don't focus the monitor; E still works (glides into the screen from the current view).
 - **Q** raises/lowers the monitor (moved from F).
 - Developer keys (R/L/M/P/O/H) are only active in `npm run dev` or with `?debug`.
+
+## Change round 4 (2026-11-09)
+- **Ceiling lights:** 8 identical fixtures (2.0 × 0.9 m) on an even grid aligned with the wall panels: front row z 1.25
+  (x ±3, the status-light panels; no center, because the monitor hatch is there), middle row z 4.05 (x -3/0/3, the center CRTs),
+  rear row z 6.85 (x -3/0/3, the rear status-light panels).
+- **Matte materials:** the grain roughnessMap was mid-gray, and roughnessMap *multiplies* roughness, so every material
+  was about half as rough as written (glossy). The grain is now near-white, and every non-metal standard material is
+  clamped to roughness >= 0.86 (materials.js). Steel and glass keep their sheen. Keycaps are 0.84. Keep new materials matte
+  unless they're metal.
+- **Server room ceiling** lowered from 9 to 5.5 (10 m hall). The core profile was refit (shaft 5.2 to H-1.6) and the six
+  bands are spaced 0.48 m from base+5.25.
+- **Window top rail removed** (the user found the beam across the top of the window awkward).
 
 ## Desk, controls & monitor stowing (change round 2, 2026-11-09)
 - **Mouse:** `scene/mouse.js`: an unbranded two-button mouse in the spirit of IBM's PS/2-era mouse (to go with the

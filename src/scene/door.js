@@ -3,7 +3,7 @@
 //   * a single octagonal panel (chamfered corners) with a small hexagonal window you can
 //     actually see through, raised panel plates, a status light (green + red LEDs), and three
 //     rounded slots near the bottom
-//   * a thick chamfered octagonal frame with rivets and small lit indicator panels
+//   * a uniform-width chamfered octagonal frame with symmetric retro trim (pinstripes, vent slots)
 // It slides UP into the wall/ceiling cavity. Not a heavy blast door: green light flashes with
 // three chirps, a brief hiss as it opens; a brief hiss and soft thud when it closes.
 // The sign over it (corridor side): monotone lamp logo / "Command Room" / "Lamplight Mainframe".
@@ -13,6 +13,7 @@ import { DOOR } from './layout.js';
 import { getLampSprite } from './lamp.js';
 
 const PANEL_T = 0.08;
+const FRAME_W = DOOR.frameHalfW - DOOR.halfW; // frame band width (0.3 m)
 const FRAME_T = 0.46;
 const LIFT = DOOR.height + 0.25; // how far the panel rises when open (bottom clears the opening)
 
@@ -29,6 +30,14 @@ function octagon(w, h, c, y0 = 0, path = new THREE.Shape()) {
   path.lineTo(x0, y0 + c);
   path.closePath();
   return path;
+}
+
+/**
+ * The door's octagon (w × h from y = 0, chamfer c) offset outward by e on every side, including
+ * the bottom (below the floor) and the diagonals: an offset diagonal needs chamfer c + e(2 - √2).
+ */
+function offsetOct(w, h, c, e, path) {
+  return octagon(w + 2 * e, h + 2 * e, c + e * (2 - Math.SQRT2), -e, path);
 }
 
 /** Hexagon wider than tall (flat top and bottom), centered at (cx, cy). */
@@ -90,30 +99,32 @@ export class HydraulicDoor {
     this.group.position.set(0, 0, DOOR.z);
     const W = DOOR.halfW * 2, H = DOOR.height, C = DOOR.chamfer;
 
-    // ---- frame: chunky chamfered octagon ring around the opening
+    // ---- frame: a uniform-width chamfered octagon band around the opening. The outline is the
+    // door's octagon offset outward by FRAME_W on every side (diagonals included), so the bottom
+    // corners match the top ones; the bottom part continues below the floor line.
     {
       const b = new Builder();
-      const outer = octagon(DOOR.frameHalfW * 2, DOOR.frameHeight, DOOR.chamfer + 0.12);
-      outer.holes.push(octagon(W + 0.01, H + 0.005, C, 0, new THREE.Path()));
-      const g = new THREE.ExtrudeGeometry(outer, {
-        depth: FRAME_T - 0.06, bevelEnabled: true, bevelThickness: 0.03, bevelSize: 0.025, bevelSegments: 3, curveSegments: 4,
+      const ring = (e1, e2) => {
+        const outer = offsetOct(W, H, C, e2);
+        outer.holes.push(offsetOct(W, H, C, e1, new THREE.Path()));
+        return outer;
+      };
+      const g = new THREE.ExtrudeGeometry(ring(0.005, FRAME_W), {
+        depth: FRAME_T - 0.06, bevelEnabled: true, bevelThickness: 0.03, bevelSize: 0.02, bevelSegments: 3, curveSegments: 4,
       });
       g.translate(0, 0, -(FRAME_T - 0.06) / 2);
       b.add(g, m.taupe);
-      // Rivets around the opening on both faces.
-      const ring = octagon(W + 0.17, H + 0.085, C + 0.06, 0);
-      const pts = ring.getSpacedPoints(34).filter((p) => p.y > 0.05);
+      // Symmetric retro trim on both faces: two pinstripes following the octagon, mirrored vent
+      // slot groups on the left and right bands, and a short slot group centered on top.
       for (const face of [-1, 1]) {
-        for (const p of pts) {
-          b.add(new THREE.CylinderGeometry(0.013, 0.013, 0.012, 10), m.steel, [p.x, p.y, face * (FRAME_T / 2 + 0.03)], [Math.PI / 2, 0, 0]);
+        const z = face * (FRAME_T / 2);
+        plate(b, m.taupeDark, ring(0.07, 0.1), 0.005, z, face);
+        plate(b, m.beigeLight, ring(0.18, 0.2), 0.005, z, face);
+        const bandX = DOOR.halfW + FRAME_W * 0.5 + 0.02;
+        for (const sx of [-1, 1]) {
+          for (let i = 0; i < 5; i++) b.rbox(m.grille, 0.11, 0.022, 0.012, 0.005, sx * bandX, 1.0 + i * 0.065, z + face * 0.004);
         }
-        // Small lit indicator panels on the right side of the frame.
-        const x = DOOR.halfW + 0.16;
-        for (const y of [1.18, 1.5]) {
-          b.rbox(m.grille, 0.13, 0.17, 0.02, 0.01, x, y, face * (FRAME_T / 2 + 0.035));
-          b.box(m.doorIndicator, 0.08, 0.035, 0.006, x, y + 0.035, face * (FRAME_T / 2 + 0.047));
-          b.box(m.doorIndicator, 0.08, 0.035, 0.006, x, y - 0.03, face * (FRAME_T / 2 + 0.047));
-        }
+        for (const x of [-0.12, 0, 0.12]) b.rbox(m.grille, 0.024, 0.1, 0.012, 0.006, x, H + FRAME_W * 0.55, z + face * 0.004);
       }
       this.group.add(b.build({ name: 'doorFrame', castShadow: true, receiveShadow: true }));
     }
@@ -135,7 +146,6 @@ export class HydraulicDoor {
         // Raised border ring just inside the edge.
         const border = octagon(W - 0.08, H - 0.08, C - 0.03, 0.04);
         border.holes.push(octagon(W - 0.2, H - 0.2, C - 0.08, 0.1, new THREE.Path()));
-        border.holes.push(hexagon(win.cx, win.cy, win.w + 0.16, win.h + 0.12, new THREE.Path()));
         plate(b, m.beige, border, 0.006, z, face);
         // Window bezel.
         const bezel = hexagon(win.cx, win.cy, win.w + 0.09, win.h + 0.07);

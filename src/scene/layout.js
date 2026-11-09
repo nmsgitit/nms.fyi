@@ -14,11 +14,11 @@ export const ROOM = {
 // Corridor is as tall as the room so the sign fits above the (lower) hydraulic door.
 export const CORRIDOR = { halfW: 1.2, height: 3.5, zStart: 8.2, zEnd: 12 };
 // Entrance door (door.js, Alien: Isolation-style octagonal panel in a chamfered frame) in the back wall at z 8.1.
-export const DOOR = { halfW: 0.65, height: 2.1, z: 8.1, chamfer: 0.3, frameHalfW: 0.95, frameHeight: 2.42 };
+export const DOOR = { halfW: 0.65, height: 2.1, z: 8.1, chamfer: 0.3, frameHalfW: 0.95, frameHeight: 2.4 }; // frame band 0.3 m all round
 
 export const SERVER = {
   floorY: -4.5,
-  ceilY: 9,
+  ceilY: 5.5, // lowered from 9 at the user's request (10 m tall hall)
   xMin: -16, xMax: 16,
   zMin: -28, zMax: ROOM.glassTopZ,
 };

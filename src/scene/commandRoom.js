@@ -74,8 +74,13 @@ export function buildCommandRoom(m, leds) {
     b.span(m.ceiling, hx1, xMax, H, H + 0.1, hz0, hz1);
   }
   const panels = [];
-  for (const x of [-3, 0, 3]) for (const z of [3.1, 5.9]) panels.push([x, z, 2.2, 0.9]);
-  panels.push([-3, 1.35, 2.2, 0.7], [3, 1.35, 2.2, 0.7]);
+  // Eight identical fixtures on an even grid (user layout): rows line up with the wall panels:
+  // front row (z 1.25, the front status-light panels): left + right only (the monitor hatch is
+  // front-center); middle row (z 4.05, the center CRTs) and rear row (z 6.85, the rear status-light
+  // panels): left, center, right.
+  const LIGHT_W = 2.0, LIGHT_D = 0.9;
+  for (const x of [-3, 3]) panels.push([x, 1.25, LIGHT_W, LIGHT_D]);
+  for (const z of [4.05, 6.85]) for (const x of [-3, 0, 3]) panels.push([x, z, LIGHT_W, LIGHT_D]);
   for (const [x, z, w, d] of panels) {
     b.span(m.lightPanel, x - w / 2, x + w / 2, H - 0.012, H - 0.002, z - d / 2, z + d / 2);
     // beige frame around each fixture
@@ -95,7 +100,9 @@ export function buildCommandRoom(m, leds) {
   // ---- back wall with door opening
   // The opening is only as wide as the door panel; door.js adds the octagonal frame that
   // covers the opening's corners.
-  const dw = CORRIDOR.halfW, ow = DOOR.halfW, fw = DOOR.frameHalfW + 0.02;
+  // fw: the wall band and rail run in BEHIND the door frame (which covers x 0.65..0.95, plus
+  // its sloped bottom corners), so they meet its outline cleanly at every height.
+  const dw = CORRIDOR.halfW, ow = DOOR.halfW, fw = DOOR.halfW + 0.05;
   b.span(m.wallUpper, xMin, -ow, 0, H, zBack, zBack + 0.2);
   b.span(m.wallUpper, ow, xMax, 0, H, zBack, zBack + 0.2);
   b.span(m.wallUpper, -ow, ow, DOOR.height, H, zBack, zBack + 0.2); // above the door
@@ -159,7 +166,7 @@ export function buildCommandRoom(m, leds) {
   const mullionX = [xMin + 0.06, -1.8, 1.8, xMax - 0.06];
   for (const x of mullionX) b.rbox(m.beige, 0.12, glassLen, 0.16, 0.03, x, midY, midZ, [-tilt, 0, 0]);
   b.rbox(m.beige, xMax - xMin, 0.1, 0.18, 0.03, 0, sill, 0.0); // bottom rail
-  b.rbox(m.beige, xMax - xMin, 0.14, 0.2, 0.03, 0, H - 0.05, zTop + 0.02); // top rail
+  // (No top rail: the user found the beam across the top of the window awkward.)
   const panes = [[xMin + 0.06, -1.8], [-1.8, 1.8], [1.8, xMax - 0.06]];
   for (const [x0, x1] of panes) {
     b.add(new THREE.PlaneGeometry(x1 - x0 - 0.12, glassLen - 0.1), m.glass, [(x0 + x1) / 2, midY, midZ], [-tilt, 0, 0]);

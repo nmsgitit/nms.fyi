@@ -11,7 +11,9 @@ function noiseTexture(size = 256, strength = 18, seed = 1) {
   let s = seed >>> 0;
   const rnd = () => ((s = (s * 1664525 + 1013904223) >>> 0) / 4294967296);
   for (let i = 0; i < size * size; i++) {
-    const v = 128 + (rnd() - 0.5) * strength * 2;
+    // Centered near white: a roughnessMap MULTIPLIES roughness, so the old mid-gray grain
+    // (128) silently halved every material's roughness and made everything glossy.
+    const v = Math.min(255, 238 + (rnd() - 0.5) * strength * 2);
     img.data[i * 4] = img.data[i * 4 + 1] = img.data[i * 4 + 2] = v;
     img.data[i * 4 + 3] = 255;
   }
@@ -119,6 +121,11 @@ export function createMaterials(maxAnisotropy = 4) {
   // wall) light slipped through within the shadow bias and the fill light glowed behind the door.
   for (const mat of Object.values(m)) {
     if (mat?.isMeshStandardMaterial && !mat.transparent) mat.shadowSide = THREE.FrontSide;
+    // Matte everything that isn't metal (user: no glossy reflections, carpet included).
+    // Metals (steel) and the screen glass keep their sheen.
+    if (mat?.isMeshStandardMaterial && mat.metalness < 0.3 && mat !== m.screenOff && !mat.transparent) {
+      mat.roughness = Math.max(mat.roughness, 0.86);
+    }
   }
   return m;
 }

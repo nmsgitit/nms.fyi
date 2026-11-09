@@ -75,13 +75,13 @@ export function buildSupercomputer(b, m, leds) {
   const H = SERVER.ceilY - base;
   const prof = [
     [0, 0], [1.75, 0], [2.05, 0.35], [2.2, 1.1], [2.1, 2.1], [1.75, 3.1], [1.35, 3.9], [1.12, 4.8],
-    [1.05, 6.0], [1.05, H - 2.2], [1.25, H - 1.4], [1.85, H - 0.7], [2.0, H - 0.25], [2.0, H],
+    [1.05, 5.2], [1.05, H - 1.6], [1.25, H - 1.0], [1.85, H - 0.5], [2.0, H - 0.2], [2.0, H],
   ].map(([r, y]) => new THREE.Vector2(r, y));
   b.add(new THREE.LatheGeometry(prof, 64), m.coreShell, P(0, base, 0));
 
   // Glowing bands around the shaft (lit during the reveal).
   for (let i = 0; i < 6; i++) {
-    b.add(new THREE.TorusGeometry(1.07, 0.035, 8, 64), m.coreBands[i], P(0, base + 5.4 + i * 1.05, 0), [Math.PI / 2, 0, 0]);
+    b.add(new THREE.TorusGeometry(1.07, 0.035, 8, 64), m.coreBands[i], P(0, base + 5.25 + i * 0.48, 0), [Math.PI / 2, 0, 0]);
   }
   // Cable conduits rising from the cabinet ring to the collar.
   for (let i = 0; i < 8; i++) {

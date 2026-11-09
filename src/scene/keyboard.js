@@ -142,7 +142,7 @@ export function buildKeyboard(m) {
   const gap = 0.0022;
   const capH = 0.0105;
   const atlas = keycapAtlas(keys, widthU, depthU);
-  const capMat = new THREE.MeshStandardMaterial({ map: atlas.texture, roughness: 0.5 });
+  const capMat = new THREE.MeshStandardMaterial({ map: atlas.texture, roughness: 0.84 }); // matte keycaps
   for (const k of keys) {
     if (k.w <= 0) continue;
     const cw = k.w * U - gap, cd = k.h * U - gap;
