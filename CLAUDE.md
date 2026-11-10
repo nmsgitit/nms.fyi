@@ -403,7 +403,7 @@ nearest-first (tube sounds at 100/60/40 % per row), back wash +0.3 s, fans fade 
 - **Desk phones removed** (user: not enough of an aesthetic addition for the effort). `scene/phones.js` was deleted;
   the last version (curved handset with earpiece/mouthpiece blocks) is in commit 96ed0b6 if they ever come back.
 
-## Change round 10 (2026-11-10): one account, logon scanlines
+## Change round 10 (2026-11-10): one account, logon scanlines, gate text
 - **One account:** the visitor "You" account and the unavailable admin account were merged into a single account,
   `USER_NAME` "Noah Schafrath" / `USER_TAGLINE` "Mainframe Administrator" with `USER_PORTRAIT`
   `/os/user-portrait.png` (the 80s-dithered headshot, renamed from admin-portrait.png). `ADMIN`, the unavailable notice and
@@ -413,6 +413,8 @@ nearest-first (tube sounds at 100/60/40 % per row), back wash +0.3 s, fans fade 
 - **Scanlines on the logon screen:** `.os-crt` now has `z-index: 60` (logon is 50), so the same faint scanlines as the
   desktop cover it. `.os-windows` got `isolation: isolate` so window z-indexes (which grow on every focus) can never
   climb over the menu, logon or scanlines.
+- **Gate text trimmed:** no "Best with sound on" line, and the status line (`#gate-status`) is hidden once the room is
+  ready instead of reading "Ready". It still shows "Loading the command room…" and the WebGL error.
 - **Log out returns to account selection and stays there** in every mode (full no longer calls `focus.exit()`; the
   "Exit account selection" button is the way back to the room).
 

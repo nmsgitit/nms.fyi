@@ -340,7 +340,7 @@ function enter() {
   if (!params.has('skip')) intro.start(); // door opens, then the walk begins (intro.js)
 }
 enterBtn.addEventListener('click', enter);
-gateStatus.textContent = 'Ready';
+gateStatus.hidden = true; // loading text goes away once ready (user: no "Ready" line)
 enterBtn.disabled = false;
 if (params.has('skip') || params.has('debug') || params.has('os')) {
   gateEl.classList.add('hidden');

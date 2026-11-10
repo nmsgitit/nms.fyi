@@ -87,7 +87,8 @@ html, body {
 
 .gate-box { text-align: center; padding: 16px; }
 .gate-title { font-size: clamp(28px, 6vw, 44px); letter-spacing: 0.18em; margin: 0 0 8px; }
-.gate-sub, .gate-hint { color: var(--dim); font-size: 14px; margin: 8px 0; letter-spacing: 0.06em; }
+.gate-sub[hidden] { display: none; }
+.gate-sub { color: var(--dim); font-size: 14px; margin: 8px 0; letter-spacing: 0.06em; }
 
 #gate-enter {
   margin-top: 16px;
