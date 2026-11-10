@@ -4,7 +4,7 @@
 import * as THREE from 'three';
 import { drawLamp } from './lamp.js';
 import { getWallpaper, getIcon } from '../os/art.js';
-import { APPS, OS_NAME, OS_VERSION } from '../os/desktopModel.js';
+import { APPS, OS_NAME, OS_VERSION, USER_NAME } from '../os/desktopModel.js';
 import { TASKBAR_H, ICON_GRID } from '../os/layout.js';
 import { clockText } from '../os/clock.js';
 
@@ -20,7 +20,7 @@ export class MonitorScreen {
     this.texture.colorSpace = THREE.SRGBColorSpace;
     this.texture.anisotropy = 8;
     this.texture.flipY = false; // glTF UV convention (the screen mesh comes from Blender)
-    this.state = 'off'; // off | warmup | boot | desktop | shutdown
+    this.state = 'off'; // off | warmup | boot | logon | desktop | shutdown
     this.stateT = 0;
     this._accum = 0;
     this._lastClock = '';
@@ -58,7 +58,14 @@ export class MonitorScreen {
     this.stateT = 0;
   }
 
-  /** The boot hands off to the desktop (brief blank as the mode switches, then a fade-in). */
+  /** The boot hands off to the logon screen (brief blank as the mode switches, then a fade-in). */
+  showLogon(instant = false) {
+    this.state = 'logon';
+    this.stateT = instant ? 10 : 0;
+    this.draw(this.stateT);
+  }
+
+  /** Logged on: the desktop (brief blank, then a fade-in, unless instant). */
   showDesktop(instant = false) {
     this.state = 'desktop';
     this.stateT = instant ? 10 : 0;
@@ -70,6 +77,7 @@ export class MonitorScreen {
     this.stateT += dt;
     if (this.state === 'warmup' && this.stateT > 0.9) { this.state = 'boot'; this.stateT = 0; }
     if (this.state === 'shutdown' && this.stateT > 0.6) { this.powerOff(); return; }
+    if (this.state === 'logon' && this.stateT > 1.2) return; // static once faded in
     if (this.state === 'desktop' && this.stateT > 1.2) {
       // Settled desktop: only redraw when the clock changes.
       if (clockText() !== this._lastClock) this.draw(this.stateT);
@@ -108,12 +116,12 @@ export class MonitorScreen {
       ctx.fillStyle = `rgba(240,236,220,${(0.35 + 0.65 * k1) * (1 - k3)})`;
       ctx.fillRect(W / 2 - w / 2, H / 2 - Math.max(1.5, h / 2 * 0.15), w, Math.max(3, h * 0.15));
       ctx.globalCompositeOperation = 'source-over';
-    } else if (this.state === 'desktop') {
-      // 0.25 s of black (video mode switch), then the desktop fades up.
+    } else if (this.state === 'desktop' || this.state === 'logon') {
+      // 0.25 s of black (video mode switch), then the picture fades up.
       const a = Math.min(1, Math.max(0, (t - 0.25) / 0.6));
       if (a > 0) {
         ctx.globalAlpha = a;
-        this.drawDesktop();
+        if (this.state === 'logon') this.drawLogon(); else this.drawDesktop();
         ctx.globalAlpha = 1;
       }
     }
@@ -214,6 +222,59 @@ export class MonitorScreen {
     ctx.textBaseline = 'middle';
     ctx.font = `${Math.round(13 * s)}px Tahoma, Verdana, sans-serif`;
     ctx.fillText(this._lastClock, W - cw / 2, ty + th / 2);
+  }
+
+  /** The logon screen, laid out like the HTML one in os.css (.os-logon), scaled to this canvas. */
+  drawLogon() {
+    const { ctx, canvas: c } = this;
+    const W = c.width, H = c.height;
+    const s = H / 768;
+    const bg = ctx.createRadialGradient(W * 0.4, H * 0.45, 0, W * 0.4, H * 0.45, W * 0.75);
+    bg.addColorStop(0, '#6f93e6');
+    bg.addColorStop(0.45, '#4a6fd4');
+    bg.addColorStop(1, '#3a5bc0');
+    ctx.fillStyle = bg;
+    ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = '#0a2f8f';
+    ctx.fillRect(0, 0, W, H * 0.12);
+    ctx.fillRect(0, H * 0.88, W, H * 0.12);
+    ctx.fillStyle = '#e8a64f';
+    ctx.fillRect(0, H * 0.12 - 2 * s, W, 2 * s);
+    ctx.fillStyle = '#7fa2ea';
+    ctx.fillRect(0, H * 0.88, W, 2 * s);
+    // Divider.
+    const dv = ctx.createLinearGradient(0, H * 0.24, 0, H * 0.76);
+    dv.addColorStop(0, 'rgba(255,255,255,0)');
+    dv.addColorStop(0.5, 'rgba(255,255,255,0.85)');
+    dv.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.fillStyle = dv;
+    ctx.fillRect(W / 2 - s, H * 0.24, 2 * s, H * 0.52);
+    // Left: lamp, OS name, hint (right-aligned toward the divider).
+    const rx = W / 2 - 40 * s;
+    ctx.imageSmoothingEnabled = false;
+    ctx.drawImage(getIcon('lamp'), rx - 72 * s, H / 2 - 82 * s, 72 * s, 72 * s);
+    ctx.fillStyle = '#fff';
+    ctx.textAlign = 'right';
+    ctx.textBaseline = 'alphabetic';
+    ctx.font = `${Math.round(34 * s)}px Georgia, "Times New Roman", serif`;
+    ctx.fillText(OS_NAME, rx, H / 2 + 26 * s);
+    ctx.font = `${Math.round(15 * s)}px Tahoma, Verdana, sans-serif`;
+    ctx.fillText('To begin, click your user name', rx, H / 2 + 52 * s);
+    // Right: the USER account tile.
+    const ux = W / 2 + 48 * s, uy = H / 2 - 35 * s;
+    ctx.fillStyle = '#fff';
+    ctx.beginPath();
+    ctx.roundRect(ux - 3 * s, uy - 3 * s, 70 * s, 70 * s, 6 * s);
+    ctx.fill();
+    ctx.drawImage(getIcon('user'), ux, uy, 64 * s, 64 * s);
+    ctx.imageSmoothingEnabled = true;
+    ctx.textAlign = 'left';
+    ctx.font = `bold ${Math.round(22 * s)}px Tahoma, Verdana, sans-serif`;
+    ctx.fillText(USER_NAME, ux + 82 * s, uy + 40 * s);
+    // Bottom band note.
+    ctx.textAlign = 'right';
+    ctx.font = `${Math.round(13 * s)}px Tahoma, Verdana, sans-serif`;
+    ctx.fillText('After you log on, the apps are on the desktop.', W * 0.96, H * 0.94 + 4 * s);
   }
 
   /** Scanlines + vignette so it reads as a CRT. */

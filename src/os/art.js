@@ -129,6 +129,22 @@ const DRAW = {
     r(2, 9, 4, 5, P.ol); r(3, 10, 2, 3, P.screen); r(3, 10, 1, 1, P.glow); // lens window
     r(20, 10, 1, 1, P.red); // tally light
   },
+  user: (r) => {
+    // Logon-screen avatar: a lamp-bronze tile with a simple head-and-shoulders figure.
+    r(2, 2, 28, 28, P.ol); r(3, 3, 26, 26, '#a8652a'); r(3, 3, 26, 4, '#c27a36');
+    r(12, 7, 8, 9, P.ol); r(13, 8, 6, 7, '#f6d48e'); // head
+    r(7, 18, 18, 11, P.ol); r(8, 19, 16, 10, '#f6d48e'); r(8, 19, 16, 2, '#fff1c8'); // shoulders
+  },
+  logout: (r) => {
+    // Log out: a door swung open in its frame, with an arrow stepping out through it.
+    r(5, 3, 16, 26, P.ol); r(6, 4, 14, 24, '#20242e'); // frame + dark doorway
+    r(6, 4, 3, 24, P.ol); // hinge side jamb
+    for (let i = 0; i < 9; i++) r(9 + i, 5 + Math.floor(i / 3), 1, 22 - 2 * Math.floor(i / 3), i < 7 ? '#c9962a' : P.ol); // door panel, open toward us
+    r(15, 15, 2, 2, P.ol); // knob
+    r(19, 14, 8, 4, P.ol); r(19, 15, 7, 2, '#5fd17a'); // arrow shaft
+    for (let i = 0; i < 4; i++) { r(26 + i, 12 + i, 1, 8 - 2 * i, i < 3 ? '#5fd17a' : P.ol); } // arrow head
+    r(26, 11, 1, 1, P.ol); r(26, 20, 1, 1, P.ol);
+  },
   bin: (r) => {
     r(8, 6, 16, 3, P.ol); r(9, 7, 14, 1, P.gray); r(13, 4, 6, 2, P.ol);
     r(9, 9, 14, 19, P.ol); r(10, 9, 12, 18, P.gray);

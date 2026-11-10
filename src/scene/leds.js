@@ -93,6 +93,15 @@ export class LedField {
     if (!on) g.level = 0;
   }
 
+  /**
+   * Brightness modulation for a powered group: fn(pos: Vector3, time) -> factor (0..1), or null.
+   * Used for the supercomputer's flowing light waves.
+   */
+  setWave(name, fn) {
+    const g = this.groups.get(name);
+    if (g) g.wave = fn;
+  }
+
   /** Instantly set a group fully on or off (debug, or skip-intro). */
   forceGroup(name, on) {
     const g = this.groups.get(name);
@@ -115,6 +124,7 @@ export class LedField {
           // A brief power-on flicker, then steady.
           k = t < 0.12 ? (Math.sin(t * 160) > 0 ? 1 : 0.15) : 1;
           if (it.blink > 0) k *= 0.55 + 0.45 * (Math.sin(time * it.blink * 6.283 + it.phase) > -0.2 ? 1 : 0.1);
+          if (g.wave && t >= 0.12) k *= g.wave(it.pos, time);
         }
       }
       col[i * 3] = it.color.r * k;

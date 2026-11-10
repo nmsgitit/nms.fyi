@@ -3,9 +3,11 @@
 // with an app menu and the Exit button, desktop icons, draggable windows.
 // Content comes from desktopModel.js (placeholders for now).
 //
-// Modes: 'full' (on the 3D terminal: Exit returns to the command room, the security-camera app
-// is available), 'light' (desktop only, no 3D) and 'mobile' (desktop only, touch layout).
-// Outside 'full', everything that drives the 3D world is left out (Exit, apps with requires3D).
+// Modes: 'full' (on the 3D terminal; the security-camera app is available), 'light' (desktop only,
+// no 3D) and 'mobile' (desktop only, touch layout). Apps with requires3D only exist in 'full'.
+// Every mode starts at a LOGON screen (the USER account; click it to log on). "Log out" in the
+// launcher (door icon: you aren't powering the machine off) closes the apps and returns to the
+// logon screen; in 'full' it then also steps back from the terminal into the room (onLogout).
 import { APPS, USER_NAME, USER_TAGLINE, OS_NAME, OS_VERSION } from './desktopModel.js';
 import { iconURL, wallpaperURL } from './art.js';
 import { clockText } from './clock.js';
@@ -23,15 +25,17 @@ const el = (tag, cls, attrs = {}) => {
 
 export class DesktopOS {
   /**
-   * onExit: called when the visitor picks Exit in the launcher menu.
+   * onLogout: called after logging off (full: step back from the terminal). onLogin: after logging on.
    * onClick(kind): 'press' / 'release' for every pointer click on the desktop (click sounds).
    * apps: handlers for interactive app kinds, e.g. { cameras: { mount(body, ctx), unmount(), setVisible(on) } }.
    */
-  constructor({ mode = 'full', onExit, onClick, apps = {} } = {}) {
+  constructor({ mode = 'full', onLogout, onLogin, onClick, apps = {} } = {}) {
     this.mode = mode;
     this.full = mode === 'full';
     this.mobile = mode === 'mobile';
-    this.onExit = onExit;
+    this.onLogout = onLogout;
+    this.onLogin = onLogin;
+    this.loggedIn = false;
     this.onClick = onClick;
     this.handlers = apps;
     this.apps = APPS.filter((a) => this.full || !a.requires3D);
@@ -94,18 +98,14 @@ export class DesktopOS {
       list.append(item);
     }
     const foot = el('div', 'os-menu-foot');
-    if (this.full) {
-      // Exit steps back out of the terminal into the 3D room, so it only exists in the full experience.
-      const exit = el('button', 'os-exit', { type: 'button', role: 'menuitem' });
-      exit.append(el('span', 'os-exit-icon', { 'aria-hidden': 'true', text: '⏻' }), el('span', '', { text: 'Exit' }));
-      exit.addEventListener('click', () => { this.closeMenu(); this.onExit?.(); });
-      foot.append(exit);
-    } else {
-      foot.append(el('span', 'os-menu-version', { text: `${OS_NAME} · ${OS_VERSION}` }));
-    }
+    foot.append(el('span', 'os-menu-version', { text: `${OS_NAME} · ${OS_VERSION}` }));
+    const logout = el('button', 'os-logout', { type: 'button', role: 'menuitem' });
+    logout.append(el('img', '', { src: iconURL('logout'), alt: '', width: 24, height: 24 }), el('span', '', { text: 'Log out' }));
+    logout.addEventListener('click', () => { this.closeMenu(); this.logout(); });
+    foot.append(logout);
     menu.append(head, list, foot);
 
-    root.append(desk, bar, menu, el('div', 'os-crt', { 'aria-hidden': 'true' }));
+    root.append(desk, bar, menu, this.buildLogon(), el('div', 'os-crt', { 'aria-hidden': 'true' }));
     document.body.append(root);
 
     document.addEventListener('pointerdown', (e) => {
@@ -120,6 +120,56 @@ export class DesktopOS {
         else this.active()?.querySelector('.win-close')?.click();
       }
     });
+  }
+
+  // ------------------------------------------------------------------ logon screen
+  buildLogon() {
+    const lg = (this.logonEl = el('div', 'os-logon', { role: 'dialog', 'aria-label': `${OS_NAME} log on` }));
+    const mid = el('div', 'logon-mid');
+    const brand = el('div', 'logon-brand');
+    brand.append(el('img', '', { src: iconURL('lamp'), alt: '', width: 72, height: 72 }),
+      el('p', 'logon-name', { text: OS_NAME }), el('p', 'logon-hint', { text: 'To begin, click your user name' }));
+    const users = el('div', 'logon-users');
+    const tile = (this.userTile = el('button', 'logon-user', { type: 'button' }));
+    tile.append(el('img', '', { src: iconURL('user'), alt: '', width: 64, height: 64 }),
+      el('span', 'logon-user-text', { html: `<strong>${USER_NAME}</strong><small></small>` }));
+    tile.addEventListener('click', () => this.login());
+    users.append(tile);
+    this.logonStatus = el('p', 'logon-status', { 'aria-live': 'polite' });
+    mid.append(brand, el('div', 'logon-divider', { 'aria-hidden': 'true' }), users, this.logonStatus);
+    lg.append(el('div', 'logon-band top'), mid,
+      el('div', 'logon-band bottom', { html: `<span>After you log on, the apps are on the desktop.</span>` }));
+    return lg;
+  }
+
+  setLogonView(view) { // 'users' | 'welcome' | 'logoff' | 'hidden'
+    this.logonEl.dataset.view = view;
+    this.logonEl.hidden = view === 'hidden';
+    this.logonStatus.textContent = view === 'logoff' ? 'Logging off…' : '';
+    this.userTile.querySelector('small').textContent = view === 'welcome' ? 'Loading your settings…' : '';
+  }
+
+  login() {
+    if (this.loggedIn || this.logonEl.dataset.view !== 'users') return;
+    this.setLogonView('welcome');
+    setTimeout(() => {
+      this.loggedIn = true;
+      this.logonEl.classList.add('fade');
+      setTimeout(() => { this.logonEl.classList.remove('fade'); this.setLogonView('hidden'); }, 400);
+      this.onLogin?.();
+      if (!this.mobile) this.launchBtn.focus();
+    }, 800);
+  }
+
+  logout() {
+    if (!this.loggedIn) return;
+    this.loggedIn = false;
+    for (const id of [...this.windows.keys()]) this.close(id); // logging off closes everything
+    this.setLogonView('logoff');
+    setTimeout(() => {
+      this.setLogonView('users');
+      this.onLogout?.();
+    }, 900);
   }
 
   // ------------------------------------------------------------------ open / close the OS
@@ -141,7 +191,10 @@ export class DesktopOS {
     this.tickClock();
     this._clockTimer = setInterval(() => this.tickClock(), 15000);
     requestAnimationFrame(() => this.root.classList.add('on'));
-    if (!this.mobile) setTimeout(() => this.launchBtn.focus(), 300);
+    if (!this.loggedIn) {
+      this.setLogonView('users');
+      if (!this.mobile) setTimeout(() => this.userTile.focus(), 300);
+    } else if (!this.mobile) setTimeout(() => this.launchBtn.focus(), 300);
     for (const w of this.windows.values()) if (!w.minimized) w.handler?.setVisible?.(true);
   }
 

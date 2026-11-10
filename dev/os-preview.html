@@ -14,7 +14,7 @@
     <script type="module">
       import '/src/os/os.css';
       import { DesktopOS } from '/src/os/os.js';
-      const os = new DesktopOS({ onExit: () => console.log('[os-preview] Exit pressed') });
+      const os = new DesktopOS({ mode: 'light', onLogout: () => console.log('[os-preview] logged out') });
       os.show();
       window.os = os;
     </script>

@@ -243,7 +243,88 @@
 }
 .os-exit:hover, .os-exit:focus-visible { filter: brightness(1.12); outline: 2px solid #fff; outline-offset: 1px; }
 .os-exit-icon { font-size: 15px; }
+.os-menu-foot { justify-content: space-between; align-items: center; }
 .os-menu-version { color: #fff; font-size: 12px; opacity: 0.9; }
+/* Log out (door icon): you log off the terminal, you don't power the machine down. */
+.os-logout {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 12px 3px 6px;
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  border-radius: 3px;
+  background: linear-gradient(180deg, #e8a64f, #c9761f);
+  color: #fff;
+  font: bold 13px Tahoma, Verdana, sans-serif;
+  text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.35);
+  cursor: pointer;
+}
+.os-logout img { image-rendering: pixelated; }
+.os-logout:hover, .os-logout:focus-visible { filter: brightness(1.12); outline: 2px solid #fff; outline-offset: 1px; }
+
+/* Logon screen (original, XP-reminiscent welcome): dark bands top and bottom, a brighter blue
+   middle split by a soft vertical rule; the OS name on the left, the USER account on the right.
+   screen.js drawLogon() draws the same layout on the 3D monitor. */
+.os-logon {
+  position: absolute;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  grid-template-rows: 12% 1fr 12%;
+  color: #fff;
+  background: radial-gradient(ellipse at 40% 45%, #6f93e6 0%, #4a6fd4 45%, #3a5bc0 100%);
+  transition: opacity 400ms ease;
+}
+.os-logon[hidden] { display: none; }
+.os-logon.fade { opacity: 0; }
+.logon-band { background: #0a2f8f; }
+.logon-band.top { border-bottom: 2px solid #e8a64f; }
+.logon-band.bottom {
+  border-top: 2px solid #7fa2ea;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding: 0 4%;
+  font-size: 13px;
+  opacity: 0.95;
+}
+.logon-mid { position: relative; display: flex; align-items: center; justify-content: center; }
+.logon-brand { width: 50%; padding-right: 40px; text-align: right; }
+.logon-brand img { image-rendering: pixelated; }
+.logon-name { margin: 6px 0 4px; font: 34px Georgia, 'Times New Roman', serif; letter-spacing: 0.04em; text-shadow: 1px 2px 3px rgba(0, 0, 0, 0.35); }
+.logon-hint { margin: 0; font-size: 15px; opacity: 0.92; }
+.logon-divider {
+  width: 2px;
+  height: 52%;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0), rgba(255, 255, 255, 0.85), rgba(255, 255, 255, 0));
+}
+.logon-users { width: 50%; padding-left: 40px; }
+.logon-user {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 8px 18px 8px 8px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: #fff;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.logon-user img { image-rendering: pixelated; border: 3px solid #fff; border-radius: 6px; background: #fff; }
+.logon-user strong { display: block; font-size: 22px; letter-spacing: 0.06em; }
+.logon-user small { display: block; font-size: 12px; min-height: 1em; opacity: 0.9; }
+.logon-user:hover, .logon-user:focus-visible { background: rgba(10, 47, 143, 0.55); outline: none; }
+.logon-user:hover img, .logon-user:focus-visible img { border-color: #e8a64f; }
+.logon-status { position: absolute; margin: 0; font-size: 22px; }
+.os-logon[data-view='logoff'] .logon-brand,
+.os-logon[data-view='logoff'] .logon-divider,
+.os-logon[data-view='logoff'] .logon-users { visibility: hidden; }
+.os-mobile .logon-mid { flex-direction: column; gap: 22px; }
+.os-mobile .logon-brand, .os-mobile .logon-users { width: auto; padding: 0; text-align: center; }
+.os-mobile .logon-divider { width: 60%; height: 2px; background: linear-gradient(90deg, rgba(255,255,255,0), rgba(255,255,255,0.85), rgba(255,255,255,0)); }
+.os-mobile .logon-band.bottom { justify-content: center; text-align: center; }
 
 /* Faint CRT scanlines so it still feels like the terminal (purely decorative). */
 .os-crt {

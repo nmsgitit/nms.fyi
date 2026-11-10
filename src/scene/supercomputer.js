@@ -13,7 +13,8 @@ import { PALETTE } from './palette.js';
 
 const F = SERVER.floorY;
 const DEG = Math.PI / 180;
-export const SUPER_HALF_A = 25 * DEG; // the wall section spans 90° ± this on the bay's arc
+export const SUPER_HALF_A = 30 * DEG; // the wall section spans 90° ± this on the bay's arc (pilasters at the ends)
+const DAIS_TOP_R = 5.25, DAIS_R = 6.1; // the pedestal's upper and lower step radii
 const arcPt = (r, a) => [r * Math.cos(a), SERVER.zMin - r * Math.sin(a)];
 
 /** Cylinder between two points. */
@@ -38,8 +39,14 @@ function buildWallSection(b, m, leds) {
   for (let i = 0; i < n; i++) {
     const a = start + i * step;
     const [x, z] = arcPt(15.6, a);
-    const onDais = Math.hypot(x - CORE.x, z - CORE.z) < 6.15;
-    const y0 = onDais ? F + 0.5 : F;
+    // Stand on the lowest surface under the tower's footprint (upper step, lower step or floor), so
+    // no tower floats over a step edge; steps that run under a tower's side just butt into it.
+    let far = 0;
+    for (const r of [15.2, 16.0]) for (const t of [-0.45, 0.45]) {
+      const [cx, cz] = arcPt(r, a);
+      far = Math.max(far, Math.hypot(cx - Math.sin(a) * t - CORE.x, cz - Math.cos(a) * t - CORE.z));
+    }
+    const y0 = far <= DAIS_TOP_R ? F + 0.5 : far <= DAIS_R ? F + 0.25 : F;
     const h = towerTop - y0;
     const nx = -Math.cos(a), nz = Math.sin(a);
     b.rbox(m.beige, 0.9, h, 0.8, 0.06, x, y0 + h / 2, z, [0, Math.atan2(nx, nz), 0]);
@@ -49,7 +56,8 @@ function buildWallSection(b, m, leds) {
     leds.grid([fx + nx * 0.012, y0 + h / 2 + 0.2, fz + nz * 0.012], [nz, 0, -nx], [0, 1, 0], [nx, 0, nz], 3, Math.floor((h - 1.6) / 0.3), 0.18, 0.3,
       { size: 0.04, color: (q) => (q < 0.12 ? PALETTE.ledAmber : PALETTE.ledCyan), blink: (q) => (q < 0.3 ? 0.5 + q * 4 : 0), group: 'core', delay: 0.15 + Math.abs(i - (n - 1) / 2) / n, intensity: 1.6 }, 0.85);
   }
-  // Pilasters framing the section, floor to ceiling.
+  // Pilasters framing the section, floor to ceiling, clear of the pedestal (at 65° they cut into
+  // its lower step; at 60° their front corners are ~0.8 m outside it).
   for (const a of [a0, a1]) {
     const [x, z] = arcPt(15.35, a);
     const ry = Math.atan2(-Math.cos(a), Math.sin(a));

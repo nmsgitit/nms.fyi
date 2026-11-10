@@ -103,8 +103,18 @@ export class MonitorRig {
 
   buildArm() {
     const { m } = this;
-    const mk = (r, len, mat, segs = 28) => {
-      const mesh = new THREE.Mesh(new THREE.CylinderGeometry(r, r, len, segs), mat);
+    // Each telescoping stage is a lathe-turned tube: smooth (64 sides) with rounded lips at both
+    // ends, instead of a plain low-poly cylinder (user: better resolution for the arm and piston).
+    const tube = (r, len) => {
+      const h = len / 2, e = Math.min(0.012, r * 0.25);
+      const prof = [[0, -h], [r - e, -h]];
+      for (let i = 1; i <= 6; i++) { const a = (Math.PI / 2) * (i / 6); prof.push([r - e + e * Math.sin(a), -h + e - e * Math.cos(a)]); }
+      for (let i = 0; i <= 6; i++) { const a = (Math.PI / 2) * (i / 6); prof.push([r - e + e * Math.cos(a), h - e + e * Math.sin(a)]); }
+      prof.push([0, h]);
+      return new THREE.LatheGeometry(prof.map(([x, y]) => new THREE.Vector2(x, y)), 64);
+    };
+    const mk = (r, len, mat) => {
+      const mesh = new THREE.Mesh(tube(r, len), mat);
       mesh.castShadow = true;
       mesh.receiveShadow = true;
       this.group.add(mesh);
@@ -117,8 +127,8 @@ export class MonitorRig {
     this.mid = mk(0.061, 1.12, armSteel);
     this.inner = mk(0.047, 1.12, armSteel);
     // Collar rings at each stage's bottom lip.
-    this.midCollar = new THREE.Mesh(new THREE.TorusGeometry(0.064, 0.008, 8, 28), m.beige);
-    this.innerCollar = new THREE.Mesh(new THREE.TorusGeometry(0.05, 0.007, 8, 28), m.beige);
+    this.midCollar = new THREE.Mesh(new THREE.TorusGeometry(0.064, 0.008, 14, 64), m.beige);
+    this.innerCollar = new THREE.Mesh(new THREE.TorusGeometry(0.05, 0.007, 14, 64), m.beige);
     this.midCollar.rotation.x = this.innerCollar.rotation.x = Math.PI / 2;
     this.group.add(this.midCollar, this.innerCollar);
     this.sleeve.mesh.position.y = MONITOR.anchor - this.sleeve.len / 2;
@@ -170,7 +180,7 @@ export class MonitorRig {
   setDown() {
     this.state = 'down';
     this.t = 999;
-    this.screen.showDesktop(true);
+    this.screen.showLogon(true);
     this.ledMat.color.set(PALETTE.ledCyan).multiplyScalar(2);
     this.apply(999);
   }
@@ -198,7 +208,7 @@ export class MonitorRig {
         this.emit('screenOn'); // the wall CRTs wake and boot along with it
       }
       if (this.t >= MONITOR.desktopAt && this.screen.state === 'boot') {
-        this.screen.showDesktop();
+        this.screen.showLogon(); // boot done: the logon screen (the visitor logs on after pressing E)
         this.emit('desktop'); // startup chime, enables focusing the terminal
       }
       if (this.t > MONITOR.desktopAt + 0.5) this.state = 'down';

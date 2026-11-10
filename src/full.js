@@ -14,7 +14,7 @@ import { buildCommandRoom, buildCommandLights } from './scene/commandRoom.js';
 import { buildDesk } from './scene/desk.js';
 import { buildServerRoom, populateServerRoom, buildServerLights, addCatwalkDoors } from './scene/serverRoom.js';
 import { buildSupercomputer, buildCoreLights } from './scene/supercomputer.js';
-import { WALK } from './scene/layout.js';
+import { WALK, CORE } from './scene/layout.js';
 import { MonitorRig, MONITOR, RAISE } from './scene/monitor.js';
 import { WallCRTs } from './scene/wallCrt.js';
 import { DesktopOS } from './os/os.js';
@@ -22,6 +22,7 @@ import { TerminalFocus } from './sequence/focus.js';
 import { HotkeyPanel } from './ui/hotkeys.js';
 import { LookAround } from './sequence/lookAround.js';
 import { buildDeskNote } from './scene/deskNote.js';
+import { buildDeskPhones } from './scene/phones.js';
 import { HydraulicDoor } from './scene/door.js';
 import { DoorIntro } from './sequence/intro.js';
 import { CctvSystem } from './scene/cctv.js';
@@ -93,7 +94,8 @@ scene.add(leds.build());
 const cctv = new CctvSystem(); // security cameras in the server room's four upper corners
 scene.add(cctv.group);
 wallCrts.cctv = cctv;
-scene.add(buildDeskNote()); // handwritten operator note next to the keyboard: "press Q" 
+scene.add(buildDeskNote()); // handwritten operator note next to the keyboard (Q and F)
+scene.add(buildDeskPhones(m)); // operator phone (beige, keypad) + receive-only red phone, back left of the desk
 const commandLights = buildCommandLights();
 scene.add(commandLights);
 const serverLights = buildServerLights(m);
@@ -145,6 +147,28 @@ try {
 const reveal = new Reveal({ coreLights, serverLights, commandLights, panelMats: [m.lightPanel, m.corridorPanel], leds });
 reveal.on('breaker', (e) => debug?.log?.(`breaker ${e.index}`));
 const setLit = (on) => (on ? reveal.finish() : reveal.reset()); // debug L key, ?lit
+
+// Flowing light waves on the supercomputer once it's fully powered (user request): rolling bands
+// of brightness across its LEDs and up/down the core's light rings. The phase swings back and
+// forth (a sine of time), so the waves slow, reverse and flow the other way. Eases in after 'lit'.
+let coreWaveAmt = 0;
+const wavePhase = (t) => 7 * Math.sin(t * 0.32);
+leds.setWave('core', (p, t) => {
+  if (coreWaveAmt <= 0) return 1;
+  const w = 0.5 + 0.5 * Math.cos(0.95 * (p.x - CORE.x) + 0.55 * p.y - wavePhase(t));
+  return 1 - coreWaveAmt * 0.62 * (1 - w);
+});
+function updateCoreWaves(dt, t) {
+  const target = reveal.state === 'lit' ? 1 : 0;
+  coreWaveAmt += (target - coreWaveAmt) * Math.min(1, dt * 0.8);
+  if (target === 0 && coreWaveAmt < 0.01) coreWaveAmt = 0;
+  if (reveal.state !== 'lit') return; // the reveal owns the bands until then
+  const ph = 6 * Math.sin(t * 0.42);
+  for (const { mat, max, index } of coreLights.bands) {
+    const w = 0.5 + 0.5 * Math.cos(1.25 * index - ph);
+    mat.color.copy(max).multiplyScalar(1 - coreWaveAmt * 0.7 * (1 - w));
+  }
+}
 
 // ---------------------------------------------------------------- sound (stage 4)
 // The AudioContext can only start from a user gesture: the Enter click (or, with ?skip,
@@ -205,7 +229,9 @@ const debug = createDebug({ params, renderer, scene, camera, walk, setLit, leds 
 const cameraApp = new CameraApp({ renderer, scene, cctv, sound });
 const os = new DesktopOS({
   mode: 'full',
-  onExit: () => focus.exit(),
+  // Log out (launcher): back to the logon screen on the monitor, then step back into the room.
+  onLogout: () => { monitor.screen.showLogon(true); focus.exit(); },
+  onLogin: () => monitor.screen.showDesktop(true),
   onClick: (kind) => sound.ready && sound.uiClick(kind),
   apps: { cameras: cameraApp },
 });
@@ -359,6 +385,7 @@ function frame() {
   wallCrts.update(dt);
   wallCrts.renderFeeds(renderer, scene); // CCTV feeds for the wall CRTs that show one
   reveal.update(elapsed);
+  updateCoreWaves(dt, elapsed);
   leds.update(elapsed);
   debug.update(dt);
   composer.render();

@@ -162,6 +162,9 @@ export function createMaterials(maxAnisotropy = 4) {
   const serverDiffuser = diffuserTexture(512, 152, { rotate: true });
   m.serverFixtureRows = [0, 1, 2, 3].map(() => new THREE.MeshBasicMaterial({ color: 0x000000, map: serverDiffuser, toneMapped: false }));
   // Curved strip fixtures around the north bay (chord pieces whose long axis is the texture's u).
+  // Light grey frames around the server-room fixtures: a slight contrast with that ceiling (user).
+  m.fixtureFrame = new THREE.MeshStandardMaterial({ color: 0xc4c3bf, roughness: 0.88, metalness: 0 });
+  m.fixtureFrame.shadowSide = THREE.FrontSide;
   m.serverBayStrip = new THREE.MeshBasicMaterial({ color: 0x000000, map: diffuserTexture(512, 110), toneMapped: false });
   m.coreFixture = new THREE.MeshBasicMaterial({ color: 0x000000, toneMapped: false });
   // One material per light band on the core column (0 = lowest) so they climb in sequence.

@@ -1,17 +1,20 @@
-// A handwritten note on the command desk, left of the keyboard (user request): it tells the
-// visitor how to bring the terminal down, now that it no longer drops on its own.
+// A handwritten note on the command desk, left of the keyboard (user request): "Note to Mainframe
+// Operators: Press Q to control the terminal. Press F to look around the room." 
 // A torn notebook page: faint blue rules, a red margin line, ballpoint-blue handwriting in
 // Caveat (OFL-1.1, bundled from @fontsource/caveat, so it looks the same on every machine).
 import * as THREE from 'three';
 import caveatUrl from '@fontsource/caveat/files/caveat-latin-600-normal.woff2?url';
 import { DESK } from './layout.js';
 
-const PAPER_W = 0.3, PAPER_H = 0.2;
+const PAPER_W = 0.3, PAPER_H = 0.24;
 const TW = 1024, TH = Math.round((TW * PAPER_H) / PAPER_W);
+const LINE = 140; // ruled line spacing in canvas px
 const LINES = [
-  { text: 'Note to Mainframe Operators:', size: 104, underline: true },
-  { text: 'For terminal control,', size: 112 },
-  { text: 'press Q on the keyboard.', size: 112, circleQ: true },
+  { text: 'Note to Mainframe Operators:', size: 100, underline: true },
+  { text: 'Press Q to control', size: 106, circle: 'Q' },
+  { text: 'the terminal.', size: 106 },
+  { text: 'Press F to look', size: 106, circle: 'F' },
+  { text: 'around the room.', size: 106 },
 ];
 
 function seeded(seed) {
@@ -35,7 +38,7 @@ function draw(canvas, fontReady) {
   // Rules and margin.
   ctx.strokeStyle = 'rgba(90,130,190,0.35)';
   ctx.lineWidth = 2;
-  for (let y = 170; y < TH - 20; y += 160) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(TW, y); ctx.stroke(); }
+  for (let y = 158; y < TH - 20; y += LINE) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(TW, y); ctx.stroke(); }
   ctx.strokeStyle = 'rgba(200,70,70,0.45)';
   ctx.beginPath(); ctx.moveTo(96, 0); ctx.lineTo(96, TH); ctx.stroke();
   // Torn top edge (perforation stubs from a spiral pad).
@@ -47,7 +50,7 @@ function draw(canvas, fontReady) {
   ctx.fillStyle = '#1f3a8a';
   ctx.strokeStyle = '#1f3a8a';
   ctx.textBaseline = 'alphabetic';
-  let y = 154;
+  let y = 140;
   for (let line of LINES) {
     ctx.save();
     const x = 120 + rnd() * 14;
@@ -71,16 +74,16 @@ function draw(canvas, fontReady) {
       ctx.bezierCurveTo(w * 0.3, 8, w * 0.7, 22, w + 6, 12);
       ctx.stroke();
     }
-    if (line.circleQ) { // circle the Q
-      const pre = ctx.measureText('press ').width;
-      const qw = ctx.measureText('Q').width;
+    if (line.circle) { // circle the key letter
+      const pre = ctx.measureText(line.text.slice(0, line.text.indexOf(line.circle))).width;
+      const qw = ctx.measureText(line.circle).width;
       ctx.lineWidth = 3.5;
       ctx.beginPath();
       ctx.ellipse(pre + qw / 2, -line.size * 0.3, qw * 0.95, line.size * 0.5, -0.12, 0.2, Math.PI * 2.1);
       ctx.stroke();
     }
     ctx.restore();
-    y += 160;
+    y += LINE;
   }
 }
 

@@ -260,12 +260,76 @@ for i, x in enumerate(slot_x):
     rbox(f"TopVent{i}", (0.02, SLOT_Y1 - SLOT_Y0 + 0.004, 0.008), (x, (SLOT_Y0 + SLOT_Y1) / 2, slot_floor[x] - 0.001), "grille", 0.003, 2)
 
 # ------------------------------------------------------------------ yoke (U-bracket) + arm mount
+# One continuous swept piece (user: the old crossbar sitting on two straight arms looked like
+# separate blocks): a rounded-rectangle section swept up each arm, around a smooth bend and
+# across the top, so the arms flow into the bar on both sides. Round bosses finish the arm ends
+# at the hub axis.
 hub_x = W / 2 + 0.012
+ARM_X = hub_x + 0.034          # arm centerline
+YOKE_T, YOKE_D = 0.054, 0.085  # section: in-plane thickness, depth (y)
+YOKE_RC = 0.02                 # section corner radius
+YOKE_BEND = 0.075              # centerline bend radius at the top corners
+
+def yoke_path():
+    """Centerline in the XZ plane with unit tangents: up the left arm, bend, across, bend, down."""
+    pts = []
+    def add(x, z, tx, tz):
+        if pts and abs(pts[-1][0] - x) < 1e-6 and abs(pts[-1][1] - z) < 1e-6:
+            return
+        pts.append((x, z, tx, tz))
+    z_top = YOKE_TOP
+    for i in range(9):  # left arm, from the hub axis up
+        add(-ARM_X, (z_top - YOKE_BEND) * i / 8, 0, 1)
+    cx, cz = -ARM_X + YOKE_BEND, z_top - YOKE_BEND
+    for i in range(1, 25):  # bend: 180 deg -> 90 deg around (cx, cz)
+        a = math.pi - (math.pi / 2) * i / 24
+        add(cx + YOKE_BEND * math.cos(a), cz + YOKE_BEND * math.sin(a), math.sin(a), -math.cos(a))
+    for i in range(1, 13):  # crossbar
+        x = -ARM_X + YOKE_BEND + (2 * (ARM_X - YOKE_BEND)) * i / 12
+        add(x, z_top, 1, 0)
+    cx = ARM_X - YOKE_BEND
+    for i in range(1, 25):  # bend: 90 deg -> 0 deg
+        a = math.pi / 2 - (math.pi / 2) * i / 24
+        add(cx + YOKE_BEND * math.cos(a), cz + YOKE_BEND * math.sin(a), math.sin(a), -math.cos(a))
+    for i in range(1, 9):  # right arm, down to the hub axis
+        add(ARM_X, (z_top - YOKE_BEND) * (1 - i / 8), 0, -1)
+    return pts
+
+def rounded_rect(hu, hv, r, seg=6):
+    """Profile points (u, v) counter-clockwise."""
+    out = []
+    for cu, cv, a0 in ((hu - r, hv - r, 0), (-hu + r, hv - r, 90), (-hu + r, -hv + r, 180), (hu - r, -hv + r, 270)):
+        for i in range(seg + 1):
+            a = math.radians(a0 + 90 * i / seg)
+            out.append((cu + r * math.cos(a), cv + r * math.sin(a)))
+    return out
+
+def sweep(name, path, profile, mat):
+    bm = bmesh.new()
+    rings = []
+    for (x, z, tx, tz) in path:
+        nx, nz = tz, -tx  # in-plane normal
+        rings.append([bm.verts.new((x + nx * u, v, z + nz * u)) for (u, v) in profile])
+    n = len(profile)
+    for a, b in zip(rings, rings[1:]):
+        for i in range(n):
+            f = bm.faces.new((a[i], a[(i + 1) % n], b[(i + 1) % n], b[i]))
+            f.smooth = True
+    for ring, rev in ((rings[0], True), (rings[-1], False)):
+        f = bm.faces.new(list(reversed(ring)) if rev else ring)
+        f.smooth = False
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+    return mesh_obj(name, bm, mat)
+
+yoke = sweep("YokeU", yoke_path(), rounded_rect(YOKE_T / 2, YOKE_D / 2, YOKE_RC), "yoke")
+smooth(yoke, 50)
 for s in (-1, 1):
-    cylinder(f"Hub{'L' if s < 0 else 'R'}", 0.055, 0.03, (s * hub_x, 0.0, 0.0), "steel", rot=(0, math.radians(90), 0), verts=36)
-    rbox(f"YokeArm{'L' if s < 0 else 'R'}", (0.05, 0.085, YOKE_TOP + 0.03), (s * (hub_x + 0.034), 0.0, YOKE_TOP / 2), "yoke", 0.022, 5)
-rbox("YokeBar", (2 * (hub_x + 0.034) + 0.064, 0.085, 0.056), (0, 0.0, YOKE_TOP), "yoke", 0.024, 5)  # wider than the arms: coincident faces flickered
-cylinder("Mount", 0.075, 0.07, (0, 0.0, YOKE_TOP + 0.035), "steel", verts=40)
+    side = 'L' if s < 0 else 'R'
+    cylinder(f"Hub{side}", 0.055, 0.03, (s * hub_x, 0.0, 0.0), "steel", rot=(0, math.radians(90), 0), verts=48)
+    # Round boss at the arm's end, the same depth as the arm, so the arm ends in a smooth half-round.
+    # 8 mm wider than the arm: flush faces were coplanar with the arm's sides and flickered dark.
+    cylinder(f"YokeBoss{side}", YOKE_D / 2 + 0.002, YOKE_T + 0.008, (s * ARM_X, 0.0, 0.0), "yoke", rot=(0, math.radians(90), 0), verts=48)
+cylinder("Mount", 0.075, 0.07, (0, 0.0, YOKE_TOP + 0.035), "steel", verts=48)
 
 # ------------------------------------------------------------------ origin at the attachment point; parent everything
 # Hierarchy: Monitor (origin = arm attachment)

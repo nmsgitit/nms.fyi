@@ -17,7 +17,7 @@ const DEG = Math.PI / 180;
 // The bay: angle a from the east (+x) side, 0..180°. Point at radius r: (r cos a, zMin - r sin a).
 // The banks and catwalks wrap from each side up to END_A (and 180 - END_A), which leaves several
 // feet of clear wall either side of the supercomputer's wall section (90 ± SUPER_HALF_A).
-export const APSE = { END_A: 55 * DEG, SUPER_HALF_A: 25 * DEG };
+export const APSE = { END_A: 52 * DEG, SUPER_HALF_A: 30 * DEG };
 const AZ = SERVER.zMin;
 const R = SERVER.apseR;
 const arcPt = (r, a) => [r * Math.cos(a), AZ - r * Math.sin(a)];
@@ -112,10 +112,22 @@ export function buildServerRoom(m) {
     arcStrip(b, m.taupeDark, BAY_RING_R, a0 - 2 * DEG, a1 + 2 * DEG, C - 0.75, C, 0.36, 3);
     arcStrip(b, m.taupe, BAY_RING_R, a0, a1, C - 0.95, C - 0.75, 0.5, 3);
     arcStrip(b, m.serverBayStrip, BAY_RING_R, a0 + 0.3 * DEG, a1 - 0.3 * DEG, C - 0.97, C - 0.95, 0.42, 3);
+    // Light grey frame around the strip (like the command-room fixtures): both long edges and end caps.
+    for (const dr of [-0.235, 0.235]) arcStrip(b, m.fixtureFrame, BAY_RING_R + dr, a0, a1, C - 0.995, C - 0.955, 0.07, 3);
+    for (const a of [a0, a1]) {
+      const [x, z] = arcPt(BAY_RING_R, a);
+      b.box(m.fixtureFrame, 0.54, 0.04, 0.07, x, C - 0.975, z, [0, a, 0]); // local x along the radius
+    }
   }
   for (const [x, z, row] of FIXTURES) {
     b.span(m.taupe, x - 0.5, x + 0.5, C - 0.95, C - 0.75, z - 1.5, z + 1.5);
     b.span(m.serverFixtureRows[row], x - 0.42, x + 0.42, C - 0.97, C - 0.95, z - 1.42, z + 1.42);
+    // Light grey frame ring around the diffuser, standing just proud of it (as in the command room).
+    const fy0 = C - 0.995, fy1 = C - 0.955;
+    b.span(m.fixtureFrame, x - 0.5, x + 0.5, fy0, fy1, z - 1.5, z - 1.42);
+    b.span(m.fixtureFrame, x - 0.5, x + 0.5, fy0, fy1, z + 1.42, z + 1.5);
+    b.span(m.fixtureFrame, x - 0.5, x - 0.42, fy0, fy1, z - 1.42, z + 1.42);
+    b.span(m.fixtureFrame, x + 0.42, x + 0.5, fy0, fy1, z - 1.42, z + 1.42);
   }
 
   // ---- catwalks: along both side walls, around the bay (stopping short of the supercomputer),
@@ -184,7 +196,7 @@ const ROW_Z = [-4.6, -11.4, -18.2, -25.0];
 const TRUSS_Z = [-4.6, -8.0, -11.4, -14.8, -18.2, -21.6, -25.0];
 const FIXTURES = ROW_Z.flatMap((z, row) => [-12, -6, 0, 6, 12].map((x) => [x, z, row]));
 const BAY_RING_R = 13.4; // over the catwalks' inner edge
-const BAY_STRIPS = [[5 * DEG, 54 * DEG], [126 * DEG, 175 * DEG]];
+const BAY_STRIPS = [[5 * DEG, 50 * DEG], [130 * DEG, 175 * DEG]];
 
 export function populateServerRoom(b, m, leds) {
   const { xMin, xMax, zMin, zMax } = SERVER;

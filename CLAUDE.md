@@ -119,7 +119,8 @@ src/apps/cameras.js   Security Cameras app (full only): renders the CCTV views i
 src/scene/ledSign.js  amber LED dot-matrix board texture (5x7 font, dot lamp, two gears) for the door signs
 tools/favicon/make_favicon.py  builds the favicon (32x32 pixel oil lamp in the lamp.js palette) -> public/favicon.svg,
                       favicon-32.png, favicon.ico, apple-touch-icon.png (pure Python; rerun after editing the art)
-src/scene/deskNote.js handwritten operator note on the desk ("press Q"), Caveat font from @fontsource/caveat (OFL)
+src/scene/phones.js   two retro desk phones (beige with keypad, red receive-only)
+src/scene/deskNote.js handwritten operator note on the desk (Q and F), Caveat font from @fontsource/caveat (OFL)
 src/debug.js          URL flags, orbit camera, HUD, keys
 src/style.css
 src/camera/walk.js    scripted first-person walk: speed profile, head bob/sway/roll, 'step' events
@@ -373,6 +374,34 @@ nearest-first (tube sounds at 100/60/40 % per row), back wash +0.3 s, fans fade 
   and flickered against it above the sign. It now ends inside the wall (zBack + 0.1). Never end a slab on another face.
 - **Window top rail back** (the user re-requested it, suspecting the old angle was off): it's now rotated with the glass
   tilt (`[-tilt, 0, 0]`) and centered on the glass top edge, so it reads as the glass's own head rail, not a level beam.
+
+## Change round 8 (2026-11-10): logon, phones, arm, waves
+- **Logon screen + Log out** (all modes): DesktopOS starts at an original XP-reminiscent welcome screen (dark bands, blue
+  middle, "LAMPLIGHT OS / To begin, click your user name" left, the USER account tile right; `.os-logon`). Click USER ->
+  "Loading your settings…" -> desktop (`onLogin`). The launcher's Exit became **Log out** with a door-opening pixel icon
+  (`logout` in art.js; user: you aren't powering the machine off), in full AND lite/mobile. Log out closes every window,
+  shows "Logging off…", returns to the logon screen, then `onLogout` (full: `monitor.screen.showLogon(true)` +
+  `focus.exit()`). The 3D monitor draws the same logon layout (`MonitorScreen.drawLogon()`, state `logon`) after the boot
+  (`desktopAt`) and in `setDown()`, so the glide into the terminal lands on a matching picture. Mobile stacks it vertically.
+- **Desk note** now reads "Note to Mainframe Operators: / Press Q to control / the terminal. / Press F to look / around
+  the room." (Q and F circled). Paper 0.30 × 0.24 m.
+- **Desk phones** (`scene/phones.js`): the same early-80s model twice at the back left of the desk: beige operator phone
+  with a 12-key numbered keypad (decal legends on 3D keys), and a dark red receive-only phone with a blank plate and an
+  unlit call lamp (no numbers). Wedge body (extruded profile, beveled), cradle horns, handset (handle + cups), coiled cord
+  (`CoilCurve` helix around a guide curve). Gotchas: the bevel puffs the sloped face out ~16 mm (mount plates on the real
+  surface), and the face tilt is `+SLOPE` (front edge down).
+- **Server fixture frames:** light grey (`m.fixtureFrame`, 0xc4c3bf) rings around every hall fixture and the bay strips,
+  standing just proud of the diffuser (user: grey, not beige, to contrast the ceiling).
+- **Monitor yoke** (monitor.py): one swept U (`sweep()` of a rounded-rect section along a path with 75 mm bends) instead
+  of a bar on two arms, with round bosses at the hub ends (8 mm wider than the arm: flush faces flickered dark).
+  `check_monitor.py` flags only the usual surface parts. **Telescoping arm** (monitor.js): lathe-turned stages, 64
+  sides, rounded lips; smoother collars.
+- **Pedestal overlap fixed** (user CCTV screenshot): the wall-section pilasters moved from 65°/115° (they cut into the
+  lower step) to 60°/120° (`SUPER_HALF_A` 30°), and each tower stands on the lowest surface under its footprint (upper
+  step / lower step / floor). Bay banks and catwalks now stop at 52° and the bay strips at 50°/130° to keep a gap.
+- **Flowing light waves** on the supercomputer once `lit` (eases in): `leds.setWave('core', fn)` modulates every core LED
+  by a rolling cosine across x/y whose phase swings back and forth (`7 sin(0.32 t)`), and the six shaft rings get a wave
+  flowing up and down (`updateCoreWaves()` in full.js). The reveal owns those lights until `lit`.
 
 ## Change round 7 (2026-11-09): north bay, new sequence, living wall CRTs
 - **Sequence (final, user-tuned):** the power-up keeps its ORIGINAL timing (everything comes online a couple of steps
