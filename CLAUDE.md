@@ -68,7 +68,7 @@ instead of blocking on them.
 | 6 | LAMPLIGHT OS shell: boot to desktop 2 s after the monitor lands (+ startup chime), HTML desktop (XP-reminiscent, original), lamp launcher + Exit, window manager, E / click / tap focus with camera glide, 3D pause while open | ✅ shell 2026-11-09. **Content: placeholders; waiting on the user** |
 | 6b | Full/Light chooser + lazy 3D, mobile spin, Security Cameras app, LED signs (change round 6) | ✅ 2026-11-09 |
 | 7 | Polish: film grain, fluorescent flicker, mobile/low-GPU fallback, accessibility (skip intro, reduced motion), loading screen | todo |
-| 8 | Deploy to Infomaniak Node.js hosting | todo; confirm their Node version and how they run apps |
+| 8 | Deploy to Infomaniak Node.js hosting | upload bundle prepared 2026-11-10 (see Deploy); user uploads via FileZilla |
 
 ## Tech stack
 
@@ -254,6 +254,19 @@ ffmpeg -ss 22 -i "$A" -t 9.5 -vf fps=2 -q:v 2 reference/apollo/frames/apollo_%02
 ```
 Contact sheets with timestamps are in `reference/*/sheet_*.jpg`. The terminal still is
 `reference/apollo/terminal_still.webp`.
+
+## Deploy (Infomaniak Node.js hosting)
+- Runtime needs only **Express** (`dependencies`); three.js, the Caveat font and Vite are `devDependencies` because Vite
+  bundles them into `dist/` at build time.
+- **Prebuilt upload (what we use):** `npx vite build`, then assemble `deploy/nms.fyi/` (gitignored) =
+  `dist/ server.js package.json package-lock.json`. The user drags those four into `sites/nms.fyi` over SFTP in
+  FileZilla (Claude can't type their password, and computer use is off, so Claude prepares and they transfer).
+  On the host: install `npm ci --omit=dev` (no build step), start `npm start`, port = `$PORT` or 3000. Check
+  `https://nms.fyi/healthz` -> "ok". Tested locally from a fresh copy (all routes 200).
+- **Build-on-server alternative** (GitHub link): install `npm ci` (WITH dev deps), build `npm run build`, start `npm start`.
+- Never upload `node_modules/`. To update: rebuild, re-assemble `deploy/`, re-upload (overwrite), restart the app.
+- Host details known so far: SSH host `57-112638.ssh.hosting-ik.com`, folder `sites/nms.fyi`; the temporary SSH user
+  rejected Claude's key (`~/.ssh/id_ed25519_infomaniak`).
 
 ## Monitor timing (monitor.js MONITOR)
 Starts when `walk.t >= walk.duration - MONITOR.total` (5.1 s into the 9.9 s walk), so it arrives as the walk
