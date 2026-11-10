@@ -21,6 +21,7 @@ export const SERVER = {
   ceilY: 5.5, // lowered from 9 at the user's request (10 m tall hall)
   xMin: -16, xMax: 16,
   zMin: -28, zMax: ROOM.glassTopZ, // rectangular hall
+  frontWallZ: -0.95, // server-room face of the wall holding the command-room glass (it spans -0.95 .. -0.6)
   // The north end is a half-circle bay (user request): centered on the hall's back line, as wide
   // as the hall, so it reaches 16 m further north. The supercomputer is set into its far wall.
   apseR: 16,

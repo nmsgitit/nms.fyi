@@ -9,7 +9,7 @@ import { PALETTE } from './palette.js';
 const F = SERVER.floorY;
 const C = SERVER.ceilY;
 const CATWALK_Y = -1.0;
-const FRONT_WALL_Z0 = -0.95; // server-room face of the wall that holds the command-room glass
+const FRONT_WALL_Z0 = SERVER.frontWallZ; // server-room face of the wall that holds the command-room glass
 const CW = 2.2; // catwalk depth
 const STRINGER_Y0 = CATWALK_Y - 0.34; // underside of the steel beams carrying the catwalk decks
 const LANDING_W = 4.6, LANDING_D = 2.65; // door landings at the near ends of the side catwalks
@@ -93,10 +93,10 @@ export function buildServerRoom(m) {
   b.span(m.wallUpper, ox1, xMax, F, C, wz0, wz1);
   b.span(m.wallUpper, ox0, ox1, ROOM.height + 0.1, C, wz0, wz1);
   b.span(m.wallUpper, ox0, ox1, F, ROOM.sill - 0.05, wz0, 0); // below the sill (solid)
-  // Window surround seen from the server room: a chunky beige frame and exterior ledge.
+  // Exterior sill ledge and lintel seen from the server room. (The vertical side posts were removed:
+  // seen from the command room they read as a second, straight window frame behind the tilted one.)
   b.rbox(m.beige, ox1 - ox0 + 0.5, 0.3, 0.5, 0.08, 0, ROOM.sill - 0.17, wz0 - 0.1);
   b.rbox(m.beige, ox1 - ox0 + 0.5, 0.3, 0.4, 0.08, 0, ROOM.height + 0.25, wz0 - 0.05);
-  for (const s of [-1, 1]) b.rbox(m.beige, 0.3, ROOM.height - ROOM.sill + 0.6, 0.4, 0.08, s * (ox1 + 0.1), (ROOM.sill + ROOM.height) / 2, wz0 - 0.05);
 
   // ---- ceiling trusses (evenly spaced, one over each fixture row and one between) and fixtures
   for (const z of TRUSS_Z) b.span(m.taupeDark, xMin, xMax, C - 0.75, C, z - 0.18, z + 0.18);

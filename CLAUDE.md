@@ -375,6 +375,18 @@ nearest-first (tube sounds at 100/60/40 % per row), back wash +0.3 s, fans fade 
   tilt (`[-tilt, 0, 0]`) and centered on the glass top edge, so it reads as the glass's own head rail, not a level beam.
 
 ## Change round 10 (2026-11-10)
+- **One window frame:** the straight frame behind the tilted one was the server room's old vertical window posts
+  (removed). The command-room side walls and the front ceiling strip now run out to the server-room wall
+  (`SERVER.frontWallZ` -0.95); they used to stop at the glass top (z -0.6), leaving a slot at each window end.
+- **Door frame side grilles removed** (both faces; the catwalk doors share `HydraulicDoor`, so theirs went too). The
+  three short slots on top remain.
+- **Accounts on the logon screen:** "You" / "Mainframe Operator" (the visitor; logs in) and "Noah Schafrath" /
+  "Mainframe Administrator" (the site owner, with his portrait; implies who runs it). Clicking the admin shows "This
+  account is currently unavailable. Please return to the account selection menu." with a "Return to account selection"
+  button. The launcher header reads You / Mainframe Operator. Monitor drawing has both cards.
+  Portrait: `public/os/admin-portrait.png`, made from the user's headshot (not committed) with ffmpeg: crop
+  228×228+30+6, lanczos to 80×80, unsharp, contrast 1.1, saturation 1.22, warm colorbalance, 28-color palettegen,
+  paletteuse Bayer dither scale 3 (16 colors lost the eyes).
 - **Desk phones removed** (user: not enough of an aesthetic addition for the effort). `scene/phones.js` was deleted;
   the last version (curved handset with earpiece/mouthpiece blocks) is in commit 96ed0b6 if they ever come back.
 

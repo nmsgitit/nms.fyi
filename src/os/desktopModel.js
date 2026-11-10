@@ -9,8 +9,16 @@ export const OS_NAME = 'LAMPLIGHT OS';
 export const OS_VERSION = 'Version 3.2';
 export const OS_EDITION = 'Server Edition';
 export const OS_BUILD = 'Build 1987.4127';
-export const USER_NAME = 'USER'; // generic: whoever is using the terminal (user request)
-export const USER_TAGLINE = 'Welcome. Pick something to open.';
+// The visitor's account (user request: "You", the operator) and the site owner's admin account,
+// shown on the logon screen only to imply who runs the mainframe; it can't be logged into.
+export const USER_NAME = 'You';
+export const USER_TAGLINE = 'Mainframe Operator';
+export const ADMIN = {
+  name: 'Noah Schafrath',
+  role: 'Mainframe Administrator',
+  portrait: '/os/admin-portrait.png', // 80x80, 28-color Bayer-dithered take on his headshot (see CLAUDE.md)
+  unavailable: 'This account is currently unavailable. Please return to the account selection menu.',
+};
 
 /**
  * Desktop apps, in icon order (top to bottom, then the next column).

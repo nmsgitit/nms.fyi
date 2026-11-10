@@ -4,7 +4,7 @@
 import * as THREE from 'three';
 import { drawLamp } from './lamp.js';
 import { getWallpaper, getIcon } from '../os/art.js';
-import { APPS, OS_NAME, OS_VERSION, OS_EDITION, OS_BUILD, USER_NAME } from '../os/desktopModel.js';
+import { APPS, OS_NAME, OS_VERSION, OS_EDITION, OS_BUILD, USER_NAME, USER_TAGLINE, ADMIN } from '../os/desktopModel.js';
 import { TASKBAR_H, ICON_GRID } from '../os/layout.js';
 import { clockText } from '../os/clock.js';
 
@@ -24,6 +24,10 @@ export class MonitorScreen {
     this.stateT = 0;
     this._accum = 0;
     this._lastClock = '';
+    // The admin's portrait for the logon screen drawing (redraw once it has loaded).
+    this.portrait = new Image();
+    this.portrait.onload = () => { if (this.state === 'logon') this.draw(this.stateT); };
+    this.portrait.src = ADMIN.portrait;
     this.draw(0);
   }
 
@@ -261,17 +265,25 @@ export class MonitorScreen {
     ctx.fillText(OS_NAME, rx, H / 2 + 26 * s);
     ctx.font = `${Math.round(15 * s)}px Tahoma, Verdana, sans-serif`;
     ctx.fillText('To begin, click your user name', rx, H / 2 + 52 * s);
-    // Right: the USER account tile.
-    const ux = W / 2 + 48 * s, uy = H / 2 - 35 * s;
-    ctx.fillStyle = '#fff';
-    ctx.beginPath();
-    ctx.roundRect(ux - 3 * s, uy - 3 * s, 70 * s, 70 * s, 6 * s);
-    ctx.fill();
-    ctx.drawImage(getIcon('user'), ux, uy, 64 * s, 64 * s);
-    ctx.imageSmoothingEnabled = true;
-    ctx.textAlign = 'left';
-    ctx.font = `bold ${Math.round(22 * s)}px Tahoma, Verdana, sans-serif`;
-    ctx.fillText(USER_NAME, ux + 82 * s, uy + 40 * s);
+    // Right: the two account cards (You, then the administrator), as in the HTML.
+    const ux = W / 2 + 48 * s;
+    const cardAt = (uy, img, name, role) => {
+      ctx.fillStyle = '#fff';
+      ctx.beginPath();
+      ctx.roundRect(ux - 3 * s, uy - 3 * s, 70 * s, 70 * s, 6 * s);
+      ctx.fill();
+      ctx.imageSmoothingEnabled = false;
+      if (img && (img.width || img.naturalWidth)) ctx.drawImage(img, ux, uy, 64 * s, 64 * s);
+      ctx.imageSmoothingEnabled = true;
+      ctx.fillStyle = '#fff';
+      ctx.textAlign = 'left';
+      ctx.font = `bold ${Math.round(22 * s)}px Tahoma, Verdana, sans-serif`;
+      ctx.fillText(name, ux + 82 * s, uy + 30 * s);
+      ctx.font = `${Math.round(12 * s)}px Tahoma, Verdana, sans-serif`;
+      ctx.fillText(role, ux + 82 * s, uy + 48 * s);
+    };
+    cardAt(H / 2 - 82 * s, getIcon('user'), USER_NAME, USER_TAGLINE);
+    cardAt(H / 2 + 8 * s, this.portrait.complete ? this.portrait : null, ADMIN.name, ADMIN.role);
     // Build information, bottom right.
     ctx.textAlign = 'right';
     ctx.font = `${Math.round(12 * s)}px Tahoma, Verdana, sans-serif`;

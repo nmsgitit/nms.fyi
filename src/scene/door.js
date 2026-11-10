@@ -85,16 +85,13 @@ export class HydraulicDoor {
       });
       g.translate(0, 0, -(FRAME_T - 0.06) / 2);
       b.add(g, m.taupe);
-      // Symmetric retro trim on both faces: two pinstripes following the octagon, mirrored vent
-      // slot groups on the left and right bands, and a short slot group centered on top.
+      // Symmetric retro trim on both faces: two pinstripes following the octagon and a short slot
+      // group centered on top. (The black vent grilles on the left and right bands were removed at
+      // the user's request; this class also builds the catwalk doors, so they lost them too.)
       for (const face of [-1, 1]) {
         const z = face * (FRAME_T / 2);
         plate(b, m.taupeDark, ring(0.07, 0.1), 0.005, z, face);
         plate(b, m.beigeLight, ring(0.18, 0.2), 0.005, z, face);
-        const bandX = DOOR.halfW + FRAME_W * 0.5 + 0.02;
-        for (const sx of [-1, 1]) {
-          for (let i = 0; i < 5; i++) b.rbox(m.grille, 0.11, 0.022, 0.012, 0.005, sx * bandX, 1.0 + i * 0.065, z + face * 0.004);
-        }
         for (const x of [-0.12, 0, 0.12]) b.rbox(m.grille, 0.024, 0.1, 0.012, 0.006, x, H + FRAME_W * 0.55, z + face * 0.004);
       }
       this.group.add(b.build({ name: 'doorFrame', castShadow: true, receiveShadow: true }));

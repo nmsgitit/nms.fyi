@@ -8,7 +8,7 @@
 // Every mode starts at a LOGON screen (the USER account; click it to log on). "Log out" in the
 // launcher (door icon: you aren't powering the machine off) closes the apps and returns to the
 // logon screen; in 'full' it then also steps back from the terminal into the room (onLogout).
-import { APPS, USER_NAME, USER_TAGLINE, OS_NAME, OS_VERSION, OS_EDITION, OS_BUILD } from './desktopModel.js';
+import { APPS, USER_NAME, USER_TAGLINE, ADMIN, OS_NAME, OS_VERSION, OS_EDITION, OS_BUILD } from './desktopModel.js';
 import { iconURL, wallpaperURL } from './art.js';
 import { clockText } from './clock.js';
 
@@ -130,24 +130,41 @@ export class DesktopOS {
     const mark = el('div', 'logon-mark'); // the lamp centered over the OS name
     mark.append(el('img', '', { src: iconURL('lamp'), alt: '', width: 96, height: 96 }), el('p', 'logon-name', { text: OS_NAME }));
     brand.append(mark, el('p', 'logon-hint', { text: 'To begin, click your user name' }));
-    const users = el('div', 'logon-users');
-    const tile = (this.userTile = el('button', 'logon-user', { type: 'button' }));
-    tile.append(el('img', '', { src: iconURL('user'), alt: '', width: 64, height: 64 }),
-      el('span', 'logon-user-text', { html: `<strong>${USER_NAME}</strong><small></small>` }));
-    tile.addEventListener('click', () => this.login());
-    users.append(tile);
+    const users = (this.logonUsers = el('div', 'logon-users'));
+    const card = (img, name, role) => {
+      const b = el('button', 'logon-user', { type: 'button' });
+      b.append(el('img', '', { src: img, alt: '', width: 64, height: 64 }),
+        el('span', 'logon-user-text', { html: `<strong></strong><small></small>` }));
+      b.querySelector('strong').textContent = name;
+      b.querySelector('small').textContent = role;
+      b.dataset.role = role;
+      return b;
+    };
+    this.userTile = card(iconURL('user'), USER_NAME, USER_TAGLINE);
+    this.userTile.addEventListener('click', () => this.login());
+    this.adminTile = card(ADMIN.portrait, ADMIN.name, ADMIN.role);
+    this.adminTile.classList.add('admin');
+    this.adminTile.addEventListener('click', () => this.setLogonView('unavailable'));
+    users.append(this.userTile, this.adminTile);
+    // The admin account can't be used: a notice with a way back to the account list.
+    const notice = (this.logonNotice = el('div', 'logon-notice', { role: 'alert' }));
+    notice.append(el('p', '', { text: ADMIN.unavailable }));
+    const back = el('button', 'logon-back', { type: 'button', text: 'Return to account selection' });
+    back.addEventListener('click', () => { this.setLogonView('users'); this.adminTile.focus(); });
+    notice.append(back);
     this.logonStatus = el('p', 'logon-status', { 'aria-live': 'polite' });
-    mid.append(brand, el('div', 'logon-divider', { 'aria-hidden': 'true' }), users, this.logonStatus);
+    mid.append(brand, el('div', 'logon-divider', { 'aria-hidden': 'true' }), users, notice, this.logonStatus);
     lg.append(el('div', 'logon-band top'), mid,
       el('div', 'logon-band bottom', { html: `<div class="logon-build"><span>${OS_NAME} ${OS_EDITION}</span><span>${OS_VERSION} · ${OS_BUILD}</span></div>` }));
     return lg;
   }
 
-  setLogonView(view) { // 'users' | 'welcome' | 'logoff' | 'hidden'
+  setLogonView(view) { // 'users' | 'welcome' | 'unavailable' | 'logoff' | 'hidden'
     this.logonEl.dataset.view = view;
     this.logonEl.hidden = view === 'hidden';
     this.logonStatus.textContent = view === 'logoff' ? 'Logging off…' : '';
-    this.userTile.querySelector('small').textContent = view === 'welcome' ? 'Loading your settings…' : '';
+    this.userTile.querySelector('small').textContent = view === 'welcome' ? 'Loading your settings…' : this.userTile.dataset.role;
+    if (view === 'unavailable') setTimeout(() => this.logonNotice.querySelector('button').focus(), 0);
   }
 
   login() {

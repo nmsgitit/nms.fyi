@@ -2,7 +2,7 @@
 // a tilted glass wall at the front, and a short entry corridor behind.
 import * as THREE from 'three';
 import { Builder } from './builder.js';
-import { ROOM, CORRIDOR, DOOR, HATCH } from './layout.js';
+import { ROOM, CORRIDOR, DOOR, HATCH, SERVER } from './layout.js';
 import { PALETTE } from './palette.js';
 
 const PANEL_T = 0.034; // wall panel thickness including its bevel
@@ -68,7 +68,7 @@ export function buildCommandRoom(m, leds) {
   {
     const hx0 = HATCH.x - HATCH.w / 2, hx1 = HATCH.x + HATCH.w / 2;
     const hz0 = HATCH.z - HATCH.d / 2, hz1 = HATCH.z + HATCH.d / 2;
-    b.span(m.ceiling, xMin, xMax, H, H + 0.1, zTop, hz0);
+    b.span(m.ceiling, xMin - 0.2, xMax + 0.2, H, H + 0.1, SERVER.frontWallZ, hz0); // out to the server wall, over the side walls
     // Ends INSIDE the back wall (z 8.1): ending at its corridor face (8.2) z-fought with the sign wall.
     b.span(m.ceiling, xMin, xMax, H, H + 0.1, hz1, zBack + 0.1);
     b.span(m.ceiling, xMin, hx0, H, H + 0.1, hz0, hz1);
@@ -123,7 +123,9 @@ export function buildCommandRoom(m, leds) {
   for (const s of [-1, 1]) {
     const xw = s > 0 ? xMax : xMin; // inner face
     const xo = xw + s * 0.2;
-    b.span(m.wallUpper, Math.min(xw, xo), Math.max(xw, xo), 0, H, zTop, zBack + 0.2);
+    // Runs out to the server-room wall (SERVER.frontWallZ), not just to the glass top: stopping at
+    // zTop left a slot at each end of the window where the server room showed through.
+    b.span(m.wallUpper, Math.min(xw, xo), Math.max(xw, xo), 0, H, SERVER.frontWallZ, zBack + 0.2);
     b.span(m.wallLower, Math.min(xw, xw - s * 0.025), Math.max(xw, xw - s * 0.025), 0, RAIL_Y0, 0.5, zBack);
     b.span(m.beigeLight, Math.min(xw, xw - s * 0.035), Math.max(xw, xw - s * 0.035), RAIL_Y0, RAIL_Y1, 0.5, zBack);
 
