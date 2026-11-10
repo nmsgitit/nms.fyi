@@ -59,46 +59,50 @@ class CoilCurve extends THREE.Curve {
   }
 }
 
-// Handset (user reference: a modern office-phone handset): a long, straight, slab-like bar with
-// a flat face, a very slight curve, a touch thicker at the earpiece end, and squared-off rounded
-// ends. It lies face-down across the cradle horns (horn tops at y 0.095, centers x ±0.068).
-const HANDSET = { L: 0.21, sag: 0.006, hornX: 0.068, hornTop: 0.095 };
-// Section half-sizes (n = thickness, z = width) at the mouthpiece (u = -1) and earpiece (u = +1).
-const HS = { n0: 0.0155, n1: 0.0175, z0: 0.0215, z1: 0.0245 };
+// Handset (user reference photos of a modern office handset): a slim curved handle with a raised,
+// flat-faced block at each end on the face side: the earpiece (speaker, a circle of holes) and the
+// mouthpiece (microphone holes, cord jack in its end). It lies face-down with those two blocks
+// resting on the cradle horns (horn tops at y 0.095, centers x ±0.068).
+// u runs -1 (mouthpiece) .. +1 (earpiece) along the length.
+const HANDSET = { L: 0.21, sag: 0.016, hornX: 0.068, hornTop: 0.095 };
+const smoothstep = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
 
-/** Section half-thickness and centerline height at u (-1 .. 1). */
+/** Centerline, frame and section at u: top/bottom half-heights (back / face side) and half-width. */
 function handsetAt(u) {
-  const t = (u + 1) / 2;
-  return { hn: HS.n0 + (HS.n1 - HS.n0) * t, hz: HS.z0 + (HS.z1 - HS.z0) * t, y: -HANDSET.sag * u * u };
+  const { L, sag } = HANDSET;
+  const pad = smoothstep(0.46, 0.62, Math.abs(u)); // 0 handle .. 1 end block (a short sloped wall)
+  const ear = u > 0;
+  const tx = L / 2, ty = -2 * sag * u, tl = Math.hypot(tx, ty);
+  return {
+    c: [(u * L) / 2, -sag * u * u],
+    t: [tx / tl, ty / tl],
+    n: [-ty / tl, tx / tl], // toward the back (up, as it lies)
+    ht: 0.0105 + 0.0025 * pad,
+    hb: 0.0105 + pad * (ear ? 0.0175 : 0.0155), // face side: the blocks step out here
+    hz: 0.0165 + pad * (ear ? 0.0095 : 0.0075),
+  };
 }
 
-/**
- * The handset as one continuous smooth surface: a gently arched centerline (ends a few mm lower)
- * swept with a squarish superellipse section (flat faces, rounded edges) that tapers slightly
- * from the earpiece to the mouthpiece, closed with rounded, squared-off end caps.
- */
+/** One continuous smooth surface swept along the handset (squarish section, rounded edges). */
 function handsetGeometry() {
-  const { L, sag } = HANDSET;
-  const NS = 72, NU = 48, P = 4.2; // rings along, points around, superellipse exponent (squarish)
+  const NS = 120, NU = 48, P = 4.4;
   const sp = (v) => Math.sign(v) * Math.pow(Math.abs(v), 2 / P);
   const rings = [];
-  for (let i = 0; i <= NS; i++) {
-    const u = (i / NS) * 2 - 1;
-    const { hn, hz, y } = handsetAt(u);
-    const tx = L / 2, ty = -2 * sag * u, tl = Math.hypot(tx, ty);
-    rings.push({ c: [(u * L) / 2, y], t: [tx / tl, ty / tl], n: [-ty / tl, tx / tl], hn, hz, f: 1 });
-  }
-  // Rounded end caps: shrinking rings stepping out along the end tangents.
-  const cap = [[0.003, 0.97], [0.0058, 0.88], [0.0081, 0.7], [0.0095, 0.45], [0.0101, 0.18], [0.0103, 0]];
+  for (let i = 0; i <= NS; i++) rings.push({ ...handsetAt((i / NS) * 2 - 1), f: 1 });
+  // Short, blocky rounded end caps.
+  const cap = [[0.0018, 0.96], [0.0034, 0.84], [0.0045, 0.62], [0.0051, 0.34], [0.0053, 0]];
   const end = rings[NS], start = rings[0];
   for (const [d, f] of cap) rings.push({ ...end, c: [end.c[0] + end.t[0] * d, end.c[1] + end.t[1] * d], f });
   for (const [d, f] of cap) rings.unshift({ ...start, c: [start.c[0] - start.t[0] * d, start.c[1] - start.t[1] * d], f });
   const pos = [];
   for (const r of rings) {
+    // Shrink the caps toward the middle of the (asymmetric) section, not the centerline.
+    const mid = (r.ht - r.hb) / 2 * (1 - r.f);
     for (let j = 0; j < NU; j++) {
       const a = (j / NU) * Math.PI * 2;
+      const sa = Math.sin(a);
       const zz = sp(Math.cos(a)) * r.hz * r.f;
-      const nn = sp(Math.sin(a)) * r.hn * r.f;
+      const nn = sp(sa) * (sa >= 0 ? r.ht : r.hb) * r.f + mid;
       pos.push(r.c[0] + r.n[0] * nn, r.c[1] + r.n[1] * nn, zz);
     }
   }
@@ -114,6 +118,51 @@ function handsetGeometry() {
   g.setIndex(idx);
   g.computeVertexNormals();
   return g;
+}
+
+/** Hole patterns for the earpiece (speaker) and mouthpiece (mic): dark dots on transparent. */
+function holesTexture(kind) {
+  const c = document.createElement('canvas');
+  c.width = c.height = 128;
+  const ctx = c.getContext('2d');
+  ctx.fillStyle = '#100c09';
+  const dot = (x, y, r) => { ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill(); };
+  if (kind === 'ear') {
+    dot(64, 64, 6);
+    for (let k = 0; k < 6; k++) { const a = (k / 6) * Math.PI * 2; dot(64 + Math.cos(a) * 22, 64 + Math.sin(a) * 22, 5); }
+    for (let k = 0; k < 12; k++) { const a = (k / 12) * Math.PI * 2 + 0.26; dot(64 + Math.cos(a) * 44, 64 + Math.sin(a) * 44, 5); }
+  } else {
+    for (const [x, y] of [[64, 64], [44, 64], [84, 64], [64, 44], [64, 84]]) dot(x, y, 7);
+  }
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  return t;
+}
+const HOLE_TEX = {};
+
+/** Handset group: the swept body + speaker/mic hole plates + cord jack. Origin = centerline middle. */
+function buildHandset(body, trim) {
+  const group = new THREE.Group();
+  const mesh = new THREE.Mesh(handsetGeometry(), body);
+  mesh.castShadow = mesh.receiveShadow = true;
+  group.add(mesh);
+  for (const [kind, u, r] of [['ear', 0.82, 0.016], ['mic', -0.84, 0.0085]]) {
+    const at = handsetAt(u);
+    HOLE_TEX[kind] ||= holesTexture(kind);
+    const plate = new THREE.Mesh(new THREE.CircleGeometry(r, 32),
+      new THREE.MeshStandardMaterial({ map: HOLE_TEX[kind], transparent: true, alphaTest: 0.4, roughness: 0.9 }));
+    // On the block's flat face, facing out of the face side (-n).
+    plate.position.set(at.c[0] - at.n[0] * (at.hb + 0.0004), at.c[1] - at.n[1] * (at.hb + 0.0004), 0);
+    plate.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), new THREE.Vector3(-at.n[0], -at.n[1], 0));
+    group.add(plate);
+  }
+  // Cord jack in the mouthpiece end.
+  const e = handsetAt(-1);
+  const jack = new THREE.Mesh(new THREE.BoxGeometry(0.004, 0.007, 0.011), trim);
+  jack.position.set(e.c[0] - 0.0035, e.c[1] - e.hb * 0.45, 0);
+  group.add(jack);
+  group.userData.jack = jack.position.clone();
+  return group;
 }
 
 /** One telephone. keypad: true for the numbered beige one. */
@@ -167,24 +216,23 @@ function buildPhone({ body, trim, keyMat, legendInk, keypad }) {
   group.add(face);
   group.add(b.build({ name: 'phoneBody', castShadow: true, receiveShadow: true }));
 
-  // Handset across the cradle: one smooth model whose underside touches BOTH horn tops (seated at
-  // the horns' x, not at its lowest point; the earlier version floated above the horns).
-  const hgeom = handsetGeometry();
+  // Handset across the cradle, its earpiece and mouthpiece blocks resting on the horns: seated so
+  // the face at each horn's x touches that horn's top (the higher of the two wins).
   const hz = -0.058;
-  const seat = Math.max(...[-1, 1].map((sgn) => {
+  const hy = Math.max(...[-1, 1].map((sgn) => {
     const at = handsetAt((sgn * HANDSET.hornX) / (HANDSET.L / 2));
-    return HANDSET.hornTop - (at.y - at.hn); // centerline height that puts the underside on this horn
+    return HANDSET.hornTop - (at.c[1] - at.n[1] * at.hb);
   }));
-  const hy = seat;
-  const handset = new THREE.Mesh(hgeom, body);
+  const handset = buildHandset(body, trim);
   handset.position.set(0, hy, hz);
   handset.name = 'phoneHandset';
-  handset.castShadow = handset.receiveShadow = true;
   group.add(handset);
+  const jack = handset.userData.jack.clone().add(handset.position);
 
-  // Coiled cord from under the mouthpiece (left cup) down to the body's left side.
+  // Coiled cord from the jack in the mouthpiece end down to the body's left side.
   const guide = new THREE.CatmullRomCurve3([
-    new THREE.Vector3(-HANDSET.L / 2 + 0.012, hy - HANDSET.sag - HS.n0 + 0.002, hz + 0.01), // under the mouthpiece end
+    jack, // plugged into the mouthpiece end
+    new THREE.Vector3(jack.x - 0.02, jack.y - 0.015, jack.z + 0.02),
     new THREE.Vector3(-0.13, 0.07, hz + 0.05),
     new THREE.Vector3(-0.135, 0.03, 0.02),
     new THREE.Vector3(-0.108, 0.02, 0.05),
