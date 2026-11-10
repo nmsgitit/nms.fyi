@@ -119,7 +119,6 @@ src/apps/cameras.js   Security Cameras app (full only): renders the CCTV views i
 src/scene/ledSign.js  amber LED dot-matrix board texture (5x7 font, dot lamp, two gears) for the door signs
 tools/favicon/make_favicon.py  builds the favicon (32x32 pixel oil lamp in the lamp.js palette) -> public/favicon.svg,
                       favicon-32.png, favicon.ico, apple-touch-icon.png (pure Python; rerun after editing the art)
-src/scene/phones.js   two retro desk phones (beige with keypad, red receive-only)
 src/scene/deskNote.js handwritten operator note on the desk (Q and F), Caveat font from @fontsource/caveat (OFL)
 src/debug.js          URL flags, orbit camera, HUD, keys
 src/style.css
@@ -374,6 +373,10 @@ nearest-first (tube sounds at 100/60/40 % per row), back wash +0.3 s, fans fade 
   and flickered against it above the sign. It now ends inside the wall (zBack + 0.1). Never end a slab on another face.
 - **Window top rail back** (the user re-requested it, suspecting the old angle was off): it's now rotated with the glass
   tilt (`[-tilt, 0, 0]`) and centered on the glass top edge, so it reads as the glass's own head rail, not a level beam.
+
+## Change round 10 (2026-11-10)
+- **Desk phones removed** (user: not enough of an aesthetic addition for the effort). `scene/phones.js` was deleted;
+  the last version (curved handset with earpiece/mouthpiece blocks) is in commit 96ed0b6 if they ever come back.
 
 ## Change round 9 (2026-11-10)
 - **Version:** the OS is now **Version 3.2** (user: estimate a realistic version), `OS_EDITION` "Server Edition",

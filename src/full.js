@@ -22,7 +22,6 @@ import { TerminalFocus } from './sequence/focus.js';
 import { HotkeyPanel } from './ui/hotkeys.js';
 import { LookAround } from './sequence/lookAround.js';
 import { buildDeskNote } from './scene/deskNote.js';
-import { buildDeskPhones } from './scene/phones.js';
 import { HydraulicDoor } from './scene/door.js';
 import { DoorIntro } from './sequence/intro.js';
 import { CctvSystem } from './scene/cctv.js';
@@ -95,7 +94,6 @@ const cctv = new CctvSystem(); // security cameras in the server room's four upp
 scene.add(cctv.group);
 wallCrts.cctv = cctv;
 scene.add(buildDeskNote()); // handwritten operator note next to the keyboard (Q and F)
-scene.add(buildDeskPhones(m)); // operator phone (beige, keypad) + receive-only red phone, back left of the desk
 const commandLights = buildCommandLights();
 scene.add(commandLights);
 const serverLights = buildServerLights(m);
