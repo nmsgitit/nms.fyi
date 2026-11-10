@@ -59,44 +59,46 @@ class CoilCurve extends THREE.Curve {
   }
 }
 
-// Handset: length, end dip, handle and cup sections (meters). Its centerline height puts the cup
-// undersides on the cradle horns (top at y 0.095).
-const HANDSET = { L: 0.2, dip: 0.03 };
+// Handset (user reference: a modern office-phone handset): a long, straight, slab-like bar with
+// a flat face, a very slight curve, a touch thicker at the earpiece end, and squared-off rounded
+// ends. It lies face-down across the cradle horns (horn tops at y 0.095, centers x ±0.068).
+const HANDSET = { L: 0.21, sag: 0.006, hornX: 0.068, hornTop: 0.095 };
+// Section half-sizes (n = thickness, z = width) at the mouthpiece (u = -1) and earpiece (u = +1).
+const HS = { n0: 0.0155, n1: 0.0175, z0: 0.0215, z1: 0.0245 };
+
+/** Section half-thickness and centerline height at u (-1 .. 1). */
+function handsetAt(u) {
+  const t = (u + 1) / 2;
+  return { hn: HS.n0 + (HS.n1 - HS.n0) * t, hz: HS.z0 + (HS.z1 - HS.z0) * t, y: -HANDSET.sag * u * u };
+}
 
 /**
- * The handset as one continuous, smooth surface: a gently arched centerline swept with a
- * superelliptic section that is a slim oval along the handle and swells into round cups at both
- * ends (bulging downward, like the earpiece and mouthpiece), closed with rounded end caps.
+ * The handset as one continuous smooth surface: a gently arched centerline (ends a few mm lower)
+ * swept with a squarish superellipse section (flat faces, rounded edges) that tapers slightly
+ * from the earpiece to the mouthpiece, closed with rounded, squared-off end caps.
  */
 function handsetGeometry() {
-  const { L, dip } = HANDSET;
-  const NS = 96, NU = 40, P = 2.4; // rings along, points around, superellipse exponent
-  const smooth = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
-  const lerp = (a, b, t) => a + (b - a) * t;
+  const { L, sag } = HANDSET;
+  const NS = 72, NU = 48, P = 4.2; // rings along, points around, superellipse exponent (squarish)
   const sp = (v) => Math.sign(v) * Math.pow(Math.abs(v), 2 / P);
-  const rings = []; // each: { c: [x, y], n: [nx, ny], hn, hz, off }
+  const rings = [];
   for (let i = 0; i <= NS; i++) {
     const u = (i / NS) * 2 - 1;
-    // u^6 keeps the handle nearly straight and turns the ends down steeply (~60°), so the cups
-    // face down toward the cradle like a real earpiece and mouthpiece.
-    const x = (u * L) / 2, y = -dip * u ** 6;
-    const tx = L, ty = -12 * dip * u ** 5, tl = Math.hypot(tx, ty);
-    const c = smooth(0.45, 0.95, Math.abs(u)); // 0 handle .. 1 cup (a long, gentle swell)
-    // Thick-set handle, modest cups (user: chunkier, less bulbous ends).
-    rings.push({ c: [x, y], t: [tx / tl, ty / tl], n: [-ty / tl, tx / tl], hn: lerp(0.0155, 0.0215, c), hz: lerp(0.0195, 0.0245, c), off: -0.0045 * c, f: 1 });
+    const { hn, hz, y } = handsetAt(u);
+    const tx = L / 2, ty = -2 * sag * u, tl = Math.hypot(tx, ty);
+    rings.push({ c: [(u * L) / 2, y], t: [tx / tl, ty / tl], n: [-ty / tl, tx / tl], hn, hz, f: 1 });
   }
-  // Rounded caps: a few shrinking rings stepping out along the end tangents.
-  const cap = [[0.002, 0.97], [0.0038, 0.88], [0.005, 0.7], [0.0056, 0.42], [0.0059, 0]];
+  // Rounded end caps: shrinking rings stepping out along the end tangents.
+  const cap = [[0.003, 0.97], [0.0058, 0.88], [0.0081, 0.7], [0.0095, 0.45], [0.0101, 0.18], [0.0103, 0]];
   const end = rings[NS], start = rings[0];
   for (const [d, f] of cap) rings.push({ ...end, c: [end.c[0] + end.t[0] * d, end.c[1] + end.t[1] * d], f });
   for (const [d, f] of cap) rings.unshift({ ...start, c: [start.c[0] - start.t[0] * d, start.c[1] - start.t[1] * d], f });
-
   const pos = [];
   for (const r of rings) {
     for (let j = 0; j < NU; j++) {
       const a = (j / NU) * Math.PI * 2;
       const zz = sp(Math.cos(a)) * r.hz * r.f;
-      const nn = (sp(Math.sin(a)) * r.hn + r.off) * r.f + r.off * (1 - r.f);
+      const nn = sp(Math.sin(a)) * r.hn * r.f;
       pos.push(r.c[0] + r.n[0] * nn, r.c[1] + r.n[1] * nn, zz);
     }
   }
@@ -165,11 +167,15 @@ function buildPhone({ body, trim, keyMat, legendInk, keypad }) {
   group.add(face);
   group.add(b.build({ name: 'phoneBody', castShadow: true, receiveShadow: true }));
 
-  // Handset across the cradle: ONE smooth sculpted piece (handsetGeometry), its lowest points
-  // (the cups) resting on the cradle horns (top at y 0.095).
+  // Handset across the cradle: one smooth model whose underside touches BOTH horn tops (seated at
+  // the horns' x, not at its lowest point; the earlier version floated above the horns).
   const hgeom = handsetGeometry();
-  hgeom.computeBoundingBox();
-  const hz = -0.058, hy = 0.096 - hgeom.boundingBox.min.y;
+  const hz = -0.058;
+  const seat = Math.max(...[-1, 1].map((sgn) => {
+    const at = handsetAt((sgn * HANDSET.hornX) / (HANDSET.L / 2));
+    return HANDSET.hornTop - (at.y - at.hn); // centerline height that puts the underside on this horn
+  }));
+  const hy = seat;
   const handset = new THREE.Mesh(hgeom, body);
   handset.position.set(0, hy, hz);
   handset.name = 'phoneHandset';
@@ -178,7 +184,7 @@ function buildPhone({ body, trim, keyMat, legendInk, keypad }) {
 
   // Coiled cord from under the mouthpiece (left cup) down to the body's left side.
   const guide = new THREE.CatmullRomCurve3([
-    new THREE.Vector3(-HANDSET.L / 2 - 0.004, 0.1, hz + 0.012), // under the mouthpiece cup
+    new THREE.Vector3(-HANDSET.L / 2 + 0.012, hy - HANDSET.sag - HS.n0 + 0.002, hz + 0.01), // under the mouthpiece end
     new THREE.Vector3(-0.13, 0.07, hz + 0.05),
     new THREE.Vector3(-0.135, 0.03, 0.02),
     new THREE.Vector3(-0.108, 0.02, 0.05),
