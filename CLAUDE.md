@@ -383,7 +383,8 @@ nearest-first (tube sounds at 100/60/40 % per row), back wash +0.3 s, fans fade 
   replaced by build info ("LAMPLIGHT OS Server Edition / Version 3.2 · Build 1987.4127"), on the monitor drawing too.
 - **Phone handsets:** one smooth sculpted mesh each (`handsetGeometry()`): a centerline `y = -dip·u^6` (straight
   handle, ends turning ~60° down) swept with a superelliptic section that grows from a slim oval handle into round cups
-  that bulge downward, closed with rounded caps. Its rest height is computed from its bounding box so the cups sit on
+  that bulge downward, closed with rounded caps. Then (user) thicker-set with less bulbous ends: handle section
+  0.0155 × 0.0195 half-sizes, cups 0.0215 × 0.0245, a long gentle swell. Its rest height is computed from its bounding box so the cups sit on
   the cradle horns.
 - **Hatch sealed:** the doors meet at the center, run 1 cm past the opening front and back, have 3 mm edges instead of
   8 mm, and the left door carries a seal strip over the seam (it swings away with that door).

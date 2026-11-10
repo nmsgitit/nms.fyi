@@ -81,8 +81,9 @@ function handsetGeometry() {
     // face down toward the cradle like a real earpiece and mouthpiece.
     const x = (u * L) / 2, y = -dip * u ** 6;
     const tx = L, ty = -12 * dip * u ** 5, tl = Math.hypot(tx, ty);
-    const c = smooth(0.5, 0.92, Math.abs(u)); // 0 handle .. 1 cup
-    rings.push({ c: [x, y], t: [tx / tl, ty / tl], n: [-ty / tl, tx / tl], hn: lerp(0.0105, 0.026, c), hz: lerp(0.0145, 0.029, c), off: -0.008 * c, f: 1 });
+    const c = smooth(0.45, 0.95, Math.abs(u)); // 0 handle .. 1 cup (a long, gentle swell)
+    // Thick-set handle, modest cups (user: chunkier, less bulbous ends).
+    rings.push({ c: [x, y], t: [tx / tl, ty / tl], n: [-ty / tl, tx / tl], hn: lerp(0.0155, 0.0215, c), hz: lerp(0.0195, 0.0245, c), off: -0.0045 * c, f: 1 });
   }
   // Rounded caps: a few shrinking rings stepping out along the end tangents.
   const cap = [[0.002, 0.97], [0.0038, 0.88], [0.005, 0.7], [0.0056, 0.42], [0.0059, 0]];
