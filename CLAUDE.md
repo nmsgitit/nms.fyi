@@ -117,6 +117,8 @@ src/os/clock.js       taskbar clock text (kept out of scene/ so the desktop neve
 src/scene/cctv.js     CctvSystem: 4 corner CCTV cameras (bracket, pan head, tilt platform, housing), servo motion, patrol, lens cameras
 src/apps/cameras.js   Security Cameras app (full only): renders the CCTV views into the window, mouse pan, arrows switch, grain/OSD (cameras.css)
 src/scene/ledSign.js  amber LED dot-matrix board texture (5x7 font, dot lamp, two gears) for the door signs
+tools/favicon/make_favicon.py  builds the favicon (32x32 pixel oil lamp in the lamp.js palette) -> public/favicon.svg,
+                      favicon-32.png, favicon.ico, apple-touch-icon.png (pure Python; rerun after editing the art)
 src/scene/deskNote.js handwritten operator note on the desk ("press Q"), Caveat font from @fontsource/caveat (OFL)
 src/debug.js          URL flags, orbit camera, HUD, keys
 src/style.css
