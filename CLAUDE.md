@@ -416,6 +416,8 @@ nearest-first (tube sounds at 100/60/40 % per row), back wash +0.3 s, fans fade 
   full ~1 MB). No canvas / WebGL context exists before that. Full then shows the old Enter gate (needed for audio).
   The last choice is remembered in localStorage `nms-mode` (only pre-focuses the button; the chooser always shows).
   If full.js fails (no WebGL2), the gate offers "Open the light version".
+- **Chooser text** (user, later): tiles read "Full Site" / "Lite Site" with "Best for systems with / without dedicated
+  graphics."; no subtitle under NMS FYI. In code the modes are still 'full' / 'light'.
 - **Light version** (`desktopOnly.js`): the desktop at once; no canvas, no sound, no mute button.
 - **Mobile spin**: touch-first devices (UA mobile, iPadOS, or coarse pointer with no fine pointer) skip the chooser and
   get `DesktopOS({ mode: 'mobile' })`: zoom 1, home-screen icon grid, single tap opens, apps full screen with 40 px
