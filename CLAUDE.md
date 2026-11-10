@@ -401,6 +401,9 @@ nearest-first (tube sounds at 100/60/40 % per row), back wash +0.3 s, fans fade 
 - **Banks and catwalks** wrap around the bay from both sides and stop at 55° (`APSE.END_A`): several feet clear of the
   supercomputer section and dais. Catwalk rails follow the curve with an end rail. The old back catwalk and back-wall
   banks are gone.
+- **Catwalk supports** (user: they didn't touch the catwalks): the bay's columns stood at r 13.6, outside decks that start
+  at r 13.8. Now every open deck edge has a steel stringer beam underneath (`STRINGER_Y0`), and the columns stand under
+  the stringers (r 14.0 in the bay, 0.2 m in from the edge on the straight runs and landings).
 - **Catwalk doors** moved onto **landings** (4.6 × 2.65 m, railed) at the near ends of the side catwalks, door centers
   3.3 m from the side walls, so they're well clear of the wall banks.
 - **Server lighting:** hall fixtures on an even grid (x -12/-6/0/6/12 × z -4.6/-11.4/-18.2/-25.0), trusses over each

@@ -12,6 +12,7 @@ const C = SERVER.ceilY;
 const CATWALK_Y = -1.0;
 const FRONT_WALL_Z0 = -0.95; // server-room face of the wall that holds the command-room glass
 const CW = 2.2; // catwalk depth
+const STRINGER_Y0 = CATWALK_Y - 0.34; // underside of the steel beams carrying the catwalk decks
 const LANDING_W = 4.6, LANDING_D = 2.65; // door landings at the near ends of the side catwalks
 const DEG = Math.PI / 180;
 // The bay: angle a from the east (+x) side, 0..180°. Point at radius r: (r cos a, zMin - r sin a).
@@ -158,9 +159,14 @@ export function buildServerRoom(m) {
     railX(inner, zMin, landZ);
     railX(outer, landZ, wz0);
     railZ(landZ, Math.min(inner, outer), Math.max(inner, outer));
-    // supports
-    for (let z = landZ - 1.5; z > zMin; z -= 5.4) b.span(m.steel, inner + s * 0.2 - 0.08, inner + s * 0.2 + 0.08, F, CATWALK_Y - 0.12, z - 0.08, z + 0.08);
-    b.span(m.steel, outer + s * 0.2 - 0.08, outer + s * 0.2 + 0.08, F, CATWALK_Y - 0.12, landZ + 0.2, landZ + 0.36);
+    // Supports: a steel stringer beam under each open edge, carried by columns standing under it
+    // (columns run from the floor up into the beam, so they visibly hold the deck).
+    const sx = inner + s * 0.2, ox = outer + s * 0.2;
+    b.span(m.steel, sx - 0.1, sx + 0.1, STRINGER_Y0, CATWALK_Y - 0.12, zMin, landZ + 0.1); // side run
+    b.span(m.steel, ox - 0.1, ox + 0.1, STRINGER_Y0, CATWALK_Y - 0.12, landZ + 0.1, wz0); // landing edge
+    b.span(m.steel, Math.min(sx, ox) - 0.1, Math.max(sx, ox) + 0.1, STRINGER_Y0, CATWALK_Y - 0.12, landZ + 0.1, landZ + 0.3); // landing back
+    for (let z = landZ - 1.5; z > zMin; z -= 5.4) b.span(m.steel, sx - 0.08, sx + 0.08, F, STRINGER_Y0, z - 0.08, z + 0.08);
+    b.span(m.steel, ox - 0.08, ox + 0.08, F, STRINGER_Y0, landZ + 0.12, landZ + 0.28);
   }
   // Around the bay, both sides.
   for (const [a0, a1] of [[0, APSE.END_A], [Math.PI - APSE.END_A, Math.PI]]) {
@@ -173,9 +179,12 @@ export function buildServerRoom(m) {
     const aEnd = a0 === 0 ? a1 : a0;
     const [x0, z0] = arcPt(R - CW, aEnd), [x1, z1] = arcPt(R, aEnd);
     for (const y of [1.05, 0.52]) b.box(rail, CW, 0.05, 0.05, (x0 + x1) / 2, CATWALK_Y + y, (z0 + z1) / 2, [0, aEnd, 0]);
+    // Stringer under the inner edge and columns under it (inside the deck: it starts at R - CW;
+    // the columns used to stand 0.2 m outside it, holding nothing).
+    arcStrip(b, m.steel, R - CW + 0.2, a0, a1, STRINGER_Y0, CATWALK_Y - 0.12, 0.2, 3);
     for (let i = 1; i < 5; i++) {
-      const [sx, sz] = arcPt(R - CW - 0.2, a0 + ((a1 - a0) * i) / 5);
-      b.span(m.steel, sx - 0.08, sx + 0.08, F, CATWALK_Y - 0.12, sz - 0.08, sz + 0.08);
+      const [sx, sz] = arcPt(R - CW + 0.2, a0 + ((a1 - a0) * i) / 5);
+      b.span(m.steel, sx - 0.08, sx + 0.08, F, STRINGER_Y0, sz - 0.08, sz + 0.08);
     }
   }
 
