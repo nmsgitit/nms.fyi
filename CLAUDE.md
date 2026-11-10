@@ -415,6 +415,8 @@ nearest-first (tube sounds at 100/60/40 % per row), back wash +0.3 s, fans fade 
   climb over the menu, logon or scanlines.
 - **Gate text trimmed:** no "Best with sound on" line, and the status line (`#gate-status`) is hidden once the room is
   ready instead of reading "Ready". It still shows "Loading the command room…" and the WebGL error.
+- **server.js:** HTML is now sent with `Cache-Control: no-cache` (was 1 h), so a deploy shows up on the next load.
+  After pulling on the server, it must rebuild (`npm ci --include=dev && npm run build`) and restart: it serves `dist/`.
 - **Log out returns to account selection and stays there** in every mode (full no longer calls `focus.exit()`; the
   "Exit account selection" button is the way back to the room).
 

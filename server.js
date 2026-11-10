@@ -13,7 +13,12 @@ app.disable('x-powered-by');
 
 // Hashed build assets never change, so cache them hard. HTML must always revalidate.
 app.use('/assets', express.static(path.join(dist, 'assets'), { immutable: true, maxAge: '1y' }));
-app.use(express.static(dist, { maxAge: '1h', index: 'index.html' }));
+app.use(express.static(dist, {
+  maxAge: '1h',
+  index: 'index.html',
+  // The page itself must never be served stale after a deploy (it names the new hashed assets).
+  setHeaders: (res, file) => { if (file.endsWith('.html')) res.setHeader('Cache-Control', 'no-cache'); },
+}));
 
 app.get('/healthz', (_req, res) => res.type('text').send('ok'));
 
