@@ -384,6 +384,9 @@ nearest-first (tube sounds at 100/60/40 % per row), back wash +0.3 s, fans fade 
   "Mainframe Administrator" (the site owner, with his portrait; implies who runs it). Clicking the admin shows "This
   account is currently unavailable. Please return to the account selection menu." with a "Return to account selection"
   button. The launcher header reads You / Mainframe Operator. Monitor drawing has both cards.
+  **Exit account selection** (full site only, bottom left of the logon screen, door icon): back to the room without
+  logging on (`onLeaveLogon` -> `focus.exit()`); the monitor keeps showing the logon screen. Lite/mobile have no room,
+  so no button there.
   Portrait: `public/os/admin-portrait.png`, made from the user's headshot (not committed) with ffmpeg: crop
   228×228+30+6, lanczos to 80×80, unsharp, contrast 1.1, saturation 1.22, warm colorbalance, 28-color palettegen,
   paletteuse Bayer dither scale 3 (16 colors lost the eyes).

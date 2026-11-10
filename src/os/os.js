@@ -29,12 +29,14 @@ export class DesktopOS {
    * onClick(kind): 'press' / 'release' for every pointer click on the desktop (click sounds).
    * apps: handlers for interactive app kinds, e.g. { cameras: { mount(body, ctx), unmount(), setVisible(on) } }.
    */
-  constructor({ mode = 'full', onLogout, onLogin, onClick, apps = {} } = {}) {
+  /** onLeaveLogon (full only): "Exit account selection" on the logon screen steps back into the room. */
+  constructor({ mode = 'full', onLogout, onLogin, onLeaveLogon, onClick, apps = {} } = {}) {
     this.mode = mode;
     this.full = mode === 'full';
     this.mobile = mode === 'mobile';
     this.onLogout = onLogout;
     this.onLogin = onLogin;
+    this.onLeaveLogon = onLeaveLogon;
     this.loggedIn = false;
     this.onClick = onClick;
     this.handlers = apps;
@@ -154,8 +156,15 @@ export class DesktopOS {
     notice.append(back);
     this.logonStatus = el('p', 'logon-status', { 'aria-live': 'polite' });
     mid.append(brand, el('div', 'logon-divider', { 'aria-hidden': 'true' }), users, notice, this.logonStatus);
-    lg.append(el('div', 'logon-band top'), mid,
-      el('div', 'logon-band bottom', { html: `<div class="logon-build"><span>${OS_NAME} ${OS_EDITION}</span><span>${OS_VERSION} · ${OS_BUILD}</span></div>` }));
+    const bottom = el('div', 'logon-band bottom', { html: `<div class="logon-build"><span>${OS_NAME} ${OS_EDITION}</span><span>${OS_VERSION} · ${OS_BUILD}</span></div>` });
+    if (this.full) {
+      // Back to the room without logging on (only the full site has a room to go back to).
+      const leave = el('button', 'logon-exit', { type: 'button' });
+      leave.append(el('img', '', { src: iconURL('logout'), alt: '', width: 24, height: 24 }), el('span', '', { text: 'Exit account selection' }));
+      leave.addEventListener('click', () => { this.setLogonView('users'); this.onLeaveLogon?.(); });
+      bottom.prepend(leave);
+    }
+    lg.append(el('div', 'logon-band top'), mid, bottom);
     return lg;
   }
 

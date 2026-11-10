@@ -230,6 +230,7 @@ const os = new DesktopOS({
   // Log out (launcher): back to the logon screen on the monitor, then step back into the room.
   onLogout: () => { monitor.screen.showLogon(true); focus.exit(); },
   onLogin: () => monitor.screen.showDesktop(true),
+  onLeaveLogon: () => focus.exit(), // "Exit account selection": back to the room without logging on
   onClick: (kind) => sound.ready && sound.uiClick(kind),
   apps: { cameras: cameraApp },
 });

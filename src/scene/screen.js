@@ -284,6 +284,25 @@ export class MonitorScreen {
     };
     cardAt(H / 2 - 82 * s, getIcon('user'), USER_NAME, USER_TAGLINE);
     cardAt(H / 2 + 8 * s, this.portrait.complete ? this.portrait : null, ADMIN.name, ADMIN.role);
+    // "Exit account selection", bottom left (as in the HTML; the monitor only shows the full site).
+    ctx.imageSmoothingEnabled = true;
+    const bx = W * 0.04, bh = 28 * s, bw = 196 * s, by = H * 0.94 - bh / 2;
+    const bg2 = ctx.createLinearGradient(0, by, 0, by + bh);
+    bg2.addColorStop(0, '#e8a64f');
+    bg2.addColorStop(1, '#c9761f');
+    ctx.fillStyle = bg2;
+    ctx.beginPath();
+    ctx.roundRect(bx, by, bw, bh, 4 * s);
+    ctx.fill();
+    ctx.imageSmoothingEnabled = false;
+    ctx.drawImage(getIcon('logout'), bx + 5 * s, by + 2 * s, 24 * s, 24 * s);
+    ctx.imageSmoothingEnabled = true;
+    ctx.fillStyle = '#fff';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'middle';
+    ctx.font = `bold ${Math.round(13 * s)}px Tahoma, Verdana, sans-serif`;
+    ctx.fillText('Exit account selection', bx + 36 * s, by + bh / 2);
+    ctx.textBaseline = 'alphabetic';
     // Build information, bottom right.
     ctx.textAlign = 'right';
     ctx.font = `${Math.round(12 * s)}px Tahoma, Verdana, sans-serif`;
