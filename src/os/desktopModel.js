@@ -5,7 +5,10 @@
 // PLACEHOLDER CONTENT: the user still has to decide the real apps and their contents.
 
 export const OS_NAME = 'LAMPLIGHT OS';
-export const OS_VERSION = 'Version 1.0';
+// A mature late-80s system running a whole facility wouldn't still be on 1.0 (user: estimate it).
+export const OS_VERSION = 'Version 3.2';
+export const OS_EDITION = 'Server Edition';
+export const OS_BUILD = 'Build 1987.4127';
 export const USER_NAME = 'USER'; // generic: whoever is using the terminal (user request)
 export const USER_TAGLINE = 'Welcome. Pick something to open.';
 

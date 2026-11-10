@@ -59,6 +59,60 @@ class CoilCurve extends THREE.Curve {
   }
 }
 
+// Handset: length, end dip, handle and cup sections (meters). Its centerline height puts the cup
+// undersides on the cradle horns (top at y 0.095).
+const HANDSET = { L: 0.2, dip: 0.03 };
+
+/**
+ * The handset as one continuous, smooth surface: a gently arched centerline swept with a
+ * superelliptic section that is a slim oval along the handle and swells into round cups at both
+ * ends (bulging downward, like the earpiece and mouthpiece), closed with rounded end caps.
+ */
+function handsetGeometry() {
+  const { L, dip } = HANDSET;
+  const NS = 96, NU = 40, P = 2.4; // rings along, points around, superellipse exponent
+  const smooth = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
+  const lerp = (a, b, t) => a + (b - a) * t;
+  const sp = (v) => Math.sign(v) * Math.pow(Math.abs(v), 2 / P);
+  const rings = []; // each: { c: [x, y], n: [nx, ny], hn, hz, off }
+  for (let i = 0; i <= NS; i++) {
+    const u = (i / NS) * 2 - 1;
+    // u^6 keeps the handle nearly straight and turns the ends down steeply (~60°), so the cups
+    // face down toward the cradle like a real earpiece and mouthpiece.
+    const x = (u * L) / 2, y = -dip * u ** 6;
+    const tx = L, ty = -12 * dip * u ** 5, tl = Math.hypot(tx, ty);
+    const c = smooth(0.5, 0.92, Math.abs(u)); // 0 handle .. 1 cup
+    rings.push({ c: [x, y], t: [tx / tl, ty / tl], n: [-ty / tl, tx / tl], hn: lerp(0.0105, 0.026, c), hz: lerp(0.0145, 0.029, c), off: -0.008 * c, f: 1 });
+  }
+  // Rounded caps: a few shrinking rings stepping out along the end tangents.
+  const cap = [[0.002, 0.97], [0.0038, 0.88], [0.005, 0.7], [0.0056, 0.42], [0.0059, 0]];
+  const end = rings[NS], start = rings[0];
+  for (const [d, f] of cap) rings.push({ ...end, c: [end.c[0] + end.t[0] * d, end.c[1] + end.t[1] * d], f });
+  for (const [d, f] of cap) rings.unshift({ ...start, c: [start.c[0] - start.t[0] * d, start.c[1] - start.t[1] * d], f });
+
+  const pos = [];
+  for (const r of rings) {
+    for (let j = 0; j < NU; j++) {
+      const a = (j / NU) * Math.PI * 2;
+      const zz = sp(Math.cos(a)) * r.hz * r.f;
+      const nn = (sp(Math.sin(a)) * r.hn + r.off) * r.f + r.off * (1 - r.f);
+      pos.push(r.c[0] + r.n[0] * nn, r.c[1] + r.n[1] * nn, zz);
+    }
+  }
+  const idx = [];
+  for (let i = 0; i < rings.length - 1; i++) {
+    for (let j = 0; j < NU; j++) {
+      const a = i * NU + j, b = i * NU + ((j + 1) % NU), c2 = (i + 1) * NU + j, d = (i + 1) * NU + ((j + 1) % NU);
+      idx.push(a, c2, b, b, c2, d);
+    }
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  g.setIndex(idx);
+  g.computeVertexNormals();
+  return g;
+}
+
 /** One telephone. keypad: true for the numbered beige one. */
 function buildPhone({ body, trim, keyMat, legendInk, keypad }) {
   const group = new THREE.Group();
@@ -110,19 +164,20 @@ function buildPhone({ body, trim, keyMat, legendInk, keypad }) {
   group.add(face);
   group.add(b.build({ name: 'phoneBody', castShadow: true, receiveShadow: true }));
 
-  // Handset across the cradle: a slim handle with a cup at each end.
-  const hb = new Builder();
-  const hy = 0.106, hz = -0.058;
-  hb.rbox(body, 0.15, 0.024, 0.036, 0.011, 0, hy + 0.006, hz);
-  for (const s of [-1, 1]) {
-    hb.add(new THREE.SphereGeometry(0.034, 24, 14), body, [s * 0.088, hy - 0.006, hz], [0, 0, 0], [1, 0.62, 0.95]);
-    hb.add(new THREE.CylinderGeometry(0.03, 0.03, 0.004, 24), trim, [s * 0.088, hy - 0.026, hz]); // cup face
-  }
-  group.add(hb.build({ name: 'phoneHandset', castShadow: true, receiveShadow: true }));
+  // Handset across the cradle: ONE smooth sculpted piece (handsetGeometry), its lowest points
+  // (the cups) resting on the cradle horns (top at y 0.095).
+  const hgeom = handsetGeometry();
+  hgeom.computeBoundingBox();
+  const hz = -0.058, hy = 0.096 - hgeom.boundingBox.min.y;
+  const handset = new THREE.Mesh(hgeom, body);
+  handset.position.set(0, hy, hz);
+  handset.name = 'phoneHandset';
+  handset.castShadow = handset.receiveShadow = true;
+  group.add(handset);
 
-  // Coiled cord from the left cup down to the body's left side.
+  // Coiled cord from under the mouthpiece (left cup) down to the body's left side.
   const guide = new THREE.CatmullRomCurve3([
-    new THREE.Vector3(-0.112, hy - 0.02, hz + 0.01),
+    new THREE.Vector3(-HANDSET.L / 2 - 0.004, 0.1, hz + 0.012), // under the mouthpiece cup
     new THREE.Vector3(-0.13, 0.07, hz + 0.05),
     new THREE.Vector3(-0.135, 0.03, 0.02),
     new THREE.Vector3(-0.108, 0.02, 0.05),

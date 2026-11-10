@@ -14,6 +14,7 @@
 import * as THREE from 'three';
 import { getLampSprite, LAMP_VARIANTS, drawLamp } from './lamp.js';
 import { CCTV_CAMERAS } from './cctv.js';
+import { OS_VERSION } from '../os/desktopModel.js';
 
 const W = 320, H = 224; // canvas per screen (screensaver, boot, readouts, feed overlay)
 const FEED_W = 256, FEED_H = 192;
@@ -304,7 +305,7 @@ export class WallCRTs {
     ctx.fillText('LAMPLIGHT OS', W / 2, 138);
     ctx.font = '13px Georgia, "Times New Roman", serif';
     ctx.fillStyle = '#b9ab8f';
-    ctx.fillText('Version 1.0', W / 2, 156);
+    ctx.fillText(OS_VERSION, W / 2, 156);
     const segs = 16, bw = 160, x0 = (W - bw) / 2, y0 = 172;
     const filled = Math.floor(segs * Math.min(1, sc.st / BOOT_SECONDS));
     ctx.strokeStyle = '#7d6d52';

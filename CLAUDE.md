@@ -375,6 +375,19 @@ nearest-first (tube sounds at 100/60/40 % per row), back wash +0.3 s, fans fade 
 - **Window top rail back** (the user re-requested it, suspecting the old angle was off): it's now rotated with the glass
   tilt (`[-tilt, 0, 0]`) and centered on the glass top edge, so it reads as the glass's own head rail, not a level beam.
 
+## Change round 9 (2026-11-10)
+- **Version:** the OS is now **Version 3.2** (user: estimate a realistic version), `OS_EDITION` "Server Edition",
+  `OS_BUILD` "Build 1987.4127" (desktopModel.js). The terminal boot, the wall-CRT boot screens and the launcher footer
+  all read OS_VERSION.
+- **Logon screen:** the lamp is 96 px and centered over "LAMPLIGHT OS" (`.logon-mark`); the bottom-right note was
+  replaced by build info ("LAMPLIGHT OS Server Edition / Version 3.2 · Build 1987.4127"), on the monitor drawing too.
+- **Phone handsets:** one smooth sculpted mesh each (`handsetGeometry()`): a centerline `y = -dip·u^6` (straight
+  handle, ends turning ~60° down) swept with a superelliptic section that grows from a slim oval handle into round cups
+  that bulge downward, closed with rounded caps. Its rest height is computed from its bounding box so the cups sit on
+  the cradle horns.
+- **Hatch sealed:** the doors meet at the center, run 1 cm past the opening front and back, have 3 mm edges instead of
+  8 mm, and the left door carries a seal strip over the seam (it swings away with that door).
+
 ## Change round 8 (2026-11-10): logon, phones, arm, waves
 - **Logon screen + Log out** (all modes): DesktopOS starts at an original XP-reminiscent welcome screen (dark bands, blue
   middle, "LAMPLIGHT OS / To begin, click your user name" left, the USER account tile right; `.os-logon`). Click USER ->

@@ -289,9 +289,10 @@
   opacity: 0.95;
 }
 .logon-mid { position: relative; display: flex; align-items: center; justify-content: center; }
-.logon-brand { width: 50%; padding-right: 40px; text-align: right; }
+.logon-brand { width: 50%; padding-right: 40px; display: flex; flex-direction: column; align-items: flex-end; text-align: right; }
+.logon-mark { display: flex; flex-direction: column; align-items: center; }
 .logon-brand img { image-rendering: pixelated; }
-.logon-name { margin: 6px 0 4px; font: 34px Georgia, 'Times New Roman', serif; letter-spacing: 0.04em; text-shadow: 1px 2px 3px rgba(0, 0, 0, 0.35); }
+.logon-name { margin: 2px 0 4px; font: 34px Georgia, 'Times New Roman', serif; letter-spacing: 0.04em; text-shadow: 1px 2px 3px rgba(0, 0, 0, 0.35); }
 .logon-hint { margin: 0; font-size: 15px; opacity: 0.92; }
 .logon-divider {
   width: 2px;
@@ -325,6 +326,9 @@
 .os-mobile .logon-brand, .os-mobile .logon-users { width: auto; padding: 0; text-align: center; }
 .os-mobile .logon-divider { width: 60%; height: 2px; background: linear-gradient(90deg, rgba(255,255,255,0), rgba(255,255,255,0.85), rgba(255,255,255,0)); }
 .os-mobile .logon-band.bottom { justify-content: center; text-align: center; }
+.os-mobile .logon-brand { align-items: center; }
+.logon-build { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; font: 12px/1.3 Tahoma, Verdana, sans-serif; opacity: 0.9; letter-spacing: 0.03em; }
+.os-mobile .logon-build { align-items: center; }
 
 /* Faint CRT scanlines so it still feels like the terminal (purely decorative). */
 .os-crt {

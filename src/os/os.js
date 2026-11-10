@@ -8,7 +8,7 @@
 // Every mode starts at a LOGON screen (the USER account; click it to log on). "Log out" in the
 // launcher (door icon: you aren't powering the machine off) closes the apps and returns to the
 // logon screen; in 'full' it then also steps back from the terminal into the room (onLogout).
-import { APPS, USER_NAME, USER_TAGLINE, OS_NAME, OS_VERSION } from './desktopModel.js';
+import { APPS, USER_NAME, USER_TAGLINE, OS_NAME, OS_VERSION, OS_EDITION, OS_BUILD } from './desktopModel.js';
 import { iconURL, wallpaperURL } from './art.js';
 import { clockText } from './clock.js';
 
@@ -127,8 +127,9 @@ export class DesktopOS {
     const lg = (this.logonEl = el('div', 'os-logon', { role: 'dialog', 'aria-label': `${OS_NAME} log on` }));
     const mid = el('div', 'logon-mid');
     const brand = el('div', 'logon-brand');
-    brand.append(el('img', '', { src: iconURL('lamp'), alt: '', width: 72, height: 72 }),
-      el('p', 'logon-name', { text: OS_NAME }), el('p', 'logon-hint', { text: 'To begin, click your user name' }));
+    const mark = el('div', 'logon-mark'); // the lamp centered over the OS name
+    mark.append(el('img', '', { src: iconURL('lamp'), alt: '', width: 96, height: 96 }), el('p', 'logon-name', { text: OS_NAME }));
+    brand.append(mark, el('p', 'logon-hint', { text: 'To begin, click your user name' }));
     const users = el('div', 'logon-users');
     const tile = (this.userTile = el('button', 'logon-user', { type: 'button' }));
     tile.append(el('img', '', { src: iconURL('user'), alt: '', width: 64, height: 64 }),
@@ -138,7 +139,7 @@ export class DesktopOS {
     this.logonStatus = el('p', 'logon-status', { 'aria-live': 'polite' });
     mid.append(brand, el('div', 'logon-divider', { 'aria-hidden': 'true' }), users, this.logonStatus);
     lg.append(el('div', 'logon-band top'), mid,
-      el('div', 'logon-band bottom', { html: `<span>After you log on, the apps are on the desktop.</span>` }));
+      el('div', 'logon-band bottom', { html: `<div class="logon-build"><span>${OS_NAME} ${OS_EDITION}</span><span>${OS_VERSION} · ${OS_BUILD}</span></div>` }));
     return lg;
   }
 

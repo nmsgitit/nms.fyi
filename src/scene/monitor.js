@@ -90,8 +90,12 @@ export class MonitorRig {
       const pivot = new THREE.Group();
       pivot.position.set(s * hw, H, 0);
       const db = new Builder();
-      const w = hw - 0.004, t = 0.028;
-      db.rbox(m.taupe, w, t, HATCH.d - 0.01, 0.008, -s * w / 2, -t / 2, 0);
+      // Closed, the hatch must look sealed (user: you shouldn't see into the shaft): the doors
+      // meet at the center, run 1 cm past the opening front and back, have tight 3 mm edges,
+      // and the left door carries a seal strip under the center seam.
+      const w = hw, t = 0.028;
+      db.rbox(m.taupe, w, t, HATCH.d + 0.02, 0.003, -s * w / 2, -t / 2, 0);
+      if (s < 0) db.box(m.taupeDark, 0.06, 0.004, HATCH.d + 0.02, w, -t - 0.002, 0); // seal strip over the seam
       const gx0 = -s * (w - 0.06), gx1 = -s * 0.06; // grip strip along the door (span needs min < max)
       db.span(m.taupeDark, Math.min(gx0, gx1), Math.max(gx0, gx1), -t - 0.002, -t, -0.2, 0.2);
       const mesh = db.build({ name: 'hatchDoor', castShadow: true, receiveShadow: true });

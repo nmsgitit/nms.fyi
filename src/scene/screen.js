@@ -4,7 +4,7 @@
 import * as THREE from 'three';
 import { drawLamp } from './lamp.js';
 import { getWallpaper, getIcon } from '../os/art.js';
-import { APPS, OS_NAME, OS_VERSION, USER_NAME } from '../os/desktopModel.js';
+import { APPS, OS_NAME, OS_VERSION, OS_EDITION, OS_BUILD, USER_NAME } from '../os/desktopModel.js';
 import { TASKBAR_H, ICON_GRID } from '../os/layout.js';
 import { clockText } from '../os/clock.js';
 
@@ -249,14 +249,15 @@ export class MonitorScreen {
     dv.addColorStop(1, 'rgba(255,255,255,0)');
     ctx.fillStyle = dv;
     ctx.fillRect(W / 2 - s, H * 0.24, 2 * s, H * 0.52);
-    // Left: lamp, OS name, hint (right-aligned toward the divider).
+    // Left: the lamp centered over the OS name, then the hint (right-aligned toward the divider).
     const rx = W / 2 - 40 * s;
-    ctx.imageSmoothingEnabled = false;
-    ctx.drawImage(getIcon('lamp'), rx - 72 * s, H / 2 - 82 * s, 72 * s, 72 * s);
     ctx.fillStyle = '#fff';
-    ctx.textAlign = 'right';
     ctx.textBaseline = 'alphabetic';
     ctx.font = `${Math.round(34 * s)}px Georgia, "Times New Roman", serif`;
+    const nameW = ctx.measureText(OS_NAME).width;
+    ctx.imageSmoothingEnabled = false;
+    ctx.drawImage(getIcon('lamp'), rx - nameW / 2 - 48 * s, H / 2 - 104 * s, 96 * s, 96 * s);
+    ctx.textAlign = 'right';
     ctx.fillText(OS_NAME, rx, H / 2 + 26 * s);
     ctx.font = `${Math.round(15 * s)}px Tahoma, Verdana, sans-serif`;
     ctx.fillText('To begin, click your user name', rx, H / 2 + 52 * s);
@@ -271,10 +272,11 @@ export class MonitorScreen {
     ctx.textAlign = 'left';
     ctx.font = `bold ${Math.round(22 * s)}px Tahoma, Verdana, sans-serif`;
     ctx.fillText(USER_NAME, ux + 82 * s, uy + 40 * s);
-    // Bottom band note.
+    // Build information, bottom right.
     ctx.textAlign = 'right';
-    ctx.font = `${Math.round(13 * s)}px Tahoma, Verdana, sans-serif`;
-    ctx.fillText('After you log on, the apps are on the desktop.', W * 0.96, H * 0.94 + 4 * s);
+    ctx.font = `${Math.round(12 * s)}px Tahoma, Verdana, sans-serif`;
+    ctx.fillText(`${OS_NAME} ${OS_EDITION}`, W * 0.96, H * 0.94 - 4 * s);
+    ctx.fillText(`${OS_VERSION} · ${OS_BUILD}`, W * 0.96, H * 0.94 + 13 * s);
   }
 
   /** Scanlines + vignette so it reads as a CRT. */
