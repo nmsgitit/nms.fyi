@@ -66,7 +66,7 @@
 .os-icon.dark.selected span { color: #fff; }
 
 /* Windows */
-.os-windows { position: absolute; inset: 0; pointer-events: none; }
+.os-windows { position: absolute; inset: 0; pointer-events: none; isolation: isolate; } /* window z-indexes stay inside */
 .win {
   position: absolute;
   width: min(560px, calc(100% - 40px));
@@ -202,7 +202,7 @@
   background: var(--os-title);
   color: #fff;
 }
-.os-menu-head img { image-rendering: pixelated; background: rgba(0, 0, 0, 0.25); border-radius: 4px; padding: 2px; }
+.os-menu-head img { image-rendering: pixelated; border: 2px solid #fff; border-radius: 4px; background: #fff; }
 .os-menu-user { display: flex; flex-direction: column; }
 .os-menu-user strong { font-size: 16px; }
 .os-menu-user span { font-size: 12px; opacity: 0.9; }
@@ -293,42 +293,12 @@
 .logon-mark { display: flex; flex-direction: column; align-items: center; }
 .logon-brand img { image-rendering: pixelated; }
 .logon-name { margin: 2px 0 4px; font: 34px Georgia, 'Times New Roman', serif; letter-spacing: 0.04em; text-shadow: 1px 2px 3px rgba(0, 0, 0, 0.35); }
-.logon-hint { margin: 0; font-size: 15px; opacity: 0.92; }
 .logon-divider {
   width: 2px;
   height: 52%;
   background: linear-gradient(180deg, rgba(255, 255, 255, 0), rgba(255, 255, 255, 0.85), rgba(255, 255, 255, 0));
 }
 .logon-users { width: 50%; padding-left: 40px; display: flex; flex-direction: column; align-items: flex-start; gap: 10px; }
-.logon-user.admin img { background: #c9c3b6; image-rendering: pixelated; }
-/* The admin account's "unavailable" notice replaces the account list. */
-.logon-notice {
-  display: none;
-  position: absolute;
-  left: 50%;
-  margin-left: 40px;
-  max-width: min(360px, 42%);
-  padding: 16px 18px;
-  border-radius: 8px;
-  background: rgba(10, 47, 143, 0.6);
-  border: 1px solid rgba(255, 255, 255, 0.45);
-  font-size: 15px;
-  line-height: 1.45;
-}
-.logon-notice p { margin: 0 0 14px; }
-.logon-back {
-  padding: 6px 14px;
-  border: 1px solid #fff;
-  border-radius: 4px;
-  background: linear-gradient(180deg, #e8a64f, #c9761f);
-  color: #fff;
-  font: bold 13px Tahoma, Verdana, sans-serif;
-  cursor: pointer;
-}
-.logon-back:hover, .logon-back:focus-visible { filter: brightness(1.12); outline: 2px solid #fff; outline-offset: 2px; }
-.os-logon[data-view='unavailable'] .logon-users { visibility: hidden; }
-.os-logon[data-view='unavailable'] .logon-notice { display: block; }
-.os-logon[data-view='welcome'] .logon-user.admin { visibility: hidden; }
 .logon-user {
   display: flex;
   align-items: center;
@@ -357,8 +327,6 @@
 .os-mobile .logon-band.bottom { justify-content: center; text-align: center; }
 .os-mobile .logon-brand { align-items: center; }
 .os-mobile .logon-users { align-items: center; }
-.os-mobile .logon-notice { position: static; margin: 0 16px; max-width: none; }
-.os-mobile .os-logon[data-view='unavailable'] .logon-users { display: none; }
 .logon-exit {
   display: flex;
   align-items: center;
@@ -384,6 +352,7 @@
   pointer-events: none;
   background: repeating-linear-gradient(180deg, rgba(0, 0, 0, 0.05) 0 1px, transparent 1px 3px);
   mix-blend-mode: multiply;
+  z-index: 60; /* over the logon screen (50) too, so it has the same scanlines as the desktop */
 }
 
 /* Phones: windows fill the desktop; no dragging. */

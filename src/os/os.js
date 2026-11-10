@@ -8,7 +8,7 @@
 // Every mode starts at a LOGON screen (the USER account; click it to log on). "Log out" in the
 // launcher (door icon: you aren't powering the machine off) closes the apps and returns to the
 // logon screen; in 'full' it then also steps back from the terminal into the room (onLogout).
-import { APPS, USER_NAME, USER_TAGLINE, ADMIN, OS_NAME, OS_VERSION, OS_EDITION, OS_BUILD } from './desktopModel.js';
+import { APPS, USER_NAME, USER_TAGLINE, USER_PORTRAIT, OS_NAME, OS_VERSION, OS_EDITION, OS_BUILD } from './desktopModel.js';
 import { iconURL, wallpaperURL } from './art.js';
 import { clockText } from './clock.js';
 
@@ -90,7 +90,7 @@ export class DesktopOS {
     const menu = (this.menu = el('div', 'os-menu', { role: 'menu', 'aria-label': 'Applications' }));
     menu.hidden = true;
     const head = el('div', 'os-menu-head');
-    head.append(el('img', '', { src: iconURL('lamp'), alt: '', width: 48, height: 48 }),
+    head.append(el('img', 'os-menu-portrait', { src: USER_PORTRAIT, alt: '', width: 48, height: 48 }),
       el('div', 'os-menu-user', { html: `<strong>${USER_NAME}</strong><span>${USER_TAGLINE}</span>` }));
     const list = el('div', 'os-menu-list');
     for (const app of this.apps) {
@@ -131,7 +131,7 @@ export class DesktopOS {
     const brand = el('div', 'logon-brand');
     const mark = el('div', 'logon-mark'); // the lamp centered over the OS name
     mark.append(el('img', '', { src: iconURL('lamp'), alt: '', width: 96, height: 96 }), el('p', 'logon-name', { text: OS_NAME }));
-    brand.append(mark, el('p', 'logon-hint', { text: 'To begin, click your user name' }));
+    brand.append(mark);
     const users = (this.logonUsers = el('div', 'logon-users'));
     const card = (img, name, role) => {
       const b = el('button', 'logon-user', { type: 'button' });
@@ -142,20 +142,11 @@ export class DesktopOS {
       b.dataset.role = role;
       return b;
     };
-    this.userTile = card(iconURL('user'), USER_NAME, USER_TAGLINE);
+    this.userTile = card(USER_PORTRAIT, USER_NAME, USER_TAGLINE);
     this.userTile.addEventListener('click', () => this.login());
-    this.adminTile = card(ADMIN.portrait, ADMIN.name, ADMIN.role);
-    this.adminTile.classList.add('admin');
-    this.adminTile.addEventListener('click', () => this.setLogonView('unavailable'));
-    users.append(this.userTile, this.adminTile);
-    // The admin account can't be used: a notice with a way back to the account list.
-    const notice = (this.logonNotice = el('div', 'logon-notice', { role: 'alert' }));
-    notice.append(el('p', '', { text: ADMIN.unavailable }));
-    const back = el('button', 'logon-back', { type: 'button', text: 'Return to account selection' });
-    back.addEventListener('click', () => { this.setLogonView('users'); this.adminTile.focus(); });
-    notice.append(back);
+    users.append(this.userTile);
     this.logonStatus = el('p', 'logon-status', { 'aria-live': 'polite' });
-    mid.append(brand, el('div', 'logon-divider', { 'aria-hidden': 'true' }), users, notice, this.logonStatus);
+    mid.append(brand, el('div', 'logon-divider', { 'aria-hidden': 'true' }), users, this.logonStatus);
     const bottom = el('div', 'logon-band bottom', { html: `<div class="logon-build"><span>${OS_NAME} ${OS_EDITION}</span><span>${OS_VERSION} · ${OS_BUILD}</span></div>` });
     if (this.full) {
       // Back to the room without logging on (only the full site has a room to go back to).
@@ -168,12 +159,11 @@ export class DesktopOS {
     return lg;
   }
 
-  setLogonView(view) { // 'users' | 'welcome' | 'unavailable' | 'logoff' | 'hidden'
+  setLogonView(view) { // 'users' | 'welcome' | 'logoff' | 'hidden'
     this.logonEl.dataset.view = view;
     this.logonEl.hidden = view === 'hidden';
     this.logonStatus.textContent = view === 'logoff' ? 'Logging off…' : '';
     this.userTile.querySelector('small').textContent = view === 'welcome' ? 'Loading your settings…' : this.userTile.dataset.role;
-    if (view === 'unavailable') setTimeout(() => this.logonNotice.querySelector('button').focus(), 0);
   }
 
   login() {

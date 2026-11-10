@@ -393,18 +393,28 @@ nearest-first (tube sounds at 100/60/40 % per row), back wash +0.3 s, fans fade 
   (`SERVER.frontWallZ` -0.95); they used to stop at the glass top (z -0.6), leaving a slot at each window end.
 - **Door frame side grilles removed** (both faces; the catwalk doors share `HydraulicDoor`, so theirs went too). The
   three short slots on top remain.
-- **Accounts on the logon screen:** "You" / "Mainframe Operator" (the visitor; logs in) and "Noah Schafrath" /
-  "Mainframe Administrator" (the site owner, with his portrait; implies who runs it). Clicking the admin shows "This
-  account is currently unavailable. Please return to the account selection menu." with a "Return to account selection"
-  button. The launcher header reads You / Mainframe Operator. Monitor drawing has both cards.
+- **Accounts on the logon screen:** superseded in round 10 (one account, Noah Schafrath).
   **Exit account selection** (full site only, bottom left of the logon screen, door icon): back to the room without
   logging on (`onLeaveLogon` -> `focus.exit()`); the monitor keeps showing the logon screen. Lite/mobile have no room,
   so no button there.
-  Portrait: `public/os/admin-portrait.png`, made from the user's headshot (not committed) with ffmpeg: crop
+  Portrait (now `public/os/user-portrait.png`), made from the user's headshot (not committed) with ffmpeg: crop
   228×228+30+6, lanczos to 80×80, unsharp, contrast 1.1, saturation 1.22, warm colorbalance, 28-color palettegen,
   paletteuse Bayer dither scale 3 (16 colors lost the eyes).
 - **Desk phones removed** (user: not enough of an aesthetic addition for the effort). `scene/phones.js` was deleted;
   the last version (curved handset with earpiece/mouthpiece blocks) is in commit 96ed0b6 if they ever come back.
+
+## Change round 10 (2026-11-10): one account, logon scanlines
+- **One account:** the visitor "You" account and the unavailable admin account were merged into a single account,
+  `USER_NAME` "Noah Schafrath" / `USER_TAGLINE` "Mainframe Administrator" with `USER_PORTRAIT`
+  `/os/user-portrait.png` (the 80s-dithered headshot, renamed from admin-portrait.png). `ADMIN`, the unavailable notice and
+  its CSS are gone. The launcher header shows the portrait (white border) instead of the lamp.
+- **"To begin, click your user name" removed** (HTML and monitor drawing). Monitor drawing re-measured against the HTML at
+  1024×768: lamp top `H/2 - 70s`, OS name baseline `H/2 + 59s`, the card `H/2 - 32s` (centered).
+- **Scanlines on the logon screen:** `.os-crt` now has `z-index: 60` (logon is 50), so the same faint scanlines as the
+  desktop cover it. `.os-windows` got `isolation: isolate` so window z-indexes (which grow on every focus) can never
+  climb over the menu, logon or scanlines.
+- **Log out returns to account selection and stays there** in every mode (full no longer calls `focus.exit()`; the
+  "Exit account selection" button is the way back to the room).
 
 ## Change round 9 (2026-11-10)
 - **Version:** the OS is now **Version 3.2** (user: estimate a realistic version), `OS_EDITION` "Server Edition",
@@ -428,8 +438,8 @@ nearest-first (tube sounds at 100/60/40 % per row), back wash +0.3 s, fans fade 
   middle, "LAMPLIGHT OS / To begin, click your user name" left, the USER account tile right; `.os-logon`). Click USER ->
   "Loading your settings…" -> desktop (`onLogin`). The launcher's Exit became **Log out** with a door-opening pixel icon
   (`logout` in art.js; user: you aren't powering the machine off), in full AND lite/mobile. Log out closes every window,
-  shows "Logging off…", returns to the logon screen, then `onLogout` (full: `monitor.screen.showLogon(true)` +
-  `focus.exit()`). The 3D monitor draws the same logon layout (`MonitorScreen.drawLogon()`, state `logon`) after the boot
+  shows "Logging off…", returns to the logon screen, then `onLogout` (full: `monitor.screen.showLogon(true)`; since
+  round 10 it stays at the terminal on account selection instead of `focus.exit()`). The 3D monitor draws the same logon layout (`MonitorScreen.drawLogon()`, state `logon`) after the boot
   (`desktopAt`) and in `setDown()`, so the glide into the terminal lands on a matching picture. Mobile stacks it vertically.
 - **Desk note** now reads "Note to Mainframe Operators: / Press Q to control / the terminal. / Press F to look / around
   the room." (Q and F circled). Paper 0.30 × 0.24 m.

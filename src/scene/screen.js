@@ -4,7 +4,7 @@
 import * as THREE from 'three';
 import { drawLamp } from './lamp.js';
 import { getWallpaper, getIcon } from '../os/art.js';
-import { APPS, OS_NAME, OS_VERSION, OS_EDITION, OS_BUILD, USER_NAME, USER_TAGLINE, ADMIN } from '../os/desktopModel.js';
+import { APPS, OS_NAME, OS_VERSION, OS_EDITION, OS_BUILD, USER_NAME, USER_TAGLINE, USER_PORTRAIT } from '../os/desktopModel.js';
 import { TASKBAR_H, ICON_GRID } from '../os/layout.js';
 import { clockText } from '../os/clock.js';
 
@@ -24,10 +24,10 @@ export class MonitorScreen {
     this.stateT = 0;
     this._accum = 0;
     this._lastClock = '';
-    // The admin's portrait for the logon screen drawing (redraw once it has loaded).
+    // The account portrait for the logon screen drawing (redraw once it has loaded).
     this.portrait = new Image();
     this.portrait.onload = () => { if (this.state === 'logon') this.draw(this.stateT); };
-    this.portrait.src = ADMIN.portrait;
+    this.portrait.src = USER_PORTRAIT;
     this.draw(0);
   }
 
@@ -253,19 +253,17 @@ export class MonitorScreen {
     dv.addColorStop(1, 'rgba(255,255,255,0)');
     ctx.fillStyle = dv;
     ctx.fillRect(W / 2 - s, H * 0.24, 2 * s, H * 0.52);
-    // Left: the lamp centered over the OS name, then the hint (right-aligned toward the divider).
+    // Left: the lamp centered over the OS name (right-aligned toward the divider), vertically centered.
     const rx = W / 2 - 40 * s;
     ctx.fillStyle = '#fff';
     ctx.textBaseline = 'alphabetic';
     ctx.font = `${Math.round(34 * s)}px Georgia, "Times New Roman", serif`;
     const nameW = ctx.measureText(OS_NAME).width;
     ctx.imageSmoothingEnabled = false;
-    ctx.drawImage(getIcon('lamp'), rx - nameW / 2 - 48 * s, H / 2 - 104 * s, 96 * s, 96 * s);
+    ctx.drawImage(getIcon('lamp'), rx - nameW / 2 - 48 * s, H / 2 - 70 * s, 96 * s, 96 * s);
     ctx.textAlign = 'right';
-    ctx.fillText(OS_NAME, rx, H / 2 + 26 * s);
-    ctx.font = `${Math.round(15 * s)}px Tahoma, Verdana, sans-serif`;
-    ctx.fillText('To begin, click your user name', rx, H / 2 + 52 * s);
-    // Right: the two account cards (You, then the administrator), as in the HTML.
+    ctx.fillText(OS_NAME, rx, H / 2 + 59 * s);
+    // Right: the one account card, as in the HTML.
     const ux = W / 2 + 48 * s;
     const cardAt = (uy, img, name, role) => {
       ctx.fillStyle = '#fff';
@@ -282,8 +280,7 @@ export class MonitorScreen {
       ctx.font = `${Math.round(12 * s)}px Tahoma, Verdana, sans-serif`;
       ctx.fillText(role, ux + 82 * s, uy + 48 * s);
     };
-    cardAt(H / 2 - 82 * s, getIcon('user'), USER_NAME, USER_TAGLINE);
-    cardAt(H / 2 + 8 * s, this.portrait.complete ? this.portrait : null, ADMIN.name, ADMIN.role);
+    cardAt(H / 2 - 32 * s, this.portrait.complete ? this.portrait : null, USER_NAME, USER_TAGLINE);
     // "Exit account selection", bottom left (as in the HTML; the monitor only shows the full site).
     ctx.imageSmoothingEnabled = true;
     const bx = W * 0.04, bh = 28 * s, bw = 196 * s, by = H * 0.94 - bh / 2;

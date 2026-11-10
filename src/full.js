@@ -227,8 +227,9 @@ const debug = createDebug({ params, renderer, scene, camera, walk, setLit, leds 
 const cameraApp = new CameraApp({ renderer, scene, cctv, sound });
 const os = new DesktopOS({
   mode: 'full',
-  // Log out (launcher): back to the logon screen on the monitor, then step back into the room.
-  onLogout: () => { monitor.screen.showLogon(true); focus.exit(); },
+  // Log out (launcher): back to the account selection screen, staying at the terminal (user request);
+  // "Exit account selection" there is the way back to the room.
+  onLogout: () => monitor.screen.showLogon(true),
   onLogin: () => monitor.screen.showDesktop(true),
   onLeaveLogon: () => focus.exit(), // "Exit account selection": back to the room without logging on
   onClick: (kind) => sound.ready && sound.uiClick(kind),
