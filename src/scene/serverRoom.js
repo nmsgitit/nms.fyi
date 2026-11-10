@@ -1,6 +1,5 @@
 // The server room beyond the glass: a tall hall with tiers of data banks along the walls (lower
-// tier on the floor, upper tier on a catwalk), freestanding rack rows, ceiling trusses with light
-// fixtures. The north end is a half-circle bay (apse) whose far wall holds the supercomputer
+// tier on the floor, upper tier on a catwalk), ceiling trusses with light fixtures. The north end is a half-circle bay (apse) whose far wall holds the supercomputer
 // (supercomputer.js); the banks and catwalks follow the curve and stop short of it.
 import * as THREE from 'three';
 import { Builder } from './builder.js';
@@ -71,19 +70,6 @@ function bank(b, m, leds, x, y, z, facing, group, delayBase) {
   const right = [fz, 0, -fx];
   leds.grid([fxp + fx * 0.012, y + h / 2 + 0.1, fzp + fz * 0.012], right, [0, 1, 0], facing, 3, 6, 0.24, 0.32,
     { size: 0.045, color: ledColor, blink: ledBlink, group, delay: delayBase, intensity: 1.5 }, 0.85);
-}
-
-function rack(b, m, leds, x, z, group, delayBase) {
-  // Freestanding double-sided rack running along z; fronts face ±x.
-  const w = 1.0, h = 2.3, d = 0.8;
-  b.rbox(m.taupe, d * 2, h, w, 0.05, x, F + h / 2, z);
-  b.rbox(m.beigeLight, d * 2 + 0.06, 0.08, w + 0.06, 0.03, x, F + h + 0.04, z);
-  for (const s of [-1, 1]) {
-    const fx = x + s * (d + 0.001);
-    b.box(m.grille, 0.02, h - 0.4, w - 0.16, fx, F + h / 2, z);
-    leds.grid([fx + s * 0.012, F + h / 2, z], [0, 0, 1], [0, 1, 0], [s, 0, 0], 3, 5, 0.22, 0.3,
-      { size: 0.035, color: ledColor, blink: ledBlink, group, delay: delayBase, intensity: 1.3 }, 0.8);
-  }
 }
 
 export function buildServerRoom(m) {
@@ -223,10 +209,8 @@ export function populateServerRoom(b, m, leds) {
       }
     }
   }
-  // Freestanding rack rows on the floor.
-  for (const x of [-10.2, 10.2]) {
-    for (let z = -5.5; z > -24; z -= 1.1) rack(b, m, leds, x, z, 'racks', (-5.5 - z) / 20);
-  }
+  // (The two freestanding rack rows in the middle of the hall were removed at the user's request:
+  // only the banks along the walls and around the bay remain.)
 }
 
 /**
