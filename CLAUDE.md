@@ -439,7 +439,7 @@ nearest-first (tube sounds at 100/60/40 % per row), back wash +0.3 s, fans fade 
 - **Server ceiling beams** (user: lights crossing under beams made no sense): a lengthwise beam over each fixture column
   (`FIX_X`), every fixture housing hung under its beam running the same way; cross beams only between fixture rows plus
   the hall/bay edge beam (`CROSS_Z` -8, -14.8, -21.6, zMin). Beams, housings and the bay's radial/ring beams use
-  `m.serverBeam` (MeshBasic 0x222427 at full power, a couple of shades darker than the anthracite ceiling; black when
+  `m.serverBeam` (MeshBasic **#232323** at full power (user-picked; was 0x222427), darker than the anthracite ceiling; black when
   unpowered, comes up with row 0). The old `TRUSS_Z` (one over each row) is gone.
 - **Supercomputer face panel:** the beige surround now runs from z 1.0 (deep inside the bulbous base, so it grows out of
   it instead of floating off it at the top corners) to 2.38 (just past the bulge's widest point, r 2.2, which used to
