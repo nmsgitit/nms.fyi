@@ -4,10 +4,11 @@
 //     chooser between the Full Site (3D command room, sound) and the Lite Site (the desktop only).
 //     three.js and the whole scene live in full.js, a separate chunk fetched only after "Full" is
 //     picked, so the welcome page costs no GPU time.
-// URL overrides (testing): ?full ?light ?mobile. The dev flags ?skip ?os ?debug ?lit imply full.
+// URL overrides (testing): ?full ?light ?mobile. ?skip implies full; so do the dev-build-only flags ?os ?debug ?lit.
 import './style.css';
 
 const params = new URLSearchParams(location.search);
+if (!import.meta.env.DEV) for (const k of ['debug', 'lit', 'os']) params.delete(k); // dev-only flags (see full.js)
 const chooser = document.getElementById('chooser');
 const gate = document.getElementById('gate');
 const gateStatus = document.getElementById('gate-status');
