@@ -100,6 +100,11 @@ npm start          # serves dist/ on $PORT (default 3000)
   the monitor (only after exiting the desktop), **F** look around with the mouse, **Tab** hotkey menu. Dev keys (only
   `npm run dev` or `?debug`; never for visitors): **L** toggles server power, **R** replays the whole intro from the corridor, **M** replays the terminal drop + boot (wall CRTs wake),
   **P** replays the power-up, **O** orbit cam, **H** HUD.
+- **C = freecam** (`src/freecam.js`, `npm run dev` ONLY: not in the production build, not even with `?debug`): click to
+  capture the mouse, WASD move (where you look), Space/Z up/down, Shift ×4, Alt ÷4, wheel = base speed (2 m/s default).
+  While on, all other keys and canvas clicks are swallowed in the capture phase (E/Q/F/Tab/monitor click don't fire),
+  the HUD shows position/yaw/pitch/speed, near plane 1 cm; C again restores the exact previous camera. Blocked while the
+  desktop or the entry gate is up. `debug.orbitActive()` is true while it flies, so the walk doesn't move the camera.
 - In dev, `window.scene/camera/renderer/walk/setLit/leds/monitor/reveal` are exposed.
 - Deterministic reveal stepping (screenshots stall rAF): replace `reveal.update` and `leds.update` with no-ops
   driven by your own clock, `reveal.start(0)`, then call the original `update(T)` in small increments.
@@ -122,6 +127,7 @@ tools/favicon/make_favicon.py  builds the favicon (32x32 pixel oil lamp in the l
                       favicon-32.png, favicon.ico, apple-touch-icon.png (pure Python; rerun after editing the art)
 src/scene/deskNote.js handwritten operator note on the desk (Q and F), Caveat font from @fontsource/caveat (OFL)
 src/debug.js          URL flags, orbit camera, HUD, keys
+src/freecam.js        dev-only fly camera on C (see URL flags / dev keys)
 src/style.css
 src/camera/walk.js    scripted first-person walk: speed profile, head bob/sway/roll, 'step' events
 src/scene/layout.js   ALL world dimensions/positions (edit here first)

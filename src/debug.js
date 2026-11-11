@@ -6,8 +6,10 @@
 //
 // Dev keys (only in `npm run dev` or with ?debug; never for normal visitors):
 //   L toggle server-room power, O toggle orbit camera, H toggle HUD
-//   (R/M/P replays live in main.js under the same gate.)
+//   (R/M/P replays live in full.js under the same gate.)
+// C: freecam (freecam.js), `npm run dev` only (not even with ?debug on the live site).
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { Freecam } from './freecam.js';
 
 export function createDebug({ params, renderer, camera, walk, setLit }) {
   const hud = document.getElementById('debug-hud');
@@ -33,6 +35,24 @@ export function createDebug({ params, renderer, camera, walk, setLit }) {
     camera.position.set(0, 6, 12);
   }
 
+  const api = { onFreecam: null };
+  let freecam = null;
+  if (import.meta.env.DEV) {
+    let hudWasHidden = true;
+    freecam = new Freecam({
+      camera,
+      canvas: renderer.domElement,
+      // Not while the desktop is up or the entry gate is still showing.
+      isBlocked: () => document.getElementById('os')?.classList.contains('on') ||
+        !document.getElementById('gate')?.classList.contains('hidden'),
+      onChange: (on) => {
+        if (orbit) orbit.enabled = !on && orbitOn;
+        if (on) { hudWasHidden = hud.hidden; hud.hidden = false; } else hud.hidden = hudWasHidden;
+        api.onFreecam?.(on);
+      },
+    });
+  }
+
   const devKeys = params.has('debug') || import.meta.env.DEV;
   window.addEventListener('keydown', (e) => {
     if (!devKeys || document.getElementById('os')?.classList.contains('on')) return;
@@ -46,23 +66,26 @@ export function createDebug({ params, renderer, camera, walk, setLit }) {
     if (k === 'h') hud.hidden = !hud.hidden;
   });
 
-  return {
-    orbitActive: () => orbitOn,
+  return Object.assign(api, {
+    /** True while a debug camera (orbit or freecam) owns the camera, so the walk must not move it. */
+    orbitActive: () => orbitOn || !!freecam?.active,
     log(msg) {
       lines.push(msg);
       if (lines.length > 4) lines.shift();
     },
     update(dt) {
-      if (orbitOn && orbit) orbit.update();
+      if (freecam?.active) freecam.update(dt);
+      else if (orbitOn && orbit) orbit.update();
       frames++; acc += dt;
       if (acc >= 0.5) { fps = Math.round(frames / acc); frames = 0; acc = 0; }
       if (!hud.hidden) {
         const p = camera.position;
         const info = renderer.info.render;
         hud.textContent = `fps ${fps}  calls ${info.calls}  tris ${(info.triangles / 1000).toFixed(0)}k\n` +
-          `cam ${p.x.toFixed(2)} ${p.y.toFixed(2)} ${p.z.toFixed(2)}  walk ${walk.state} ${walk.t.toFixed(1)}/${walk.duration.toFixed(1)}s\n` +
+          (freecam?.active ? freecam.status() + '\n'
+            : `cam ${p.x.toFixed(2)} ${p.y.toFixed(2)} ${p.z.toFixed(2)}  walk ${walk.state} ${walk.t.toFixed(1)}/${walk.duration.toFixed(1)}s\n`) +
           lines.join('\n');
       }
     },
-  };
+  });
 }

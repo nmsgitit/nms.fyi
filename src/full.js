@@ -249,6 +249,8 @@ focus.focusIn = () => {
   hotkeys.setBarVisible(false);
   _focusIn();
 };
+// Dev freecam (C): stop looking around and hide the controls bar while flying.
+debug.onFreecam = (on) => { if (on) look.cancel(); hotkeys.setBarVisible(!on && focus.state !== 'open'); };
 const _focusExit = focus.exit.bind(focus);
 focus.exit = () => { _focusExit(); hotkeys.setBarVisible(true); };
 window.addEventListener('keydown', (e) => {
