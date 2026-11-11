@@ -90,12 +90,14 @@ npm start          # serves dist/ on $PORT (default 3000)
 - `?full`, `?light`, `?mobile`: force a version (skip the chooser / mobile detection).
 - `?skip`: skip to the end state: at the desk, server room powered, terminal down and booted, wall CRTs live.
   `?skip&up` keeps the terminal in the ceiling; `?skip&dark` keeps the room unpowered (and the terminal up).
-- `?lit`: server room fully powered (preview the layout).
-- `?os`: skip straight into the desktop (development).
+- `?lit`: server room fully powered (preview the layout). **Dev builds only.**
+- `?os`: skip straight into the desktop (development). **Dev builds only.**
 - `?time=HH:MM`: preview the desktop wallpaper at another time of day.
 - `/dev/os-preview.html` (dev server only): the HTML desktop alone, no WebGL needed (handy for phone-size checks in
   the built-in browser pane, which has no WebGL).
-- `?debug`: orbit camera + HUD (fps, draw calls, camera position).
+- `?debug`: orbit camera + HUD (fps, draw calls, camera position). **Dev builds only:** on the live site full.js and
+  main.js strip `debug`, `lit` and `os` from the URL, and all dev keys (L/R/M/P/O/H/C) are `import.meta.env.DEV` only.
+  `?skip`, `?up`, `?dark` and the version flags still work everywhere.
 - Sound is silent until the first user gesture (browser rule). Visitor keys (3D view): **E** use the terminal, **Q** raise/lower
   the monitor (only after exiting the desktop), **F** look around with the mouse, **Tab** hotkey menu. Dev keys (only
   `npm run dev` or `?debug`; never for visitors): **L** toggles server power, **R** replays the whole intro from the corridor, **M** replays the terminal drop + boot (wall CRTs wake),
@@ -122,8 +124,13 @@ npm start          # serves dist/ on $PORT (default 3000)
   Dev server: `npx vite --host 127.0.0.1 --port 5174 --strictPort` -> http://127.0.0.1:5174.
   Test build: `npm run build` there, then `PORT=3001 node server.js` -> http://127.0.0.1:3001 (rebuild + restart after
   changes; it's the production build, so dev-only tools like the C freecam aren't in it).
-- Requests name the environment; when it's ambiguous, ask which one. Keep each environment's CLAUDE.md change rounds
-  about its own branch (the Bad Idea copy says which reworks are experiments).
+- **Where changes go (standing user rule, until they explicitly say to disregard it):** anything the user calls a
+  major change, or that SOUNDS like one (reworking the monitor system, changing the walk-in, expanding which rooms are
+  available, and the like), goes to the **Bad Idea Environment first**, and Claude says so when it's making that call
+  itself. Minor cosmetic tweaks (like the recent rounds of fixes) go to **both**: commit on `main`, then cherry-pick onto
+  `bad-idea` (and rebuild its test build).
+- Keep each environment's CLAUDE.md change rounds about its own branch (the Bad Idea copy says which reworks are
+  experiments).
 
 ## Code map
 

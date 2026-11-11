@@ -4,10 +4,11 @@
 //   ?lit     server room fully powered (preview the layout)
 //   ?skip    skip the walk; start at the desk
 //
-// Dev keys (only in `npm run dev` or with ?debug; never for normal visitors):
+// Everything here is dev-build only (user): full.js strips ?debug/?lit from the URL on the live site.
+// Dev keys (only in `npm run dev`):
 //   L toggle server-room power, O toggle orbit camera, H toggle HUD
 //   (R/M/P replays live in full.js under the same gate.)
-// C: freecam (freecam.js), `npm run dev` only (not even with ?debug on the live site).
+// C: freecam (freecam.js), `npm run dev` only.
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { Freecam } from './freecam.js';
 
@@ -53,7 +54,7 @@ export function createDebug({ params, renderer, camera, walk, setLit }) {
     });
   }
 
-  const devKeys = params.has('debug') || import.meta.env.DEV;
+  const devKeys = import.meta.env.DEV; // never on the live site (full.js also strips ?debug/?lit there)
   window.addEventListener('keydown', (e) => {
     if (!devKeys || document.getElementById('os')?.classList.contains('on')) return;
     if (e.target instanceof HTMLInputElement) return;

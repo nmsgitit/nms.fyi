@@ -33,6 +33,9 @@ import { Walk } from './camera/walk.js';
 import { createDebug } from './debug.js';
 
 const params = new URLSearchParams(location.search);
+// Developer flags only exist in dev builds (user): on the live site ?debug (orbit camera, HUD), ?lit (power preview)
+// and ?os (straight into the desktop) are ignored. ?skip and the version flags stay available.
+if (!import.meta.env.DEV) for (const k of ['debug', 'lit', 'os']) params.delete(k);
 const gateEl = document.getElementById('gate');
 const gateStatus = document.getElementById('gate-status');
 const enterBtn = document.getElementById('gate-enter');
@@ -318,7 +321,7 @@ if (params.has('skip') || params.has('os')) {
   if (params.has('os')) { focus.focusIn(); focus.t = focus.dur; }
 }
 // Dev replay keys: only in `npm run dev` or with ?debug (never for normal visitors).
-const devKeys = params.has('debug') || import.meta.env.DEV;
+const devKeys = import.meta.env.DEV; // replay keys: dev builds only, never on the live site
 window.addEventListener('keydown', (e) => {
   if (!devKeys || os.isOpen) return; // the desktop has the keyboard
   const k = e.key.toLowerCase();
