@@ -441,6 +441,11 @@ nearest-first (tube sounds at 100/60/40 % per row), back wash +0.3 s, fans fade 
   the hall/bay edge beam (`CROSS_Z` -8, -14.8, -21.6, zMin). Beams, housings and the bay's radial/ring beams use
   `m.serverBeam` (MeshBasic **#1A1A1A** at full power (user-picked), darker than the ceiling (**#232323**, user-picked); black when
   unpowered, comes up with row 0). The old `TRUSS_Z` (one over each row) is gone.
+  **Housings flow into the beams** (user: the frames didn't attach convincingly): `HOUSING` is an extruded cross-section,
+  1 m wide with an 8 cm lip, whose sides sweep up in concave coves (r 0.32) into the beam's sides, meeting them 0.2 m
+  above the beam bottom. `m.serverBeam` became a **MeshMatcapMaterial** (procedural grey `shadeMatcap()`, color = the
+  power level × #1A1A1A, toneMapped off): no light reaches the ceiling, and flat color hid every curve; the matcap
+  shades by surface angle alone (faces toward the viewer ~95 % of the color, grazing ones darker).
 - **Supercomputer face panel:** the beige surround now runs from z 1.0 (deep inside the bulbous base, so it grows out of
   it instead of floating off it at the top corners) to 2.38 (just past the bulge's widest point, r 2.2, which used to
   poke through its front near the bottom). The dark panel and LEDs moved out with it.

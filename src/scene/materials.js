@@ -102,6 +102,31 @@ function ribTexture(size = 256) {
   return t;
 }
 
+/** A neutral matcap (grey sphere lit softly from above-front): shading without lights. */
+function shadeMatcap() {
+  const N = 256;
+  const c = document.createElement('canvas');
+  c.width = c.height = N;
+  const g = c.getContext('2d');
+  const img = g.createImageData(N, N);
+  const L = new THREE.Vector3(0, 0.5, 0.86).normalize();
+  for (let y = 0; y < N; y++) {
+    for (let x = 0; x < N; x++) {
+      const nx = (x + 0.5) / N * 2 - 1, ny = 1 - (y + 0.5) / N * 2;
+      const r2 = nx * nx + ny * ny;
+      const nz = Math.sqrt(Math.max(0, 1 - r2));
+      const v = Math.round(255 * Math.min(1, 0.6 + 0.4 * Math.max(0, nx * L.x + ny * L.y + nz * L.z)));
+      const i = (y * N + x) * 4;
+      img.data[i] = img.data[i + 1] = img.data[i + 2] = v;
+      img.data[i + 3] = 255;
+    }
+  }
+  g.putImageData(img, 0, 0);
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  return t;
+}
+
 export function createMaterials(maxAnisotropy = 4) {
   const grain = noiseTexture();
   grain.repeat.set(6, 6);
@@ -169,7 +194,11 @@ export function createMaterials(maxAnisotropy = 4) {
   m.fixtureFrame.shadowSide = THREE.FrontSide;
   // Server-room ceiling: unlit (black) until the reveal brings it up to anthracite with the first row.
   m.serverCeiling = new THREE.MeshBasicMaterial({ color: 0x000000, toneMapped: false });
-  m.serverBeam = new THREE.MeshBasicMaterial({ color: 0x000000, toneMapped: false }); // beams + fixture housings, same idea
+  // Beams + fixture housings: no light reaches them either, but flat color hid their shape (the housings' coves into
+  // the beams were invisible), so they use a matcap: soft shading from the surface's angle alone, no lights needed.
+  // A face looking straight at the viewer comes out at ~95 % of the color (the user's #1A1A1A), grazing faces darker.
+  m.serverBeam = new THREE.MeshMatcapMaterial({ color: 0x000000, matcap: shadeMatcap() });
+  m.serverBeam.toneMapped = false;
 
   m.serverBayStrip = new THREE.MeshBasicMaterial({ color: 0x000000, map: diffuserTexture(512, 110), toneMapped: false });
   m.coreFixture = new THREE.MeshBasicMaterial({ color: 0x000000, toneMapped: false });
