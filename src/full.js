@@ -36,9 +36,9 @@ const params = new URLSearchParams(location.search);
 // Developer flags only exist in dev builds (user): on the live site ?debug (orbit camera, HUD), ?lit (power preview)
 // and ?os (straight into the desktop) are ignored. ?skip and the version flags stay available.
 if (!import.meta.env.DEV) for (const k of ['debug', 'lit', 'os']) params.delete(k);
-const gateEl = document.getElementById('gate');
-const gateStatus = document.getElementById('gate-status');
-const enterBtn = document.getElementById('gate-enter');
+// Set once the experience has started (main.js calls enter() when the loading screen finishes); the 3D-view keys
+// wait for it, as they used to wait for the click-to-enter gate.
+let started = false;
 
 function webgl2Available() {
   try {
@@ -48,10 +48,7 @@ function webgl2Available() {
   }
 }
 
-if (!webgl2Available()) {
-  gateStatus.textContent = 'This experience needs WebGL 2, which this browser or device doesn’t provide.';
-  throw new Error('WebGL2 unavailable');
-}
+if (!webgl2Available()) throw new Error('WebGL2 unavailable'); // main.js shows the message and the Lite Site option
 
 // ---------------------------------------------------------------- renderer
 const canvas = document.getElementById('view');
@@ -192,8 +189,8 @@ let startMuted = false;
 try { startMuted = localStorage.getItem('nms-muted') === '1'; } catch { /* storage unavailable */ }
 applyMute(startMuted);
 muteBtn.addEventListener('click', () => applyMute(!sound.muted));
-async function startSound() {
-  await sound.start();
+async function startSound(ctx) {
+  await sound.start(ctx || undefined);
   sound.ambience();
   if (reveal.state === 'lit') sound.serverAmbience();
 }
@@ -257,7 +254,7 @@ debug.onFreecam = (on) => { if (on) look.cancel(); hotkeys.setBarVisible(!on && 
 const _focusExit = focus.exit.bind(focus);
 focus.exit = () => { _focusExit(); hotkeys.setBarVisible(true); };
 window.addEventListener('keydown', (e) => {
-  if (e.key.toLowerCase() !== 'f' || e.repeat || os.isOpen || !gateEl.classList.contains('hidden')) return;
+  if (e.key.toLowerCase() !== 'f' || e.repeat || os.isOpen || !started) return;
   if (look.active) look.exit();
   else look.enter();
 });
@@ -278,7 +275,7 @@ const hotkeys = new HotkeyPanel(() => ({
   looking: look.active,
 }));
 window.addEventListener('keydown', (e) => {
-  if (e.key !== 'Tab' || os.isOpen || !gateEl.classList.contains('hidden')) return;
+  if (e.key !== 'Tab' || os.isOpen || !started) return;
   e.preventDefault();
   hotkeys.toggle();
 });
@@ -336,24 +333,24 @@ window.addEventListener('keydown', (e) => {
   }
 });
 
-// ---------------------------------------------------------------- gate
-function enter() {
-  gateEl.classList.add('hidden');
-  enterBtn.blur();
-  startSound(); // inside the click: browsers allow audio to start here
-  hotkeys.setBarVisible(true);
-  if (!params.has('skip')) intro.start(); // door opens, then the walk begins (intro.js)
-}
-enterBtn.addEventListener('click', enter);
-gateStatus.hidden = true; // loading text goes away once ready (user: no "Ready" line)
-enterBtn.disabled = false;
-if (params.has('skip') || params.has('debug') || params.has('os')) {
-  gateEl.classList.add('hidden');
-  // No gate click in these modes, so the first click or key anywhere unlocks sound.
-  const unlock = () => startSound();
-  window.addEventListener('pointerdown', unlock, { once: true });
-  window.addEventListener('keydown', unlock, { once: true });
+// ---------------------------------------------------------------- start
+/**
+ * Start the experience: called by main.js when the loading screen finishes (or at once for the ?skip/dev flags).
+ * audioCtx: an AudioContext made inside the user's Full Site click, so sound can start without another click.
+ * Without one (the site was opened straight into Full by a URL flag), the first click or key starts the sound.
+ */
+export function enter({ audioCtx = null } = {}) {
+  if (started) return;
+  started = true;
+  document.body.dataset.started = '1'; // debug.js (freecam) waits for this
+  if (audioCtx) startSound(audioCtx);
+  else {
+    const unlock = () => startSound();
+    window.addEventListener('pointerdown', unlock, { once: true });
+    window.addEventListener('keydown', unlock, { once: true });
+  }
   if (!['zoomingIn', 'open'].includes(focus.state)) hotkeys.setBarVisible(true);
+  if (!['skip', 'os', 'debug'].some((k) => params.has(k))) intro.start(); // door opens, then the walk begins (intro.js)
 }
 
 // ---------------------------------------------------------------- loop

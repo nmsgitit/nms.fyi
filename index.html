@@ -60,14 +60,13 @@
       </footer>
     </div>
 
-    <!-- Click-to-enter gate (full experience only): browsers only allow audio after a user
-         gesture, so the walk-in (with footsteps) starts from this click. -->
-    <div id="gate" role="dialog" aria-labelledby="gate-title" hidden>
-      <div class="gate-box">
-        <p id="gate-title" class="gate-title">NMS FYI</p>
-        <p class="gate-sub" id="gate-status">Loading…</p>
-        <button id="gate-enter" type="button" disabled>Enter</button>
-        <button id="gate-light" class="gate-alt" type="button" hidden>Open the Lite Site</button>
+    <!-- Full-site loading screen (src/loader.js): the LAMPLIGHT-style boot screen while the 3D site loads, then it
+         fades into the walk-in. Sound is unlocked by the Full Site click on the welcome page. -->
+    <div id="loader" role="status" aria-label="Loading experience" hidden>
+      <canvas aria-hidden="true"></canvas>
+      <div class="loader-error" hidden>
+        <p></p>
+        <button id="loader-lite" type="button">Open the Lite Site</button>
       </div>
     </div>
 
