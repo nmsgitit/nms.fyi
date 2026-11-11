@@ -39,23 +39,23 @@ let badgeMat = null;
 function badgeMaterial() {
   if (badgeMat) return badgeMat;
   const c = document.createElement('canvas');
-  c.width = 256;
+  c.width = 336; // wide enough that the whole word sits inside the oval (user)
   c.height = 96;
   const g = c.getContext('2d');
   g.fillStyle = '#8b8273';
   g.beginPath();
-  g.roundRect(4, 4, 248, 88, 44);
+  g.roundRect(4, 4, 328, 88, 44);
   g.fill();
   g.strokeStyle = '#c9c2b4';
   g.lineWidth = 4;
   g.beginPath();
-  g.roundRect(12, 12, 232, 72, 36);
+  g.roundRect(12, 12, 312, 72, 36);
   g.stroke();
   g.fillStyle = '#efe9dc';
   g.font = 'bold 40px Tahoma, Verdana, sans-serif';
   g.textAlign = 'center';
   g.textBaseline = 'middle';
-  g.fillText('LAMPLIGHT', 128, 50);
+  g.fillText('LAMPLIGHT', 168, 50);
   const t = new THREE.CanvasTexture(c);
   t.colorSpace = THREE.SRGBColorSpace;
   t.anisotropy = 8;
@@ -124,7 +124,7 @@ export function buildMouse(m) {
 
   // Maker's badge on the palm rest, following the slope.
   const badgeZ = 0.03;
-  b.add(new THREE.PlaneGeometry(0.026, 0.0098), badgeMaterial(), [0, top(badgeZ) + 0.0003, badgeZ], [-Math.PI / 2 + slope, 0, 0]);
+  b.add(new THREE.PlaneGeometry(0.0343, 0.0098), badgeMaterial(), [0, top(badgeZ) + 0.0003, badgeZ], [-Math.PI / 2 + slope, 0, 0]);
 
   const group = b.build({ name: 'mouse', castShadow: true, receiveShadow: true });
   return group;

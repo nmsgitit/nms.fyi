@@ -421,7 +421,8 @@ nearest-first (tube sounds at 100/60/40 % per row), back wash +0.3 s, fans fade 
   over), split by a 0.9 mm gap with a dark strip set 0.8 mm below the cap tops so it reads as a shadowed seam, plus a
   hairline seam behind them (user: the earlier raised caps and black separator block were the main problem); four grip grooves on each
   side; a tapered strain relief with three ribs where the cord leaves (`MOUSE_CORD_START`); a small oval LAMPLIGHT badge
-  (canvas texture) on the palm rest. Rejected on the way: button lips wrapping over the front (read as loose slabs).
+  (canvas texture, 336×96 px on a 34 × 10 mm plane: wide enough that the whole word sits inside the oval) on the palm
+  rest. Rejected on the way: button lips wrapping over the front (read as loose slabs).
 
 ## Change round 11 (2026-11-11): welcome page, editions, clock wallpaper, LED grids
 - **Welcome page** (desktops/laptops; replaces the old chooser, still `#chooser` + `showChooser()` in main.js): a slideshow
