@@ -106,18 +106,22 @@ export function buildServerRoom(m) {
   for (const [x0, x1] of [[ox0, ROOM.xMin], [ROOM.xMax, ox1]]) b.span(m.wallUpper, x0, x1, F, 0, wz0, WINDOW_FOOT_Z); // recess sides
 
   // ---- ceiling trusses (evenly spaced, one over each fixture row and one between) and fixtures
-  for (const z of TRUSS_Z) b.span(m.taupeDark, xMin, xMax, C - 0.75, C, z - 0.18, z + 0.18);
+  // Beams (user: lights crossing under beams made no sense): one running the length of the hall over each column of
+  // fixtures, so every fixture hangs under its beam running the same way, plus cross beams only BETWEEN fixture rows
+  // and an edge beam where the hall meets the bay (the bay's radial beams start on it).
+  for (const x of FIX_X) b.span(m.serverBeam, x - 0.18, x + 0.18, C - 0.75, C, zMin - 0.18, wz0);
+  for (const z of CROSS_Z) b.span(m.serverBeam, xMin, xMax, C - 0.75, C, z - 0.18, z + 0.18);
   // The bay: radial beams, and on each side a ring beam over the catwalk carrying a curved strip
   // fixture. Both stop at the 58° radial beam, short of the supercomputer, which has its own
   // lights (ceiling ring light, collar downlights, key spot, wall washes) and no fluorescents.
   // (The old full-circle ring beam also ran straight through the core's ceiling collar.)
   for (const a of [28, 58, 122, 152]) {
     const [x, z] = arcPt(R / 2, a * DEG);
-    b.box(m.taupeDark, R, 0.75, 0.3, x, C - 0.375, z, [0, a * DEG, 0]); // local x along the radius
+    b.box(m.serverBeam, R, 0.75, 0.3, x, C - 0.375, z, [0, a * DEG, 0]); // local x along the radius
   }
   for (const [a0, a1] of BAY_STRIPS) {
-    arcStrip(b, m.taupeDark, BAY_RING_R, a0 - 2 * DEG, a1 + 2 * DEG, C - 0.75, C, 0.36, 3);
-    arcStrip(b, m.taupe, BAY_RING_R, a0, a1, C - 0.95, C - 0.75, 0.5, 3);
+    arcStrip(b, m.serverBeam, BAY_RING_R, a0 - 2 * DEG, a1 + 2 * DEG, C - 0.75, C, 0.36, 3);
+    arcStrip(b, m.serverBeam, BAY_RING_R, a0, a1, C - 0.95, C - 0.75, 0.5, 3);
     arcStrip(b, m.serverBayStrip, BAY_RING_R, a0 + 0.3 * DEG, a1 - 0.3 * DEG, C - 0.97, C - 0.95, 0.42, 3);
     // Light grey frame around the strip (like the command-room fixtures): both long edges and end caps.
     for (const dr of [-0.235, 0.235]) arcStrip(b, m.fixtureFrame, BAY_RING_R + dr, a0, a1, C - 0.995, C - 0.955, 0.07, 3);
@@ -127,7 +131,7 @@ export function buildServerRoom(m) {
     }
   }
   for (const [x, z, row] of FIXTURES) {
-    b.span(m.taupe, x - 0.5, x + 0.5, C - 0.95, C - 0.75, z - 1.5, z + 1.5);
+    b.span(m.serverBeam, x - 0.5, x + 0.5, C - 0.95, C - 0.75, z - 1.5, z + 1.5); // housing, hung under its beam
     b.span(m.serverFixtureRows[row], x - 0.42, x + 0.42, C - 0.97, C - 0.95, z - 1.42, z + 1.42);
     // Light grey frame ring around the diffuser, standing just proud of it (as in the command room).
     const fy0 = C - 0.995, fy1 = C - 0.955;
@@ -200,8 +204,9 @@ export function buildServerRoom(m) {
 // order, nearest the window first). Trusses run over each row and midway. The bay gets curved
 // strips over its catwalks instead of rectangular panels (they didn't fit the round end).
 const ROW_Z = [-4.6, -11.4, -18.2, -25.0];
-const TRUSS_Z = [-4.6, -8.0, -11.4, -14.8, -18.2, -21.6, -25.0];
-const FIXTURES = ROW_Z.flatMap((z, row) => [-12, -6, 0, 6, 12].map((x) => [x, z, row]));
+const FIX_X = [-12, -6, 0, 6, 12]; // fixture columns = the lengthwise beams
+const CROSS_Z = [-8.0, -14.8, -21.6, SERVER.zMin]; // cross beams midway between rows, and the hall/bay edge beam
+const FIXTURES = ROW_Z.flatMap((z, row) => FIX_X.map((x) => [x, z, row]));
 const BAY_RING_R = 13.4; // over the catwalks' inner edge
 const BAY_STRIPS = [[5 * DEG, 50 * DEG], [130 * DEG, 175 * DEG]];
 
@@ -296,5 +301,7 @@ export function buildServerLights(m) {
   // The ceiling: no light reaches it (the area lights face down), so it was pure black. It's an anthracite
   // surface that comes up with the first fixture row (user: dark gray, not total black).
   fixtures.push({ mat: m.serverCeiling, max: new THREE.Color(0x313437), row: 0 });
+  // Beams and fixture housings: a couple of shades darker than the ceiling (they were pure black too).
+  fixtures.push({ mat: m.serverBeam, max: new THREE.Color(0x222427), row: 0 });
   return { group, room, fixtures };
 }

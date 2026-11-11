@@ -413,6 +413,20 @@ nearest-first (tube sounds at 100/60/40 % per row), back wash +0.3 s, fans fade 
 - **Desk phones removed** (user: not enough of an aesthetic addition for the effort). `scene/phones.js` was deleted;
   the last version (curved handset with earpiece/mouthpiece blocks) is in commit 96ed0b6 if they ever come back.
 
+## Change round 14 (2026-11-11): Super keys, ceiling beams, face panel, Bad Idea Environment
+- **Super keys:** the two empty 1-unit gaps in the bottom row (left and right of the space bar, where a Model M has
+  none) are now Super keys (mod caps) with the lamp silhouette printed in the legend color, top-left (`SUPER` marker in
+  the layout table, `inked()` in keyboard.js).
+- **Server ceiling beams** (user: lights crossing under beams made no sense): a lengthwise beam over each fixture column
+  (`FIX_X`), every fixture housing hung under its beam running the same way; cross beams only between fixture rows plus
+  the hall/bay edge beam (`CROSS_Z` -8, -14.8, -21.6, zMin). Beams, housings and the bay's radial/ring beams use
+  `m.serverBeam` (MeshBasic 0x222427 at full power, a couple of shades darker than the anthracite ceiling; black when
+  unpowered, comes up with row 0). The old `TRUSS_Z` (one over each row) is gone.
+- **Supercomputer face panel:** the beige surround now runs from z 1.0 (deep inside the bulbous base, so it grows out of
+  it instead of floating off it at the top corners) to 2.38 (just past the bulge's widest point, r 2.2, which used to
+  poke through its front near the bottom). The dark panel and LEDs moved out with it.
+- Welcome stills recaptured.
+
 ## Change round 13 (2026-11-11): sloped window bay, ceiling, frames, doors, keyboard badge
 - **Sloped window bay** (user: an angled pane should join two walls in different places, not two points of one thick
   wall). `SERVER.frontWallZ` is now **-0.6** = `ROOM.glassTopZ`: the server room's wall face above and beside the window

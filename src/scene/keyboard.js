@@ -6,9 +6,12 @@ import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { Builder } from './builder.js';
 import { badgeMaterial } from './mouse.js';
+import { getLampSprite } from './lamp.js';
 import { PALETTE } from './palette.js';
 
 export const U = 0.0205; // 1 key unit in meters (slightly chunky, 1980s board)
+
+const SUPER = '<super>'; // legend marker: draw the lamp logo instead of text
 
 // Layout rows: [legend, widthU, opts]. A number entry is a gap in units.
 // opts: { h: heightU (tall keys), mod: true (darker modifier cap), accent: 'amber' }
@@ -21,7 +24,8 @@ const MAIN = [
   [['Tab', 1.5, { mod: 1 }], ['Q', 1], ['W', 1], ['E', 1], ['R', 1], ['T', 1], ['Y', 1], ['U', 1], ['I', 1], ['O', 1], ['P', 1], ['[', 1], [']', 1], ['\\', 1.5]],
   [['Caps Lock', 1.75, { mod: 1 }], ['A', 1], ['S', 1], ['D', 1], ['F', 1], ['G', 1], ['H', 1], ['J', 1], ['K', 1], ['L', 1], [';', 1], ["'", 1], ['Enter', 2.25, { mod: 1 }]],
   [['Shift', 2.25, { mod: 1 }], ['Z', 1], ['X', 1], ['C', 1], ['V', 1], ['B', 1], ['N', 1], ['M', 1], [',', 1], ['.', 1], ['/', 1], ['Shift', 2.75, { mod: 1 }]],
-  [['Ctrl', 1.5, { mod: 1 }], 1, ['Alt', 1.5, { mod: 1 }], ['', 7], ['Alt', 1.5, { mod: 1 }], 1, ['Ctrl', 1.5, { mod: 1 }]],
+  // Super keys in the two gaps the Model M left (user): a small LAMPLIGHT lamp printed on them instead of a Windows logo.
+  [['Ctrl', 1.5, { mod: 1 }], [SUPER, 1, { mod: 1 }], ['Alt', 1.5, { mod: 1 }], ['', 7], ['Alt', 1.5, { mod: 1 }], [SUPER, 1, { mod: 1 }], ['Ctrl', 1.5, { mod: 1 }]],
 ];
 
 const NAV = [ // starts at x = 15.25
@@ -87,7 +91,21 @@ const capKind = (k) => (k.accent === 'amber' ? 'amber' : k.mod ? 'mod' : 'light'
  * printed legend per key), plus a strip of plain swatches below it for the caps' sides.
  * Keycap top faces get UVs into their own key rectangle; side faces get the swatch.
  */
+/** A copy of an image filled with one color where it's opaque (a one-color print of the logo). */
+function inked(img, color) {
+  const c = document.createElement('canvas');
+  c.width = img.width;
+  c.height = img.height;
+  const g = c.getContext('2d');
+  g.drawImage(img, 0, 0);
+  g.globalCompositeOperation = 'source-in';
+  g.fillStyle = color;
+  g.fillRect(0, 0, c.width, c.height);
+  return c;
+}
+
 function keycapAtlas(keys, widthU, depthU, pxPerU = 96) {
+  const lampLogo = getLampSprite();
   const c = document.createElement('canvas');
   c.width = Math.ceil(widthU * pxPerU);
   c.height = Math.ceil((depthU + 1) * pxPerU);
@@ -103,6 +121,14 @@ function keycapAtlas(keys, widthU, depthU, pxPerU = 96) {
     if (!k.label) continue;
     const cx = (k.x + k.w / 2) * pxPerU;
     const cy = (k.y + k.h / 2) * pxPerU;
+    if (k.label === SUPER) { // the lamp silhouette, printed in the legend color, top-left like a real Super key
+      ctx.save();
+      ctx.imageSmoothingEnabled = false;
+      const lw = pxPerU * 0.5, lh = (lw * lampLogo.height) / lampLogo.width;
+      ctx.drawImage(inked(lampLogo, kind.ink), cx - pxPerU * 0.12 - lw / 2, cy - pxPerU * 0.1 - lh / 2, lw, lh);
+      ctx.restore();
+      continue;
+    }
     const big = k.label.length === 1;
     ctx.fillStyle = kind.ink;
     ctx.font = `${big ? 600 : 500} ${big ? pxPerU * 0.38 : pxPerU * (k.label.length > 5 ? 0.16 : 0.2)}px "Helvetica Neue", Arial, sans-serif`;

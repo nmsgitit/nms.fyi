@@ -169,6 +169,8 @@ export function createMaterials(maxAnisotropy = 4) {
   m.fixtureFrame.shadowSide = THREE.FrontSide;
   // Server-room ceiling: unlit (black) until the reveal brings it up to anthracite with the first row.
   m.serverCeiling = new THREE.MeshBasicMaterial({ color: 0x000000, toneMapped: false });
+  m.serverBeam = new THREE.MeshBasicMaterial({ color: 0x000000, toneMapped: false }); // beams + fixture housings, same idea
+
   m.serverBayStrip = new THREE.MeshBasicMaterial({ color: 0x000000, map: diffuserTexture(512, 110), toneMapped: false });
   m.coreFixture = new THREE.MeshBasicMaterial({ color: 0x000000, toneMapped: false });
   // One material per light band on the core column (0 = lowest) so they climb in sequence.

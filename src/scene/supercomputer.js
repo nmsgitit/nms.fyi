@@ -170,10 +170,12 @@ export function buildSupercomputer(b, m, leds) {
   b.add(new THREE.TorusGeometry(2.75, 0.07, 10, 72), m.coreFixture, P(0, SERVER.ceilY - 0.72, 0), [Math.PI / 2, 0, 0]);
 
   // ---- the "face": a dark panel of lights looking out through the ring opening
-  const fz = 2.02;
-  b.rbox(m.beigeLight, 1.9, 2.5, 0.5, 0.18, cx, base + 2.0, cz + fz - 0.1);
-  b.rbox(m.grille, 1.5, 2.0, 0.1, 0.08, cx, base + 2.05, cz + fz + 0.17);
-  leds.grid([cx, base + 2.05, cz + fz + 0.225], [1, 0, 0], [0, 1, 0], [0, 0, 1], 7, 9, 0.17, 0.17,
+  // The surround runs from deep inside the bulbous base (back at z 1.0, so it grows out of the body instead of floating
+  // off it at the top corners) to a front just past the bulge's widest point (r 2.2), which used to poke through it (user).
+  const FACE_BACK = 1.0, FACE_FRONT = 2.38;
+  b.rbox(m.beigeLight, 1.9, 2.5, FACE_FRONT - FACE_BACK, 0.18, cx, base + 2.0, cz + (FACE_BACK + FACE_FRONT) / 2);
+  b.rbox(m.grille, 1.5, 2.0, 0.1, 0.08, cx, base + 2.05, cz + FACE_FRONT + 0.02);
+  leds.grid([cx, base + 2.05, cz + FACE_FRONT + 0.075], [1, 0, 0], [0, 1, 0], [0, 0, 1], 7, 9, 0.17, 0.17,
     { size: 0.045, color: (q) => (q < 0.1 ? PALETTE.ledAmber : PALETTE.ledCyan), blink: (q) => (q < 0.45 ? 0.6 + q * 5 : 0), group: 'core', delay: 0.3, intensity: 1.9, dead: 'lens' }, 0.9);
 }
 
