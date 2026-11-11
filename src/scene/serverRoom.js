@@ -131,7 +131,7 @@ export function buildServerRoom(m) {
     }
   }
   for (const [x, z, row] of FIXTURES) {
-    b.span(m.serverBeam, x - 0.5, x + 0.5, C - 0.95, C - 0.75, z - 1.5, z + 1.5); // housing, hung under its beam
+    b.add(HOUSING, m.serverBeam, [x, C - 0.95, z]); // housing, flowing up into its beam
     b.span(m.serverFixtureRows[row], x - 0.42, x + 0.42, C - 0.97, C - 0.95, z - 1.42, z + 1.42);
     // Light grey frame ring around the diffuser, standing just proud of it (as in the command room).
     const fy0 = C - 0.995, fy1 = C - 0.955;
@@ -207,6 +207,23 @@ const ROW_Z = [-4.6, -11.4, -18.2, -25.0];
 const FIX_X = [-12, -6, 0, 6, 12]; // fixture columns = the lengthwise beams
 const CROSS_Z = [-8.0, -14.8, -21.6, SERVER.zMin]; // cross beams midway between rows, and the hall/bay edge beam
 const FIXTURES = ROW_Z.flatMap((z, row) => FIX_X.map((x) => [x, z, row]));
+// Fixture housing cross-section (user: the frames didn't attach to the beams convincingly): a 1 m wide, 8 cm deep body
+// whose sides sweep up in concave coves (r 0.32) into the 0.36 m beam's sides, meeting them 0.2 m above its bottom.
+// Extruded along the fixture (3 m, along z). Origin: bottom center.
+const HOUSING = (() => {
+  const W = 0.5, BW = 0.18, LIP = 0.08, R = W - BW;
+  const s = new THREE.Shape();
+  s.moveTo(-W, 0);
+  s.lineTo(W, 0);
+  s.lineTo(W, LIP);
+  s.absarc(W, LIP + R, R, -Math.PI / 2, -Math.PI, true); // concave cove up to the beam's right side
+  s.lineTo(-BW, LIP + R);
+  s.absarc(-W, LIP + R, R, 0, -Math.PI / 2, true); // and the left
+  s.closePath();
+  const g = new THREE.ExtrudeGeometry(s, { depth: 3.0, bevelEnabled: false, curveSegments: 16 });
+  g.translate(0, 0, -1.5);
+  return g;
+})();
 const BAY_RING_R = 13.4; // over the catwalks' inner edge
 const BAY_STRIPS = [[5 * DEG, 50 * DEG], [130 * DEG, 175 * DEG]];
 
