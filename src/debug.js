@@ -7,7 +7,7 @@
 // Everything here is dev-build only (user): full.js strips ?debug/?lit from the URL on the live site.
 // Dev keys (only in `npm run dev`):
 //   L toggle server-room power, O toggle orbit camera, H toggle HUD
-//   (R/M/P replays live in full.js under the same gate.)
+//   (R/M/P replays live in full.js under the same check.)
 // C: freecam (freecam.js), `npm run dev` only.
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { Freecam } from './freecam.js';
@@ -43,9 +43,8 @@ export function createDebug({ params, renderer, camera, walk, setLit }) {
     freecam = new Freecam({
       camera,
       canvas: renderer.domElement,
-      // Not while the desktop is up or the entry gate is still showing.
-      isBlocked: () => document.getElementById('os')?.classList.contains('on') ||
-        !document.getElementById('gate')?.classList.contains('hidden'),
+      // Not while the desktop is up or before the experience has started (loading screen).
+      isBlocked: () => document.getElementById('os')?.classList.contains('on') || !document.body.dataset.started,
       onChange: (on) => {
         if (orbit) orbit.enabled = !on && orbitOn;
         if (on) { hudWasHidden = hud.hidden; hud.hidden = false; } else hud.hidden = hudWasHidden;

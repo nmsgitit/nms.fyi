@@ -135,9 +135,10 @@ npm start          # serves dist/ on $PORT (default 3000)
 ## Code map
 
 ```
-index.html            canvas + click-to-enter gate (needed so audio can start) + debug HUD
+index.html            canvas + welcome page + full-site loading screen + debug HUD
 server.js             Express production server (static dist/, SPA fallback, /healthz)
-src/main.js           tiny loader: mobile detection, Full/Light chooser, then lazy-imports full.js or desktopOnly.js
+src/main.js           tiny loader: mobile detection, welcome page/chooser, loading screen, then lazy-imports full.js or desktopOnly.js
+src/loader.js         LoadingScreen: the NMS FYI boot-style loading screen for the Full Site
 src/full.js           (separate chunk, loaded only for Full) renderer, scene assembly, glass env capture, power levels, bloom, loop
 src/desktopOnly.js    Light version / mobile spin: LAMPLIGHT OS alone, no three.js
 src/os/clock.js       taskbar clock text (kept out of scene/ so the desktop never imports three)
@@ -306,8 +307,9 @@ together around footsteps 9 to 10; keep the major sound events about a second ap
 
 ## Sound (audio/sound.js)
 - **All procedural** (Web Audio): no audio files, so nothing to license. Never rip audio from the references.
-- The AudioContext starts inside the Enter click (`startSound()` in main.js). With `?skip`/`?debug` (no gate),
-  the first pointer or key press unlocks it. All hooks are no-ops until `sound.ready`.
+- The AudioContext is created inside the welcome page's Full Site click (`unlockAudio()` in main.js) and handed to
+  `enter()` (since round 15; it used to start in the Enter-gate click). Opened straight into Full by a URL flag, the
+  first pointer or key press unlocks it. All hooks are no-ops until `sound.ready`.
 - Buses: `room` (dry + 0.9 s synthetic reverb), `server` (1.4 kHz "glass" low-pass, then quiet dry + 3 s reverb),
   `fx` (breakers: dry + big reverb) -> master -> compressor (note: Web Audio's compressor adds automatic
   makeup gain) -> analyser -> out.
@@ -431,6 +433,21 @@ nearest-first (tube sounds at 100/60/40 % per row), back wash +0.3 s, fans fade 
   paletteuse Bayer dither scale 3 (16 colors lost the eyes).
 - **Desk phones removed** (user: not enough of an aesthetic addition for the effort). `scene/phones.js` was deleted;
   the last version (curved handset with earpiece/mouthpiece blocks) is in commit 96ed0b6 if they ever come back.
+
+## Change round 15 (2026-11-11): loading screen replaces the Enter gate
+- **Full-site loading screen** (`src/loader.js`, `#loader` in index.html; user: replace the click-to-start screen and the
+  old "Loading the command room…" text). Styled like the terminal's boot screen (`drawBoot`): flat #0a0806, the bronze
+  pixel lamp (`drawLamp`), "NMS FYI" (serif) and "Loading experience" in a 4:3 frame (78 % of the fitting size), and the
+  24-segment bar. Shown the moment Full Site is clicked while `full.js` downloads and builds behind it; the bar runs on a
+  2.6 s minimum (terminal boot is 4.1 s), holds at 90 % until the import has finished, holds 0.35 s full, then the
+  screen fades (0.7 s) and main.js calls `full.js`'s exported **`enter({ audioCtx })`**, which starts the door intro.
+  On failure (no WebGL2 etc.) it shows the reason and an "Open the Lite Site" button. The old `#gate` (Enter button,
+  status line) is gone.
+- **Sound without the extra click:** the Full Site click on the welcome page creates and resumes an AudioContext
+  (`unlockAudio()` in main.js) inside the gesture; `enter()` hands it to `sound.start(ctx)`. When the site is opened
+  straight into Full by a URL flag (`?full`, `?skip`, dev flags), there's no click, so the first click or key starts it.
+- The dev/skip flags (`?skip ?os ?debug ?lit`) start at once without the loading screen; `?skip ?os ?debug` also skip
+  the door intro (as before). `started` (full.js) / `body[data-started]` replace "gate hidden" checks (F, Tab, freecam).
 
 ## Change round 14 (2026-11-11): Super keys, ceiling beams, face panel, Bad Idea Environment
 - **Super keys:** the two empty 1-unit gaps in the bottom row (left and right of the space bar, where a Model M has

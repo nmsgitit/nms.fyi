@@ -6,12 +6,11 @@
 //     picked, so the welcome page costs no GPU time.
 // URL overrides (testing): ?full ?light ?mobile. ?skip implies full; so do the dev-build-only flags ?os ?debug ?lit.
 import './style.css';
+import { LoadingScreen } from './loader.js';
 
 const params = new URLSearchParams(location.search);
 if (!import.meta.env.DEV) for (const k of ['debug', 'lit', 'os']) params.delete(k); // dev-only flags (see full.js)
 const chooser = document.getElementById('chooser');
-const gate = document.getElementById('gate');
-const gateStatus = document.getElementById('gate-status');
 const MODE_KEY = 'nms-mode';
 
 /** Touch-first devices get the mobile desktop. Touchscreen laptops (with a mouse/trackpad) don't. */
@@ -89,28 +88,49 @@ function remember(mode) {
 
 async function startDesktop(mode) {
   leaveWelcome();
-  gate.hidden = true;
+  document.getElementById('loader').hidden = true;
   document.getElementById('view')?.remove(); // no canvas, no WebGL context
   const { startDesktopOnly } = await import('./desktopOnly.js');
   startDesktopOnly(mode);
 }
 
-async function startFull() {
-  leaveWelcome();
-  gate.hidden = false;
-  gateStatus.textContent = 'Loading the command room…';
+/**
+ * Make an audio context inside the user's click (the Full Site button), where browsers allow sound to start. The
+ * old click-to-enter gate existed only for this; full.js now gets the context and starts the sound itself.
+ */
+function unlockAudio() {
   try {
-    await import('./full.js');
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    ctx.resume?.();
+    return ctx;
+  } catch { return null; }
+}
+
+/**
+ * The Full Site: the LAMPLIGHT-style loading screen while full.js (three.js + the scene) downloads and builds, then
+ * straight into the walk-in. The dev/skip flags (?skip ?os ?debug ?lit) start at once, without the loading screen.
+ */
+async function startFull(audioCtx = null) {
+  leaveWelcome();
+  const quick = ['skip', 'os', 'debug', 'lit'].some((k) => params.has(k));
+  const loader = quick ? null : new LoadingScreen();
+  loader?.show();
+  let mod;
+  try {
+    mod = await import('./full.js');
   } catch (err) {
     console.error(err);
-    gateStatus.textContent = err?.message === 'WebGL2 unavailable'
-      ? 'The full experience needs WebGL 2, which this browser or device doesn’t provide.'
-      : 'The full experience failed to load.';
-    const light = document.getElementById('gate-light');
-    light.hidden = false;
-    light.addEventListener('click', () => startDesktop('light'), { once: true });
-    document.getElementById('gate-enter').hidden = true;
+    const msg = err?.message === 'WebGL2 unavailable'
+      ? 'The Full Site needs WebGL 2, which this browser or device doesn’t provide.'
+      : 'The Full Site failed to load.';
+    (loader || new LoadingScreen()).fail(msg, () => startDesktop('light'));
+    return;
   }
+  if (loader) {
+    loader.setLoaded();
+    await loader.finished;
+  }
+  mod.enter({ audioCtx });
 }
 
 /** Scale the welcome text with screen height (like the desktop's 768 px reference), so it isn't tiny at 1440p. */
@@ -130,7 +150,7 @@ function showChooser() {
     full.disabled = true;
     full.querySelector('.choice-desc').textContent = 'Not available: this browser doesn’t support WebGL 2.';
   }
-  full.addEventListener('click', () => { remember('full'); startFull(); });
+  full.addEventListener('click', () => { remember('full'); startFull(unlockAudio()); });
   light.addEventListener('click', () => { remember('light'); startDesktop('light'); });
   let last = null;
   try { last = localStorage.getItem(MODE_KEY); } catch { /* storage unavailable */ }
