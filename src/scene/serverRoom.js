@@ -300,8 +300,8 @@ export function buildServerLights(m) {
   fixtures.push({ mat: m.serverBayStrip, max: fixtureMax, row: 3 });
   // The ceiling: no light reaches it (the area lights face down), so it was pure black. It's an anthracite
   // surface that comes up with the first fixture row (user: dark gray, not total black).
-  fixtures.push({ mat: m.serverCeiling, max: new THREE.Color(0x313437), row: 0 });
+  fixtures.push({ mat: m.serverCeiling, max: new THREE.Color(0x232323), row: 0 }); // #232323 (user)
   // Beams and fixture housings: a couple of shades darker than the ceiling (they were pure black too).
-  fixtures.push({ mat: m.serverBeam, max: new THREE.Color(0x232323), row: 0 }); // #232323 (user)
+  fixtures.push({ mat: m.serverBeam, max: new THREE.Color(0x1a1a1a), row: 0 }); // #1A1A1A (user)
   return { group, room, fixtures };
 }

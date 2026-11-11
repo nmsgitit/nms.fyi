@@ -439,7 +439,7 @@ nearest-first (tube sounds at 100/60/40 % per row), back wash +0.3 s, fans fade 
 - **Server ceiling beams** (user: lights crossing under beams made no sense): a lengthwise beam over each fixture column
   (`FIX_X`), every fixture housing hung under its beam running the same way; cross beams only between fixture rows plus
   the hall/bay edge beam (`CROSS_Z` -8, -14.8, -21.6, zMin). Beams, housings and the bay's radial/ring beams use
-  `m.serverBeam` (MeshBasic **#232323** at full power (user-picked; was 0x222427), darker than the anthracite ceiling; black when
+  `m.serverBeam` (MeshBasic **#1A1A1A** at full power (user-picked), darker than the ceiling (**#232323**, user-picked); black when
   unpowered, comes up with row 0). The old `TRUSS_Z` (one over each row) is gone.
 - **Supercomputer face panel:** the beige surround now runs from z 1.0 (deep inside the bulbous base, so it grows out of
   it instead of floating off it at the top corners) to 2.38 (just past the bulge's widest point, r 2.2, which used to
@@ -456,7 +456,7 @@ nearest-first (tube sounds at 100/60/40 % per row), back wash +0.3 s, fans fade 
   wedge-shaped cheeks. The exterior sill and lintel beams are gone, the command room's under-sill filler is gone, and its
   floor slab now starts at the glass foot (z 0; it used to poke into the recess as a ledge). Catwalk landings and doors
   moved 0.35 m with the wall face. Command-room interior unchanged.
-- **Server ceiling** is anthracite (`m.serverCeiling`, MeshBasic 0x313437 at full power, black when unpowered, comes up
+- **Server ceiling** is dark grey (`m.serverCeiling`, MeshBasic **#232323** at full power (user-picked; first 0x313437), black when unpowered, comes up
   with fixture row 0 in the reveal): no light ever reached the old ceiling, so it rendered pure black.
 - **Server-room light frames** lighter grey (`m.fixtureFrame` 0xc4c3bf -> 0xdcdbd7; server room only, the command room's
   frames are beige and untouched).
