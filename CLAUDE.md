@@ -416,8 +416,10 @@ nearest-first (tube sounds at 100/60/40 % per row), back wash +0.3 s, fans fade 
   lenses (`dead: 'lens'`), visible because the `cmd` group is powered from the start.
 - **Mouse pad:** rounded corners (24 mm) and a soft beveled top edge (`plate()` in mouse.js, extruded rounded rect).
 - **Mouse detail** (to match the keyboard): darker lower shell (`m.mouseBase`) a hair wider than the body, so a parting
-  line runs all the way round; body bottom squared off so the skirt is the base; separate button caps on the real top
-  surface (the body's bevel puts it at `topAt(z) + BEV`) with a dark split and an end seam; four grip grooves on each
+  line runs all the way round; body bottom squared off so the skirt is the base; two button caps almost flush with the
+  real top surface (the body's bevel puts it at `topAt(z) + BEV`; caps 1.2 mm proud, stopping where the front rounds
+  over), split by a 0.9 mm gap with a dark strip set 0.8 mm below the cap tops so it reads as a shadowed seam, plus a
+  hairline seam behind them (user: the earlier raised caps and black separator block were the main problem); four grip grooves on each
   side; a tapered strain relief with three ribs where the cord leaves (`MOUSE_CORD_START`); a small oval LAMPLIGHT badge
   (canvas texture) on the palm rest. Rejected on the way: button lips wrapping over the front (read as loose slabs).
 

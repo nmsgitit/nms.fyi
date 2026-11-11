@@ -88,18 +88,21 @@ export function buildMouse(m) {
   const skirtW = Wd + 0.0016, skirtL = L + 2 * BEV + 0.0016;
   b.add(plate(skirtW, skirtL, 0.008, 0.0062, 0.0012), m.mouseBase, [0, -0.0004, 0]);
 
-  // Two button caps on the front of the top, following its slope: separate pieces with a hairline gap,
-  // a dark split between them and a seam where they end. Their front edges just reach the rounded front.
+  // Two button caps on the front of the top, following its slope. They sit almost flush (1.2 mm proud) and are split
+  // by a narrow gap: what shows in it is a dark strip set below the cap tops, so it reads as a shadowed seam, not a bar
+  // (user: the old raised caps and black separator block looked wrong). A matching hairline seam where they end.
+  // The caps stop where the top starts rounding over the front, so nothing overhangs.
   const slope = Math.atan2(H_FRONT - H_BACK, L);
   const top = (z) => topAt(z) + BEV; // the real top surface (the bevel grows the profile outward)
-  const bz = -L / 2 + 0.025;
-  const capW = Wd / 2 - 0.0075, capL = 0.046;
+  const GAP = 0.0009, CAP_T = 0.0024, PROUD = 0.0012;
+  const capL = 0.042, bz = -L / 2 + 0.006 + capL / 2;
+  const capW = Wd / 2 - 0.0068;
   for (const sx of [-1, 1]) {
-    const cx = sx * (capW / 2 + 0.0012);
-    b.rbox(m.mouseButton, capW, 0.0032, capL, 0.0014, cx, top(bz) + 0.0009, bz, [slope, 0, 0], 3);
+    b.rbox(m.mouseButton, capW, CAP_T, capL, 0.0009, sx * (capW / 2 + GAP / 2), top(bz) + PROUD - CAP_T / 2, bz, [slope, 0, 0], 3);
   }
-  b.box(m.grille, 0.0016, 0.0035, capL + 0.001, 0, top(bz) + 0.0004, bz, [slope, 0, 0]);
-  b.box(m.grille, Wd - 0.012, 0.0026, 0.0012, 0, top(bz + capL / 2) + 0.0002, bz + capL / 2 + 0.0008, [slope, 0, 0]);
+  b.box(m.grille, GAP, 0.0018, capL - 0.0024, 0, top(bz) + PROUD - 0.0008 - 0.0009, bz, [slope, 0, 0]); // the split (short of the rounded cap corners)
+  const endZ = bz + capL / 2 + 0.0004;
+  b.box(m.grille, 2 * capW + GAP, 0.0014, 0.0008, 0, top(endZ) - 0.0005, endZ, [slope, 0, 0]); // the seam behind them
 
   // Thumb and finger grip grooves along both sides.
   for (const sx of [-1, 1]) {
