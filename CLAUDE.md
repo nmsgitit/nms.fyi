@@ -113,6 +113,18 @@ npm start          # serves dist/ on $PORT (default 3000)
 - Screenshots stall rAF in the Claude-in-Chrome tab, so wall-clock timing checks are unreliable there.
   Freeze and step instead: set `walk.state='idle'`, call `walk.apply(t)`, and `monitor.state='frozen'; monitor.apply(t)`.
 
+## Environments (user's names; use them)
+- **Stable Environment** = this checkout, `~/Projects/nms.fyi`, branch **`main`** (what the live site deploys from).
+  Dev server: `npx vite --host 127.0.0.1 --port 5173 --strictPort` -> http://127.0.0.1:5173.
+- **Bad Idea Environment** = a git worktree, `~/Projects/nms.fyi-bad-idea`, branch **`bad-idea`** (made from `main` on
+  2026-11-11), with its own `node_modules`. For major reworks the user isn't sure they'll like. Never merge it into
+  `main` (or deploy it) unless the user says so; if they like a rework, merge or cherry-pick on their word.
+  Dev server: `npx vite --host 127.0.0.1 --port 5174 --strictPort` -> http://127.0.0.1:5174.
+  Test build: `npm run build` there, then `PORT=3001 node server.js` -> http://127.0.0.1:3001 (rebuild + restart after
+  changes; it's the production build, so dev-only tools like the C freecam aren't in it).
+- Requests name the environment; when it's ambiguous, ask which one. Keep each environment's CLAUDE.md change rounds
+  about its own branch (the Bad Idea copy says which reworks are experiments).
+
 ## Code map
 
 ```
