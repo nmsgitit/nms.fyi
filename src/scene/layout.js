@@ -31,7 +31,7 @@ export const SERVER = {
 export const DESK = { z: 1.15, top: 0.78, width: 2.8 };
 export const HATCH = { x: 0, z: 1.05, w: 1.3, d: 1.0 }; // ceiling hatch the monitor will drop from (stage 2)
 
-export const CORE = { x: 0, z: -40.5 }; // supercomputer center: 3.5 m in front of the bay's far wall, its back set into it
+export const CORE = { x: 0, z: -36.8 }; // supercomputer center: moved forward so its pedestal (r 6.1) clears the wall towers (fronts at z -43.2) by 0.3 m
 
 export const EYE_HEIGHT = 1.65;
 

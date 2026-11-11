@@ -10,7 +10,8 @@ const _p = new THREE.Vector3();
 const _s = new THREE.Vector3();
 const _z = new THREE.Vector3(0, 0, 1);
 const _c = new THREE.Color();
-// A dead (never lit) indicator still shows its smoky lens, so a panel reads as a full, even grid.
+// A dead (never lit) indicator still shows its smoky lens once its equipment is powered (the room lights come on
+// with it), so a panel reads as a full, even grid. Before that it stays black like the rest of the dark room.
 const LENS = new THREE.Color(0.05, 0.048, 0.044);
 
 export class LedField {
@@ -82,7 +83,7 @@ export class LedField {
       _s.setScalar(it.size);
       _m.compose(_p, _q, _s);
       mesh.setMatrixAt(i, _m);
-      mesh.setColorAt(i, it.dead ? LENS : _c.setRGB(0, 0, 0));
+      mesh.setColorAt(i, _c.setRGB(0, 0, 0));
     });
     mesh.instanceColor.setUsage(THREE.DynamicDrawUsage);
     mesh.frustumCulled = false;
@@ -123,8 +124,14 @@ export class LedField {
     const col = this.mesh.instanceColor.array;
     for (let i = 0; i < this.items.length; i++) {
       const it = this.items[i];
-      if (it.dead) continue; // keeps its lens color
       const g = this.groups.get(it.group);
+      if (it.dead) {
+        const on = g.target > 0 && time - g.onAt - it.delay * g.cascade > 0 ? 1 : 0;
+        col[i * 3] = LENS.r * on;
+        col[i * 3 + 1] = LENS.g * on;
+        col[i * 3 + 2] = LENS.b * on;
+        continue;
+      }
       let k = 0;
       if (g.target > 0) {
         const t = time - g.onAt - it.delay * g.cascade;

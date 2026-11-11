@@ -146,12 +146,14 @@ export function buildCommandRoom(m, leds) {
           b.add(bezelGeom, m.grille, [face, y, z], [0, rotY, 0]); // dark screen surround
           crtSlots.push({ x: face - s * BEZEL_T, y, z, s });
         } else {
-          leds.grid([face - s * 0.001, y, z], [0, 0, 1], [0, 1, 0], [-s, 0, 0], 9, 6, 0.115, 0.11, {
+          // Even 9 × 6 grid; the positions that don't light are dead indicators showing their lens (user request).
+          leds.grid([face - s * 0.001, y, z], [0, 0, 1], [0, 1, 0], [-s, 0, 0], 9, 6, 0.112, 0.112, {
             size: 0.0085,
             group: 'cmd',
             intensity: 1.7,
             color: (r) => (r < 0.6 ? PALETTE.ledWarm : r < 0.78 ? PALETTE.ledAmber : r < 0.93 ? PALETTE.ledGreen : PALETTE.ledRed),
             blink: (r) => (r < 0.55 ? 0.35 + r * 3.5 : 0),
+            dead: 'lens',
           }, 0.55);
         }
       });

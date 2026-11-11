@@ -168,7 +168,7 @@ reference/            (gitignored) extracted frames, contact sheets, spectrogram
   Entrance door: 1.3 × 2.1 m octagonal panel at z 8.1 in a 1.9 × 2.42 m chamfered frame (`DOOR` in layout.js); the
   back-wall opening is only as wide as the panel. The walk starts at z 11.2 facing it, looking slightly up so the sign is in view.
 - Server room: floor y -4.5, ceiling y 9, x -16..16, z -28..-0.6. Catwalks at y -1.0.
-- Supercomputer center (0, -14). Desk center z 1.15, top 0.78. Ceiling hatch for the monitor
+- Supercomputer center: see `CORE` (0, -36.8 since round 12). Desk center z 1.15, top 0.78. Ceiling hatch for the monitor
   at (0, 3.2, 1.05), 1.3 × 1.0.
 - Walk ends at (0, 1.65, 2.55) looking ~9° down: keyboard at the bottom edge,
   monitor drop zone mid-low, supercomputer above it. Speed 1.0 m/s: duration ~9.9 s.
@@ -404,6 +404,22 @@ nearest-first (tube sounds at 100/60/40 % per row), back wash +0.3 s, fans fade 
   paletteuse Bayer dither scale 3 (16 colors lost the eyes).
 - **Desk phones removed** (user: not enough of an aesthetic addition for the effort). `scene/phones.js` was deleted;
   the last version (curved handset with earpiece/mouthpiece blocks) is in commit 96ed0b6 if they ever come back.
+
+## Change round 12 (2026-11-11): pedestal clearance, dark lenses, panel grids, mouse
+- **Supercomputer moved forward:** `CORE` z -40.5 -> **-36.8** (layout.js). Its pedestal's lower step (r 6.1) used to run
+  into the wall towers (fronts at z -43.2); now there's a 0.3 m gap and every tower stands on the floor. The room's shape
+  is unchanged. Everything keyed to CORE (cabinets, collar conduits, lights, CCTV aim, waves) follows. Welcome stills
+  were recaptured (core pose now [0,-2.6,-25.3]->[0,-0.6,-36.8], overlook target z -38).
+- **Dead lenses stay black in the dark:** they show `LENS` only once their LED group is powered (same timing as the live
+  LEDs in the cascade), so the unpowered server room no longer shows a field of grey dots through the glass.
+- **Command room status panels:** even 9 × 6 grids at 0.112 m pitch; the ~45 % of positions that don't light are dead
+  lenses (`dead: 'lens'`), visible because the `cmd` group is powered from the start.
+- **Mouse pad:** rounded corners (24 mm) and a soft beveled top edge (`plate()` in mouse.js, extruded rounded rect).
+- **Mouse detail** (to match the keyboard): darker lower shell (`m.mouseBase`) a hair wider than the body, so a parting
+  line runs all the way round; body bottom squared off so the skirt is the base; separate button caps on the real top
+  surface (the body's bevel puts it at `topAt(z) + BEV`) with a dark split and an end seam; four grip grooves on each
+  side; a tapered strain relief with three ribs where the cord leaves (`MOUSE_CORD_START`); a small oval LAMPLIGHT badge
+  (canvas texture) on the palm rest. Rejected on the way: button lips wrapping over the front (read as loose slabs).
 
 ## Change round 11 (2026-11-11): welcome page, editions, clock wallpaper, LED grids
 - **Welcome page** (desktops/laptops; replaces the old chooser, still `#chooser` + `showChooser()` in main.js): a slideshow

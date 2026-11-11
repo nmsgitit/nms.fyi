@@ -150,6 +150,7 @@ export function createMaterials(maxAnisotropy = 4) {
   m.doorGlass = new THREE.MeshStandardMaterial({ color: 0x23302d, roughness: 0.08, transparent: true, opacity: 0.35, depthWrite: false, side: THREE.DoubleSide });
   m.mouseBody = std(0xdcd8cf, 0.45); // pale warm gray, like late-80s mice
   m.mouseButton = std(0xcfcac0, 0.4);
+  m.mouseBase = std(0xa9a397, 0.5); // the darker lower shell and strain relief
   m.mousePad = std(0x3a3a40, 0.9);
   m.cable = std(0x9c978d, 0.6);
   m.amberKey = std(0xd8893a, 0.45);

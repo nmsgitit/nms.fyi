@@ -3,7 +3,7 @@
 // ring at its base. Inside the ring, a tall white bulbous core column rises to a
 // ceiling collar, wrapped by light bands and cable conduits. A dark "face" panel full
 // of lights looks out through the ring's opening toward the viewer.
-// It stands at the far end of the half-circle bay with its back half set INTO the curved wall
+// It stands at the far end of the half-circle bay in front of the curved wall
 // (user request: integrated into the wall's structure, in clear view from the desk): a section of
 // tall memory towers built into the wall behind it, framed by pilasters and a fascia, with
 // conduits from the core's ceiling collar running into it.
