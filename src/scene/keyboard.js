@@ -171,8 +171,11 @@ export function buildKeyboard(m) {
   // Lock lights sit in the top band above the numpad.
   const padCenterX = -W / 2 + (18.5 + 2) * U;
   const localLeds = [-1, 0, 1].map((i) => [padCenterX + i * U * 1.1, caseH + 0.0006, -caseD / 2 + margin + topBand * 0.45]);
-  // LAMPLIGHT badge (same as the mouse's) in the top band at the left, mirroring the leftmost lock light (user).
-  b.add(new THREE.PlaneGeometry(0.0343, 0.0098), badgeMaterial(), [-localLeds[0][0], caseH + 0.0004, localLeds[0][2]], [-Math.PI / 2, 0, 0]);
+  // LAMPLIGHT badge (same as the mouse's) in the top band at the left: its left end sits at the mirror image of the
+  // rightmost lock light (the one nearest the right edge), so it's as far in from the left edge as that light is from
+  // the right (user).
+  const BADGE_W = 0.0343;
+  b.add(new THREE.PlaneGeometry(BADGE_W, 0.0098), badgeMaterial(), [-localLeds[2][0] + BADGE_W / 2, caseH + 0.0004, localLeds[2][2]], [-Math.PI / 2, 0, 0]);
 
   const group = b.build({ name: 'keyboard', castShadow: true, receiveShadow: true });
 

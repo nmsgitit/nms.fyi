@@ -433,7 +433,8 @@ nearest-first (tube sounds at 100/60/40 % per row), back wash +0.3 s, fans fade 
   panel's middle, like the monitor's chin vents).
 - **Floor-level doors** under each catwalk door (same prop door, on the server floor at the wall face, under the landing).
 - **Keyboard badge:** the mouse's LAMPLIGHT badge (`badgeMaterial()`, exported from mouse.js) in the keyboard's top band
-  at the left, mirroring the leftmost lock light's position.
+  at the left: its LEFT END sits at the mirror image of the RIGHTMOST lock light (as far in from the left edge as that
+  light is from the right edge, ~3.4 cm; user correction: an earlier version centered it on the leftmost light's mirror).
 - Welcome stills recaptured (ceiling, frames, doors changed).
 
 ## Change round 12 (2026-11-11): pedestal clearance, dark lenses, panel grids, mouse
