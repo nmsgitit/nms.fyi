@@ -101,7 +101,9 @@ npm start          # serves dist/ on $PORT (default 3000)
   `npm run dev` or `?debug`; never for visitors): **L** toggles server power, **R** replays the whole intro from the corridor, **M** replays the terminal drop + boot (wall CRTs wake),
   **P** replays the power-up, **O** orbit cam, **H** HUD.
 - **C = freecam** (`src/freecam.js`, `npm run dev` ONLY: not in the production build, not even with `?debug`): click to
-  capture the mouse, WASD move (where you look), Space/Z up/down, Shift ×4, Alt ÷4, wheel = base speed (2 m/s default).
+  capture the mouse; mouse look has NO limits (pitch about the camera's own right axis, so it loops over the top; yaw
+  about world up, reversed while upside down; user: no neck-style lock), WASD move (where you look; strafe on the camera's
+  own right), Space/Z up/down, Shift ×4, Alt ÷4, wheel = base speed (2 m/s default).
   While on, all other keys and canvas clicks are swallowed in the capture phase (E/Q/F/Tab/monitor click don't fire),
   the HUD shows position/yaw/pitch/speed, near plane 1 cm; C again restores the exact previous camera. Blocked while the
   desktop or the entry gate is up. `debug.orbitActive()` is true while it flies, so the walk doesn't move the camera.

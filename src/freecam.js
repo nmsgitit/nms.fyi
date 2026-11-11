@@ -1,5 +1,5 @@
 // Developer freecam (C, `npm run dev` only; never in the production build): fly anywhere to look
-// at details up close. Click to capture the mouse (pointer lock), mouse to look, WASD to move,
+// at details up close. Click to capture the mouse (pointer lock), mouse to look (a full 360° both ways), WASD to move,
 // Space / Z up and down, Shift = 4× faster, Alt = 4× slower, mouse wheel changes the base speed.
 // While it's on, every other key and click is swallowed (so E/Q/F/Tab and the monitor click don't
 // fire), the HUD shows the camera position and direction, and the near plane drops to 1 cm.
@@ -10,6 +10,9 @@ const _fwd = new THREE.Vector3();
 const _right = new THREE.Vector3();
 const _move = new THREE.Vector3();
 const _up = new THREE.Vector3(0, 1, 0);
+const _x = new THREE.Vector3(1, 0, 0);
+const _qa = new THREE.Quaternion();
+const _camUp = new THREE.Vector3();
 
 export class Freecam {
   constructor({ camera, canvas, isBlocked = () => false, onChange = () => {} }) {
@@ -50,9 +53,16 @@ export class Freecam {
     }
     document.addEventListener('mousemove', (e) => {
       if (!this.active || document.pointerLockElement !== this.canvas) return;
-      this.euler.y -= e.movementX * 0.0022;
-      this.euler.x = Math.max(-1.55, Math.min(1.55, this.euler.x - e.movementY * 0.0022));
-      this.camera.quaternion.setFromEuler(this.euler);
+      // No limits in any direction (user): pitch turns about the camera's own right axis, so it can go over the
+      // top or under in a full loop; yaw turns about world up, reversed while upside down so moving the mouse
+      // right always swings the view right on screen.
+      const q = this.camera.quaternion;
+      _camUp.set(0, 1, 0).applyQuaternion(q);
+      const yawSign = _camUp.y < 0 ? -1 : 1;
+      q.premultiply(_qa.setFromAxisAngle(_up, -e.movementX * 0.0022 * yawSign));
+      q.multiply(_qa.setFromAxisAngle(_x, -e.movementY * 0.0022));
+      q.normalize();
+      this.euler.setFromQuaternion(q, 'YXZ'); // for the HUD readout
     });
     window.addEventListener('wheel', (e) => {
       if (!this.active) return;
@@ -91,7 +101,7 @@ export class Freecam {
     if (!this.active) return;
     const k = this.keys;
     _fwd.set(0, 0, -1).applyQuaternion(this.camera.quaternion); // fly where you look
-    _right.crossVectors(_fwd, _up).normalize();
+    _right.set(1, 0, 0).applyQuaternion(this.camera.quaternion); // the camera's own right: fine looking straight up or upside down
     _move.set(0, 0, 0);
     if (k.has('KeyW')) _move.add(_fwd);
     if (k.has('KeyS')) _move.sub(_fwd);
