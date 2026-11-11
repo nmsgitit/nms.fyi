@@ -35,8 +35,8 @@ function plate(w, d, r, h, bevel) {
 }
 
 let badgeMat = null;
-/** Small oval maker's badge on the palm rest (the site's own LAMPLIGHT mark, like the keyboard's printed legends). */
-function badgeMaterial() {
+/** Small oval LAMPLIGHT maker's badge: on the mouse's palm rest and the keyboard's top band (shared material). */
+export function badgeMaterial() {
   if (badgeMat) return badgeMat;
   const c = document.createElement('canvas');
   c.width = 336; // wide enough that the whole word sits inside the oval (user)

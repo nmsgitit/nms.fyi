@@ -413,6 +413,29 @@ nearest-first (tube sounds at 100/60/40 % per row), back wash +0.3 s, fans fade 
 - **Desk phones removed** (user: not enough of an aesthetic addition for the effort). `scene/phones.js` was deleted;
   the last version (curved handset with earpiece/mouthpiece blocks) is in commit 96ed0b6 if they ever come back.
 
+## Change round 13 (2026-11-11): sloped window bay, ceiling, frames, doors, keyboard badge
+- **Sloped window bay** (user: an angled pane should join two walls in different places, not two points of one thick
+  wall). `SERVER.frontWallZ` is now **-0.6** = `ROOM.glassTopZ`: the server room's wall face above and beside the window
+  is at the glass's head (slab -0.6..-0.25 behind it). The wall under the window is set back to the glass's foot
+  (`WINDOW_FOOT_Z` -0.09, flush with the bottom rail's front; it tops out at sill - 0.03 and the rail sits on it), which
+  leaves a recess under the glass; the server floor runs into it (UVs stretched so tiles keep their size), and its sides
+  are the command room's side walls carried down to the server floor. Above the floor those side walls close the bay as
+  wedge-shaped cheeks. The exterior sill and lintel beams are gone, the command room's under-sill filler is gone, and its
+  floor slab now starts at the glass foot (z 0; it used to poke into the recess as a ledge). Catwalk landings and doors
+  moved 0.35 m with the wall face. Command-room interior unchanged.
+- **Server ceiling** is anthracite (`m.serverCeiling`, MeshBasic 0x313437 at full power, black when unpowered, comes up
+  with fixture row 0 in the reveal): no light ever reached the old ceiling, so it rendered pure black.
+- **Server-room light frames** lighter grey (`m.fixtureFrame` 0xc4c3bf -> 0xdcdbd7; server room only, the command room's
+  frames are beige and untouched).
+- **Corridor light** has the same beige frame as the command-room fixtures.
+- **Doors** (`HydraulicDoor`, so the entry door and every prop door): the three black slots on top of the frame are
+  removed; the three bottom slots are real indents now (holes in the panel with beveled walls and a dark insert at the
+  panel's middle, like the monitor's chin vents).
+- **Floor-level doors** under each catwalk door (same prop door, on the server floor at the wall face, under the landing).
+- **Keyboard badge:** the mouse's LAMPLIGHT badge (`badgeMaterial()`, exported from mouse.js) in the keyboard's top band
+  at the left, mirroring the leftmost lock light's position.
+- Welcome stills recaptured (ceiling, frames, doors changed).
+
 ## Change round 12 (2026-11-11): pedestal clearance, dark lenses, panel grids, mouse
 - **Supercomputer moved forward:** `CORE` z -40.5 -> **-36.8** (layout.js). Its pedestal's lower step (r 6.1) used to run
   into the wall towers (fronts at z -43.2); now there's a 0.3 m gap and every tower stands on the floor. The room's shape

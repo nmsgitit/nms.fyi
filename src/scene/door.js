@@ -2,7 +2,7 @@
 // (Alien: Isolation's Sevastopol doors), in the room's beige/taupe palette:
 //   * a single octagonal panel (chamfered corners) with a small hexagonal window you can
 //     actually see through, raised panel plates, a status light (green + red LEDs), and three
-//     rounded slots near the bottom
+//     rounded slots near the bottom (indented, with dark inserts)
 //   * a uniform-width chamfered octagonal frame with symmetric retro trim (pinstripes, vent slots)
 // It slides UP into the wall/ceiling cavity. Not a heavy blast door: green light flashes with
 // three chirps, a brief hiss as it opens; a brief hiss and soft thud when it closes.
@@ -85,14 +85,13 @@ export class HydraulicDoor {
       });
       g.translate(0, 0, -(FRAME_T - 0.06) / 2);
       b.add(g, m.taupe);
-      // Symmetric retro trim on both faces: two pinstripes following the octagon and a short slot
-      // group centered on top. (The black vent grilles on the left and right bands were removed at
-      // the user's request; this class also builds the catwalk doors, so they lost them too.)
+      // Symmetric retro trim on both faces: two pinstripes following the octagon. (The black vent grilles on the
+      // left and right bands and the three slots on top were removed at the user's request; this class also builds
+      // the catwalk doors, so they lost them too.)
       for (const face of [-1, 1]) {
         const z = face * (FRAME_T / 2);
         plate(b, m.taupeDark, ring(0.07, 0.1), 0.005, z, face);
         plate(b, m.beigeLight, ring(0.18, 0.2), 0.005, z, face);
-        for (const x of [-0.12, 0, 0.12]) b.rbox(m.grille, 0.024, 0.1, 0.012, 0.006, x, H + FRAME_W * 0.55, z + face * 0.004);
       }
       this.group.add(b.build({ name: 'doorFrame', castShadow: true, receiveShadow: true }));
     }
@@ -104,6 +103,21 @@ export class HydraulicDoor {
       const win = { cx: 0, cy: H * 0.79, w: 0.42, h: 0.28 };
       const shape = octagon(W, H, C);
       shape.holes.push(hexagon(win.cx, win.cy, win.w, win.h, new THREE.Path()));
+      // Three rounded slots near the bottom, INDENTED like the monitor's chin vents (user): real holes in the panel
+      // (the extrusion gives them beveled beige walls) with a dark insert at the panel's middle, seen from both faces.
+      const slot = (x, path) => {
+        path.moveTo(x - 0.045, 0.2);
+        path.lineTo(x + 0.045, 0.2);
+        path.lineTo(x + 0.045, 0.395);
+        path.absarc(x, 0.395, 0.045, 0, Math.PI, false);
+        path.closePath();
+        return path;
+      };
+      for (const x of [-0.2, 0, 0.2]) {
+        shape.holes.push(slot(x, new THREE.Path()));
+        b.add(new THREE.ExtrudeGeometry(slot(x, new THREE.Shape()), { depth: 0.012, bevelEnabled: false, curveSegments: 8 }),
+          m.grille, [0, 0, -0.006]);
+      }
       const g = new THREE.ExtrudeGeometry(shape, {
         depth: PANEL_T - 0.016, bevelEnabled: true, bevelThickness: 0.008, bevelSize: 0.008, bevelSegments: 2, curveSegments: 4,
       });
@@ -122,16 +136,6 @@ export class HydraulicDoor {
         // Central plate with the status light housing.
         plate(b, m.beige, octagon(0.84, 0.6, 0.12, H * 0.37), 0.01, z, face);
         b.rbox(m.grille, 0.17, 0.065, 0.02, 0.01, 0, H * 0.37 + 0.44, z + face * 0.012);
-        // Three rounded slots near the bottom.
-        for (const x of [-0.2, 0, 0.2]) {
-          const s = new THREE.Shape();
-          s.moveTo(x - 0.05, 0.2);
-          s.lineTo(x + 0.05, 0.2);
-          s.lineTo(x + 0.05, 0.46);
-          s.absarc(x, 0.46, 0.05, 0, Math.PI, false);
-          s.closePath();
-          plate(b, m.grille, s, 0.006, z, face);
-        }
       }
       this.panel.add(b.build({ name: 'doorPanel', castShadow: true, receiveShadow: true }));
 

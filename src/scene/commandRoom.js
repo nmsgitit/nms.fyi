@@ -41,7 +41,7 @@ export function buildCommandRoom(m, leds) {
   const RAIL_Y0 = sill - 0.04, RAIL_Y1 = sill + 0.01;
 
   // ---- floor + walkway mat
-  b.span(m.floor, xMin, xMax, -0.06, 0, zTop, zBack);
+  b.span(m.floor, xMin, xMax, -0.06, 0, 0, zBack); // starts at the glass foot: in front of it is the server room's recess
   // The walkway mat ends in a rounded tip short of the desk, and its white trim follows the curve.
   {
     const hw = 0.75, trimW = 0.05;
@@ -164,8 +164,8 @@ export function buildCommandRoom(m, leds) {
   b.rbox(m.taupe, xMax - xMin, sill - 0.03, 0.5, 0.035, 0, (sill - 0.03) / 2, 0.25);
   b.span(m.taupeDark, xMin, xMax, 0, 0.1, 0.5, 0.53); // baseboard along the front, at the foot of the ledge
   b.rbox(m.beigeLight, xMax - xMin, 0.05, 0.58, 0.02, 0, sill - 0.015, 0.21);
-  // Under the ledge, between sill and floor at the very front.
-  b.span(m.wallUpper, xMin, xMax, -0.06, sill - 0.03, ROOM.glassTopZ, 0);
+  // (The filler under the sill out to the glass top is gone: that space is now the server room's recess under the
+  // sloped window bay; serverRoom.js builds the wall under the glass.)
 
   const gh = H - sill;
   const tilt = Math.atan2(-zTop, gh); // top leans away from the viewer
@@ -194,6 +194,11 @@ export function buildCommandRoom(m, leds) {
   b.span(m.wallLower, dw - 0.025, dw, 0, RAIL_Y0, cz0, cz1);
   b.span(m.wallUpper, -dw, dw, 0, ch, cz1, cz1 + 0.2);
   b.span(m.corridorPanel, -0.45, 0.45, ch - 0.01, ch - 0.002, 9.6, 11.2);
+  // Beige frame around the corridor light, like the command-room fixtures (user).
+  b.span(m.beige, -0.51, 0.51, ch - 0.03, ch - 0.011, 9.54, 9.6);
+  b.span(m.beige, -0.51, 0.51, ch - 0.03, ch - 0.011, 11.2, 11.26);
+  b.span(m.beige, -0.51, -0.45, ch - 0.03, ch - 0.011, 9.6, 11.2);
+  b.span(m.beige, 0.45, 0.51, ch - 0.03, ch - 0.011, 9.6, 11.2);
 
   const group = b.build({ name: 'commandRoom', receiveShadow: true, castShadow: true });
   // Glass must not cast shadows or write depth.

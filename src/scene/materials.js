@@ -164,8 +164,11 @@ export function createMaterials(maxAnisotropy = 4) {
   m.serverFixtureRows = [0, 1, 2, 3].map(() => new THREE.MeshBasicMaterial({ color: 0x000000, map: serverDiffuser, toneMapped: false }));
   // Curved strip fixtures around the north bay (chord pieces whose long axis is the texture's u).
   // Light grey frames around the server-room fixtures: a slight contrast with that ceiling (user).
-  m.fixtureFrame = new THREE.MeshStandardMaterial({ color: 0xc4c3bf, roughness: 0.88, metalness: 0 });
+  // Lightened a couple of shades of grey (was 0xc4c3bf; user). Server room only: the command room's frames are beige.
+  m.fixtureFrame = new THREE.MeshStandardMaterial({ color: 0xdcdbd7, roughness: 0.88, metalness: 0 });
   m.fixtureFrame.shadowSide = THREE.FrontSide;
+  // Server-room ceiling: unlit (black) until the reveal brings it up to anthracite with the first row.
+  m.serverCeiling = new THREE.MeshBasicMaterial({ color: 0x000000, toneMapped: false });
   m.serverBayStrip = new THREE.MeshBasicMaterial({ color: 0x000000, map: diffuserTexture(512, 110), toneMapped: false });
   m.coreFixture = new THREE.MeshBasicMaterial({ color: 0x000000, toneMapped: false });
   // One material per light band on the core column (0 = lowest) so they climb in sequence.

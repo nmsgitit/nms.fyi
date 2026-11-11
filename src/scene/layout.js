@@ -16,12 +16,16 @@ export const CORRIDOR = { halfW: 1.2, height: 3.5, zStart: 8.2, zEnd: 12 };
 // Entrance door (door.js, Alien: Isolation-style octagonal panel in a chamfered frame) in the back wall at z 8.1.
 export const DOOR = { halfW: 0.65, height: 2.1, z: 8.1, chamfer: 0.3, frameHalfW: 0.95, frameHeight: 2.4 }; // frame band 0.3 m all round
 
+// Server-room face of the wall under the command-room window: flush with the front of the glass's bottom rail.
+export const WINDOW_FOOT_Z = -0.09;
 export const SERVER = {
   floorY: -4.5,
   ceilY: 5.5, // lowered from 9 at the user's request (10 m tall hall)
   xMin: -16, xMax: 16,
   zMin: -28, zMax: ROOM.glassTopZ, // rectangular hall
-  frontWallZ: -0.95, // server-room face of the wall holding the command-room glass (it spans -0.95 .. -0.6)
+  // Server-room face of the wall above and beside the window = the glass's top edge (ROOM.glassTopZ), so the sloped glass
+  // runs from the recessed wall under it (at its foot, WINDOW_FOOT_Z) up to this wall (at its head): a sloped window bay.
+  frontWallZ: -0.6,
   // The north end is a half-circle bay (user request): centered on the hall's back line, as wide
   // as the hall, so it reaches 16 m further north. The supercomputer is set into its far wall.
   apseR: 16,

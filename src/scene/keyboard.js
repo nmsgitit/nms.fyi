@@ -5,6 +5,7 @@
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { Builder } from './builder.js';
+import { badgeMaterial } from './mouse.js';
 import { PALETTE } from './palette.js';
 
 export const U = 0.0205; // 1 key unit in meters (slightly chunky, 1980s board)
@@ -167,11 +168,13 @@ export function buildKeyboard(m) {
     geom.dispose();
   }
 
-  const group = b.build({ name: 'keyboard', castShadow: true, receiveShadow: true });
-
   // Lock lights sit in the top band above the numpad.
   const padCenterX = -W / 2 + (18.5 + 2) * U;
   const localLeds = [-1, 0, 1].map((i) => [padCenterX + i * U * 1.1, caseH + 0.0006, -caseD / 2 + margin + topBand * 0.45]);
+  // LAMPLIGHT badge (same as the mouse's) in the top band at the left, mirroring the leftmost lock light (user).
+  b.add(new THREE.PlaneGeometry(0.0343, 0.0098), badgeMaterial(), [-localLeds[0][0], caseH + 0.0004, localLeds[0][2]], [-Math.PI / 2, 0, 0]);
+
+  const group = b.build({ name: 'keyboard', castShadow: true, receiveShadow: true });
 
   return { group, localLeds, caseW, caseD };
 }

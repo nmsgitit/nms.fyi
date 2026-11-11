@@ -3,7 +3,7 @@
 // (supercomputer.js); the banks and catwalks follow the curve and stop short of it.
 import * as THREE from 'three';
 import { Builder } from './builder.js';
-import { SERVER, ROOM } from './layout.js';
+import { SERVER, ROOM, WINDOW_FOOT_Z } from './layout.js';
 import { PALETTE } from './palette.js';
 
 const F = SERVER.floorY;
@@ -80,25 +80,30 @@ export function buildServerRoom(m) {
 
   // ---- shell: one floor and ceiling over the hall and the bay (the corners outside the curved
   // wall are never seen), side walls, the curved bay wall.
-  const floorGeom = new THREE.PlaneGeometry(xMax - xMin, zMax - zBack);
-  b.add(floorGeom, m.serverFloor, [(xMin + xMax) / 2, F, (zBack + zMax) / 2], [-Math.PI / 2, 0, 0]);
-  b.span(m.ceiling, xMin, xMax, C, C + 0.3, zBack - 0.4, zMax);
+  // The floor runs on into the recess under the window (to WINDOW_FOOT_Z); its UVs are stretched with it so the
+  // tile size (texture repeat set for zMax - zBack) doesn't change.
+  const floorZ1 = WINDOW_FOOT_Z;
+  const floorGeom = new THREE.PlaneGeometry(xMax - xMin, floorZ1 - zBack);
+  const uv = floorGeom.attributes.uv;
+  for (let i = 0; i < uv.count; i++) uv.setY(i, uv.getY(i) * ((floorZ1 - zBack) / (zMax - zBack)));
+  b.add(floorGeom, m.serverFloor, [(xMin + xMax) / 2, F, (zBack + floorZ1) / 2], [-Math.PI / 2, 0, 0]);
+  b.span(m.serverCeiling, xMin, xMax, C, C + 0.3, zBack - 0.4, zMax); // anthracite, follows the room power (reveal)
   b.span(m.wallUpper, xMin - 0.3, xMin, F, C, zMin, zMax); // left
   b.span(m.wallUpper, xMax, xMax + 0.3, F, C, zMin, zMax); // right
   arcStrip(b, m.wallUpper, R + 0.15, 0, Math.PI, F, C, 0.3, 2.5); // the bay wall
   arcStrip(b, m.wallLower, R - 0.015, 0, Math.PI, F, F + 0.6, 0.03, 2.5); // its lower band
 
-  // ---- front wall (server-room side), with the command-room window opening
-  const wz0 = FRONT_WALL_Z0, wz1 = ROOM.glassTopZ; // wall slab just outside the glass
-  const ox0 = ROOM.xMin - 0.2, ox1 = ROOM.xMax + 0.2;
+  // ---- front wall (server-room side) with the command-room window as a sloped bay (user: an angled pane should join
+  // two walls in different places, not two points of one thick wall). The upper wall's face is at the glass's head
+  // (z -0.6); the wall under the window is set back to its foot (WINDOW_FOOT_Z), leaving a recess below the glass; the
+  // command room's side walls close the bay as wedge-shaped cheeks and, below its floor, as the recess's sides.
+  const wz0 = FRONT_WALL_Z0, wz1 = wz0 + 0.35; // wall slab behind the face
+  const ox0 = ROOM.xMin - 0.2, ox1 = ROOM.xMax + 0.2; // the command room's outer shell
   b.span(m.wallUpper, xMin, ox0, F, C, wz0, wz1);
   b.span(m.wallUpper, ox1, xMax, F, C, wz0, wz1);
-  b.span(m.wallUpper, ox0, ox1, ROOM.height + 0.1, C, wz0, wz1);
-  b.span(m.wallUpper, ox0, ox1, F, ROOM.sill - 0.05, wz0, 0); // below the sill (solid)
-  // Exterior sill ledge and lintel seen from the server room. (The vertical side posts were removed:
-  // seen from the command room they read as a second, straight window frame behind the tilted one.)
-  b.rbox(m.beige, ox1 - ox0 + 0.5, 0.3, 0.5, 0.08, 0, ROOM.sill - 0.17, wz0 - 0.1);
-  b.rbox(m.beige, ox1 - ox0 + 0.5, 0.3, 0.4, 0.08, 0, ROOM.height + 0.25, wz0 - 0.05);
+  b.span(m.wallUpper, ox0, ox1, ROOM.height + 0.1, C, wz0, wz1); // above the command room's ceiling slab
+  b.span(m.wallUpper, ox0, ox1, F, ROOM.sill - 0.03, WINDOW_FOOT_Z, 0.02); // under the glass (its rail sits on top)
+  for (const [x0, x1] of [[ox0, ROOM.xMin], [ROOM.xMax, ox1]]) b.span(m.wallUpper, x0, x1, F, 0, wz0, WINDOW_FOOT_Z); // recess sides
 
   // ---- ceiling trusses (evenly spaced, one over each fixture row and one between) and fixtures
   for (const z of TRUSS_Z) b.span(m.taupeDark, xMin, xMax, C - 0.75, C, z - 0.18, z + 0.18);
@@ -228,8 +233,8 @@ export function populateServerRoom(b, m, leds) {
 }
 
 /**
- * Two closed prop doors in the entry door's style on the server-room face of the glass wall, one on
- * each catwalk landing, well clear of the data banks along the side walls and of the window
+ * Closed prop doors in the entry door's style on the server-room face of the glass wall: one on each
+ * catwalk landing and one on the floor below each of those, well clear of the data banks along the side walls and of the window
  * surround: the way people would reach the catwalks. Returns the doors (add their .group).
  */
 export function addCatwalkDoors(m, b, HydraulicDoor) {
@@ -245,6 +250,12 @@ export function addCatwalkDoors(m, b, HydraulicDoor) {
     doors.push(d);
     // Landing plinth under the door: hides the frame's lower band below the deck.
     b.span(m.taupeDark, x - 1.0, x + 1.0, CATWALK_Y - 0.36, CATWALK_Y - 0.12, wallFace - 0.36, wallFace);
+    // And a door on the floor level right below it, under the landing (user): the ground-floor way in.
+    const g = new HydraulicDoor(m, { signs: false });
+    g.group.position.set(x, F, wallFace - 0.06);
+    g.group.rotation.y = Math.PI;
+    g.group.name = 'serverFloorDoor';
+    doors.push(g);
   }
   return doors;
 }
@@ -282,5 +293,8 @@ export function buildServerLights(m) {
   const fixtureMax = new THREE.Color(white).multiplyScalar(1.3);
   const fixtures = m.serverFixtureRows.map((mat, row) => ({ mat, max: fixtureMax, row }));
   fixtures.push({ mat: m.serverBayStrip, max: fixtureMax, row: 3 });
+  // The ceiling: no light reaches it (the area lights face down), so it was pure black. It's an anthracite
+  // surface that comes up with the first fixture row (user: dark gray, not total black).
+  fixtures.push({ mat: m.serverCeiling, max: new THREE.Color(0x313437), row: 0 });
   return { group, room, fixtures };
 }
