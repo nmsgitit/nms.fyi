@@ -446,6 +446,12 @@ nearest-first (tube sounds at 100/60/40 % per row), back wash +0.3 s, fans fade 
   above the beam bottom. `m.serverBeam` became a **MeshMatcapMaterial** (procedural grey `shadeMatcap()`, color = the
   power level × #1A1A1A, toneMapped off): no light reaches the ceiling, and flat color hid every curve; the matcap
   shades by surface angle alone (faces toward the viewer ~95 % of the color, grazing ones darker).
+  **Bigger frames, lights below them** (user: light seemed to spill past the frames): the area lights sat at C - 0.98,
+  inside the frames' 4 cm height, so the frames' outer sides got a lit sliver while their undersides stayed dark. Now
+  frames run C - 0.95 .. C - 1.01 (`FRAME_Y0/Y1`), overlap the diffuser by 3 cm and overhang the housing by 3 cm (hall:
+  inner 0.39 / outer 0.53 half-widths, ends 1.39 / 1.53; bay strips: 0.1 wide at ±0.23), the area lights are at
+  `LIGHT_Y` C - 1.02, and `m.fixtureFrame` is matcap-shaded like the beams (0xdcdbd7 at full power, row 0), so frames
+  always read as light grey.
 - **Supercomputer face panel:** the beige surround now runs from z 1.0 (deep inside the bulbous base, so it grows out of
   it instead of floating off it at the top corners) to 2.38 (just past the bulge's widest point, r 2.2, which used to
   poke through its front near the bottom). The dark panel and LEDs moved out with it.

@@ -123,22 +123,24 @@ export function buildServerRoom(m) {
     arcStrip(b, m.serverBeam, BAY_RING_R, a0 - 2 * DEG, a1 + 2 * DEG, C - 0.75, C, 0.36, 3);
     arcStrip(b, m.serverBeam, BAY_RING_R, a0, a1, C - 0.95, C - 0.75, 0.5, 3);
     arcStrip(b, m.serverBayStrip, BAY_RING_R, a0 + 0.3 * DEG, a1 - 0.3 * DEG, C - 0.97, C - 0.95, 0.42, 3);
-    // Light grey frame around the strip (like the command-room fixtures): both long edges and end caps.
-    for (const dr of [-0.235, 0.235]) arcStrip(b, m.fixtureFrame, BAY_RING_R + dr, a0, a1, C - 0.995, C - 0.955, 0.07, 3);
+    // Light grey frame around the strip: both long edges and end caps, overlapping the diffuser by 3 cm and hanging
+    // below the light plane (see FRAME_* below).
+    for (const dr of [-0.23, 0.23]) arcStrip(b, m.fixtureFrame, BAY_RING_R + dr, a0, a1, FRAME_Y0, FRAME_Y1, 0.1, 3);
     for (const a of [a0, a1]) {
       const [x, z] = arcPt(BAY_RING_R, a);
-      b.box(m.fixtureFrame, 0.54, 0.04, 0.07, x, C - 0.975, z, [0, a, 0]); // local x along the radius
+      b.box(m.fixtureFrame, 0.56, FRAME_Y1 - FRAME_Y0, 0.1, x, (FRAME_Y0 + FRAME_Y1) / 2, z, [0, a, 0]); // local x along the radius
     }
   }
   for (const [x, z, row] of FIXTURES) {
     b.add(HOUSING, m.serverBeam, [x, C - 0.95, z]); // housing, flowing up into its beam
     b.span(m.serverFixtureRows[row], x - 0.42, x + 0.42, C - 0.97, C - 0.95, z - 1.42, z + 1.42);
-    // Light grey frame ring around the diffuser, standing just proud of it (as in the command room).
-    const fy0 = C - 0.995, fy1 = C - 0.955;
-    b.span(m.fixtureFrame, x - 0.5, x + 0.5, fy0, fy1, z - 1.5, z - 1.42);
-    b.span(m.fixtureFrame, x - 0.5, x + 0.5, fy0, fy1, z + 1.42, z + 1.5);
-    b.span(m.fixtureFrame, x - 0.5, x - 0.42, fy0, fy1, z - 1.42, z + 1.42);
-    b.span(m.fixtureFrame, x + 0.42, x + 0.5, fy0, fy1, z - 1.42, z + 1.42);
+    // Light grey frame ring around the diffuser: overlaps it by 3 cm, overhangs the housing by 3 cm, and hangs below the
+    // area light's plane, so no lit sliver shows outside it (user: light looked like it spilled past the frames).
+    const i = 0.39, o = 0.53, zi = 1.39, zo = 1.53;
+    b.span(m.fixtureFrame, x - o, x + o, FRAME_Y0, FRAME_Y1, z - zo, z - zi);
+    b.span(m.fixtureFrame, x - o, x + o, FRAME_Y0, FRAME_Y1, z + zi, z + zo);
+    b.span(m.fixtureFrame, x - o, x - i, FRAME_Y0, FRAME_Y1, z - zi, z + zi);
+    b.span(m.fixtureFrame, x + i, x + o, FRAME_Y0, FRAME_Y1, z - zi, z + zi);
   }
 
   // ---- catwalks: along both side walls, around the bay (stopping short of the supercomputer),
@@ -205,6 +207,9 @@ export function buildServerRoom(m) {
 // strips over its catwalks instead of rectangular panels (they didn't fit the round end).
 const ROW_Z = [-4.6, -11.4, -18.2, -25.0];
 const FIX_X = [-12, -6, 0, 6, 12]; // fixture columns = the lengthwise beams
+// Fixture frames run from the housing's underside (C - 0.95) to C - 1.01; the area lights sit just below them (C - 1.02).
+// (The lights used to sit at C - 0.98, inside the frames' height, which lit a bright sliver on the frames' outer sides.)
+const FRAME_Y0 = C - 1.01, FRAME_Y1 = C - 0.95, LIGHT_Y = C - 1.02;
 const CROSS_Z = [-8.0, -14.8, -21.6, SERVER.zMin]; // cross beams midway between rows, and the hall/bay edge beam
 const FIXTURES = ROW_Z.flatMap((z, row) => FIX_X.map((x) => [x, z, row]));
 // Fixture housing cross-section (user: the frames didn't attach to the beams convincingly): a 1 m wide, 8 cm deep body
@@ -292,7 +297,7 @@ export function buildServerLights(m) {
   // its five panels), striking with that row in the reveal...
   ROW_Z.forEach((z, row) => {
     const r = new THREE.RectAreaLight(white, 0, 25, 3);
-    r.position.set(0, C - 0.98, z);
+    r.position.set(0, LIGHT_Y, z);
     r.rotation.x = -Math.PI / 2;
     group.add(r);
     room.push({ light: r, max: 1.7, row });
@@ -303,7 +308,7 @@ export function buildServerLights(m) {
     const chord = 2 * BAY_RING_R * Math.sin((a1 - a0) / 2);
     const r = new THREE.RectAreaLight(white, 0, chord, 2.4);
     const [x, z] = arcPt(BAY_RING_R * Math.cos((a1 - a0) / 2), ac);
-    r.position.set(x, C - 0.98, z);
+    r.position.set(x, LIGHT_Y, z);
     r.rotation.order = 'YXZ';
     r.rotation.set(-Math.PI / 2, ac - Math.PI / 2, 0); // face down, width along the chord
     group.add(r);
@@ -320,5 +325,7 @@ export function buildServerLights(m) {
   fixtures.push({ mat: m.serverCeiling, max: new THREE.Color(0x232323), row: 0 }); // #232323 (user)
   // Beams and fixture housings: a couple of shades darker than the ceiling (they were pure black too).
   fixtures.push({ mat: m.serverBeam, max: new THREE.Color(0x1a1a1a), row: 0 }); // #1A1A1A (user)
+  // Fixture frames: light grey (user), shaded like the beams so they always read as light grey rather than unlit-dark.
+  fixtures.push({ mat: m.fixtureFrame, max: new THREE.Color(0xdcdbd7), row: 0 });
   return { group, room, fixtures };
 }

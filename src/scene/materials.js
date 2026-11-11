@@ -190,8 +190,10 @@ export function createMaterials(maxAnisotropy = 4) {
   // Curved strip fixtures around the north bay (chord pieces whose long axis is the texture's u).
   // Light grey frames around the server-room fixtures: a slight contrast with that ceiling (user).
   // Lightened a couple of shades of grey (was 0xc4c3bf; user). Server room only: the command room's frames are beige.
-  m.fixtureFrame = new THREE.MeshStandardMaterial({ color: 0xdcdbd7, roughness: 0.88, metalness: 0 });
-  m.fixtureFrame.shadowSide = THREE.FrontSide;
+  // No light reaches the frames' faces either, so they used to look dark; matcap-shaded like the beams, brought up to
+  // 0xdcdbd7 by the reveal (serverRoom.js).
+  m.fixtureFrame = new THREE.MeshMatcapMaterial({ color: 0x000000, matcap: shadeMatcap() });
+  m.fixtureFrame.toneMapped = false;
   // Server-room ceiling: unlit (black) until the reveal brings it up to anthracite with the first row.
   m.serverCeiling = new THREE.MeshBasicMaterial({ color: 0x000000, toneMapped: false });
   // Beams + fixture housings: no light reaches them either, but flat color hid their shape (the housings' coves into
