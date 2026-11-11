@@ -1,85 +1,10 @@
-// LAMPLIGHT OS artwork, drawn in code and cached: the desktop wallpaper (an original
-// desert-at-dusk scene to fit the oil-lamp theme; deliberately nothing like XP's hill photo)
-// and 32×32 pixel icons. The same canvases feed the 3D monitor and the HTML desktop
-// (as data URLs), so both always look identical.
+// LAMPLIGHT OS artwork, drawn in code and cached: 32×32 pixel icons. The same canvases feed the
+// 3D monitor and the HTML desktop (as data URLs), so both always look identical. The wallpaper
+// (an animated desert that follows the clock) lives in wallpaper.js.
 import { getLampSprite } from '../scene/lamp.js';
 
-let wallpaper = null;
 const icons = new Map();
 const urls = new Map();
-
-/** Seeded random so the stars land in the same place every time. */
-function rng(seed) {
-  let s = seed >>> 0;
-  return () => ((s = (s * 1664525 + 1013904223) >>> 0) / 4294967296);
-}
-
-export function getWallpaper() {
-  if (wallpaper) return wallpaper;
-  const W = 1920, H = 1080;
-  const c = document.createElement('canvas');
-  c.width = W;
-  c.height = H;
-  const ctx = c.getContext('2d');
-
-  // Dusk sky.
-  const sky = ctx.createLinearGradient(0, 0, 0, H * 0.72);
-  sky.addColorStop(0, '#16233f');
-  sky.addColorStop(0.45, '#3d4f7a');
-  sky.addColorStop(0.78, '#c98a6a');
-  sky.addColorStop(1, '#f2c38a');
-  ctx.fillStyle = sky;
-  ctx.fillRect(0, 0, W, H);
-
-  // Stars in the upper sky.
-  const r = rng(11);
-  for (let i = 0; i < 140; i++) {
-    const x = r() * W, y = r() * H * 0.38;
-    const a = 0.25 + r() * 0.6;
-    ctx.fillStyle = `rgba(255,248,230,${a * (1 - y / (H * 0.42))})`;
-    ctx.fillRect(x, y, r() < 0.1 ? 3 : 2, r() < 0.1 ? 3 : 2);
-  }
-  // Crescent moon.
-  ctx.fillStyle = '#f6ecd2';
-  ctx.beginPath();
-  ctx.arc(W * 0.78, H * 0.17, 46, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.fillStyle = '#23325a';
-  ctx.beginPath();
-  ctx.arc(W * 0.78 + 20, H * 0.17 - 10, 42, 0, Math.PI * 2);
-  ctx.fill();
-  // Low sun glow on the horizon.
-  const sun = ctx.createRadialGradient(W * 0.3, H * 0.7, 10, W * 0.3, H * 0.7, H * 0.5);
-  sun.addColorStop(0, 'rgba(255,214,150,0.9)');
-  sun.addColorStop(0.25, 'rgba(255,180,110,0.35)');
-  sun.addColorStop(1, 'rgba(255,160,90,0)');
-  ctx.fillStyle = sun;
-  ctx.fillRect(0, 0, W, H);
-
-  // Three dune layers, far (light, hazy) to near (darker, richer).
-  const dune = (base, amp, waves, phase, top, bottom) => {
-    ctx.beginPath();
-    ctx.moveTo(0, H);
-    for (let x = 0; x <= W; x += 8) {
-      const u = x / W;
-      let y = base;
-      waves.forEach(([f, a], i) => { y -= Math.sin(u * Math.PI * 2 * f + phase + i) * a * amp; });
-      ctx.lineTo(x, y);
-    }
-    ctx.lineTo(W, H);
-    ctx.closePath();
-    const g = ctx.createLinearGradient(0, base - amp * 1.5, 0, H);
-    g.addColorStop(0, top);
-    g.addColorStop(1, bottom);
-    ctx.fillStyle = g;
-    ctx.fill();
-  };
-  dune(H * 0.72, 40, [[1.3, 1], [3.1, 0.35]], 0.4, '#d9a676', '#b98457');
-  dune(H * 0.8, 55, [[0.9, 1], [2.4, 0.4]], 2.1, '#b97a46', '#8f5a31');
-  dune(H * 0.9, 60, [[0.7, 1], [1.9, 0.5]], 4.0, '#8a5530', '#5c3519');
-  wallpaper = c;
-  return wallpaper;
-}
 
 // ---------------------------------------------------------------- pixel icons (32×32)
 const P = {
@@ -177,7 +102,3 @@ export function iconURL(name) {
   return urls.get(name);
 }
 
-export function wallpaperURL() {
-  if (!urls.has('__wall')) urls.set('__wall', getWallpaper().toDataURL('image/jpeg', 0.9));
-  return urls.get('__wall');
-}

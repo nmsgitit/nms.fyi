@@ -22,6 +22,7 @@ export function createDebug({ params, renderer, camera, walk, setLit }) {
     orbit = new OrbitControls(camera, renderer.domElement);
     orbit.target.set(0, 0, -10);
     orbit.enableDamping = true;
+    if (import.meta.env.DEV) window.orbit = orbit; // posing shots from the console (welcome-page stills)
     return orbit;
   }
 

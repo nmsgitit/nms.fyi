@@ -8,8 +8,9 @@
 // Every mode starts at a LOGON screen (the USER account; click it to log on). "Log out" in the
 // launcher (door icon: you aren't powering the machine off) closes the apps and returns to the
 // logon screen; in 'full' it then also steps back from the terminal into the room (onLogout).
-import { APPS, USER_NAME, USER_TAGLINE, USER_PORTRAIT, OS_NAME, OS_VERSION, OS_EDITION, OS_BUILD } from './desktopModel.js';
-import { iconURL, wallpaperURL } from './art.js';
+import { APPS, USER_NAME, USER_TAGLINE, USER_PORTRAIT, OS_NAME, OS_VERSION, EDITIONS } from './desktopModel.js';
+import { iconURL } from './art.js';
+import { DesertWallpaper } from './wallpaper.js';
 import { clockText } from './clock.js';
 
 const el = (tag, cls, attrs = {}) => {
@@ -43,7 +44,7 @@ export class DesktopOS {
     this.apps = APPS.filter((a) => this.full || !a.requires3D);
     this.windows = new Map(); // id -> { win, task, app, minimized }
     this.zoom = 1;
-    window.addEventListener("resize", () => { if (this.isOpen) this.applyScale(); });
+    window.addEventListener('resize', () => { if (this.isOpen) { this.applyScale(); this.fitWallpaper(); } });
     this.z = 10;
     this.isOpen = false;
     this.build();
@@ -54,7 +55,11 @@ export class DesktopOS {
     root.hidden = true;
 
     const desk = (this.desk = el('div', 'os-desktop'));
-    desk.style.backgroundImage = `url(${wallpaperURL()})`;
+    // Animated pixel desert that follows the visitor's clock (wallpaper.js), scaled up crisp.
+    this.wallpaper = new DesertWallpaper();
+    this.wallpaper.canvas.className = 'os-wallpaper';
+    this.wallpaper.canvas.setAttribute('aria-hidden', 'true');
+    desk.append(this.wallpaper.canvas);
     const icons = el('ul', 'os-icons', { 'aria-label': 'Desktop' });
     for (const app of this.apps) {
       const li = el('li');
@@ -147,7 +152,8 @@ export class DesktopOS {
     users.append(this.userTile);
     this.logonStatus = el('p', 'logon-status', { 'aria-live': 'polite' });
     mid.append(brand, el('div', 'logon-divider', { 'aria-hidden': 'true' }), users, this.logonStatus);
-    const bottom = el('div', 'logon-band bottom', { html: `<div class="logon-build"><span>${OS_NAME} ${OS_EDITION}</span><span>${OS_VERSION} · ${OS_BUILD}</span></div>` });
+    const { edition, build } = EDITIONS[this.mode];
+    const bottom = el('div', 'logon-band bottom', { html: `<div class="logon-build"><span>${OS_NAME} ${edition}</span><span>${OS_VERSION} · ${build}</span></div>` });
     if (this.full) {
       // Back to the room without logging on (only the full site has a room to go back to).
       const leave = el('button', 'logon-exit', { type: 'button' });
@@ -213,6 +219,31 @@ export class DesktopOS {
       if (!this.mobile) setTimeout(() => this.userTile.focus(), 300);
     } else if (!this.mobile) setTimeout(() => this.launchBtn.focus(), 300);
     for (const w of this.windows.values()) if (!w.minimized) w.handler?.setVisible?.(true);
+    this.fitWallpaper();
+    this.startWallpaper();
+  }
+
+  // ------------------------------------------------------------------ wallpaper
+  /** Pixel buffer 216 px tall, as wide as the desktop's aspect needs (so phones get a portrait scene). */
+  fitWallpaper() {
+    const w = this.desk.clientWidth || window.innerWidth, h = this.desk.clientHeight || window.innerHeight;
+    const H = 216;
+    this.wallpaper.resize(Math.min(560, Math.max(120, (H * w) / Math.max(1, h))), H);
+    this.wallpaper.render();
+  }
+
+  /** ~12 fps while the desktop is actually on screen (twinkling stars, blowing sand). */
+  startWallpaper() {
+    if (this._wpRaf) return;
+    let last = 0;
+    const tick = (now) => {
+      if (!this.isOpen) { this._wpRaf = 0; return; }
+      this._wpRaf = requestAnimationFrame(tick);
+      if (document.hidden || !this.loggedIn || now - last < 83) return;
+      last = now;
+      this.wallpaper.render();
+    };
+    this._wpRaf = requestAnimationFrame(tick);
   }
 
   hide() {

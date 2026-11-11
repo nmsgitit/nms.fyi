@@ -29,7 +29,16 @@
 }
 
 /* Desktop icons */
+.os-wallpaper {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  image-rendering: pixelated;
+  pointer-events: none;
+}
 .os-icons {
+  position: relative;
   list-style: none;
   margin: 0;
   padding: 14px;

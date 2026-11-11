@@ -14,22 +14,50 @@
   <body>
     <canvas id="view" aria-label="3D command room"></canvas>
 
-    <!-- Version chooser (src/main.js). Nothing 3D is downloaded until "Full" is picked.
-         Touch-only devices skip it and get the mobile desktop. -->
-    <div id="chooser" role="dialog" aria-labelledby="chooser-title" hidden>
-      <div class="gate-box">
-        <p id="chooser-title" class="gate-title">NMS FYI</p>
+    <!-- Welcome page / version chooser (src/main.js). Desktops and laptops only: touch-only devices skip it
+         and get the mobile desktop. Nothing 3D is downloaded until "Full Site" is picked; the background is a
+         slideshow of stills captured from the 3D facility (public/welcome/). -->
+    <div id="chooser" class="welcome" role="dialog" aria-labelledby="welcome-title" hidden>
+      <div class="wl-slides" aria-hidden="true"></div>
+      <div class="wl-shade" aria-hidden="true"></div>
+      <header class="wl-top">
+        <span class="wl-brand"><img src="/favicon.svg" alt="" width="28" height="28" />Lamplight Mainframe Facility</span>
+        <span class="wl-site">NMS FYI</span>
+      </header>
+      <main class="wl-main">
+        <p class="wl-kicker">Visitor Orientation</p>
+        <h1 id="welcome-title" class="wl-title">Welcome to NMS FYI.</h1>
+        <p class="wl-lede">
+          NMS FYI is the professional home of Noah Schafrath, presented as a fully operational 1980s computing
+          facility. From the command room, the LAMPLIGHT OS terminal gives visitors access to his background,
+          current projects, résumé and contact channels.
+        </p>
+        <p class="wl-lede wl-lede-2">
+          Two access levels are available. Both provide the same information and differ only in how the facility
+          is presented. Please select the option best suited to your system.
+        </p>
+        <h2 class="wl-h2">Select an access level</h2>
         <div class="choices">
           <button id="choose-full" class="choice" type="button">
+            <span class="choice-tag">Graphics-intensive</span>
             <span class="choice-name">Full Site</span>
+            <span class="choice-body">A guided, first-person walk through the facility to the command room terminal, with real-time 3D rendering and sound.</span>
             <span class="choice-desc">Best for systems with dedicated graphics.</span>
+            <span class="choice-cta">Enter Full Site</span>
           </button>
           <button id="choose-light" class="choice" type="button">
+            <span class="choice-tag">Graphics-friendly</span>
             <span class="choice-name">Lite Site</span>
+            <span class="choice-body">Direct access to the LAMPLIGHT OS terminal, without 3D rendering or audio, for a fast, lightweight visit.</span>
             <span class="choice-desc">Best for systems without dedicated graphics.</span>
+            <span class="choice-cta">Enter Lite Site</span>
           </button>
         </div>
-      </div>
+      </main>
+      <footer class="wl-foot" aria-hidden="true">
+        <div class="wl-caption"><span class="wl-count"></span><span class="wl-cap-title"></span><span class="wl-cap-text"></span></div>
+        <div class="wl-progress"></div>
+      </footer>
     </div>
 
     <!-- Click-to-enter gate (full experience only): browsers only allow audio after a user

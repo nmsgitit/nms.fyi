@@ -3,7 +3,8 @@
 // bar) -> desktop (a drawn copy of the HTML desktop in os/, from the same art and app list).
 import * as THREE from 'three';
 import { drawLamp } from './lamp.js';
-import { getWallpaper, getIcon } from '../os/art.js';
+import { getIcon } from '../os/art.js';
+import { DesertWallpaper } from '../os/wallpaper.js';
 import { APPS, OS_NAME, OS_VERSION, OS_EDITION, OS_BUILD, USER_NAME, USER_TAGLINE, USER_PORTRAIT } from '../os/desktopModel.js';
 import { TASKBAR_H, ICON_GRID } from '../os/layout.js';
 import { clockText } from '../os/clock.js';
@@ -173,9 +174,12 @@ export class MonitorScreen {
     const { ctx, canvas: c } = this;
     const W = c.width, H = c.height;
     const s = H / 768; // the HTML desktop's reference height is 768 px
-    const wp = getWallpaper();
-    const k = Math.max(W / wp.width, H / wp.height); // cover
-    ctx.drawImage(wp, (W - wp.width * k) / 2, (H - wp.height * k) / 2, wp.width * k, wp.height * k);
+    // The same clock-driven desert as the HTML desktop (re-rendered whenever the clock redraws this).
+    this.wallpaper ||= new DesertWallpaper(Math.round((216 * W) / H), 216);
+    const wp = this.wallpaper.render();
+    ctx.imageSmoothingEnabled = false;
+    ctx.drawImage(wp, 0, 0, W, H);
+    ctx.imageSmoothingEnabled = true;
 
     // Desktop icons.
     ctx.imageSmoothingEnabled = false;

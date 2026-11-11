@@ -92,6 +92,7 @@ npm start          # serves dist/ on $PORT (default 3000)
   `?skip&up` keeps the terminal in the ceiling; `?skip&dark` keeps the room unpowered (and the terminal up).
 - `?lit`: server room fully powered (preview the layout).
 - `?os`: skip straight into the desktop (development).
+- `?time=HH:MM`: preview the desktop wallpaper at another time of day.
 - `/dev/os-preview.html` (dev server only): the HTML desktop alone, no WebGL needed (handy for phone-size checks in
   the built-in browser pane, which has no WebGL).
 - `?debug`: orbit camera + HUD (fps, draw calls, camera position).
@@ -146,7 +147,8 @@ src/sequence/intro.js DoorIntro: corridor door sequence (DOOR_TIMING: chirps + g
 src/sequence/lookAround.js LookAround (F): turn your head with the mouse from the desk (pointer lock; drag fallback)
 src/sequence/focus.js TerminalFocus: E / monitor click / prompt tap -> camera glide into the screen -> DesktopOS; Exit reverses
 src/os/desktopModel.js  the desktop apps + text (PLACEHOLDERS): single source for the HTML desktop and the monitor drawing
-src/os/art.js         wallpaper (original desert dusk) + 32 px pixel icons, drawn in code, also as data URLs
+src/os/art.js         32 px pixel icons, drawn in code, also as data URLs
+src/os/wallpaper.js   DesertWallpaper: animated pixel desert following the local clock (desktop + monitor)
 src/os/layout.js      shared desktop proportions (768 px reference height)
 src/os/os.js          DesktopOS: HTML desktop, icons, taskbar, lamp launcher menu with Exit, window manager
 src/os/os.css         XP-reminiscent styling (original; no Microsoft assets) + the 3D "use the terminal" prompt
@@ -402,6 +404,46 @@ nearest-first (tube sounds at 100/60/40 % per row), back wash +0.3 s, fans fade 
   paletteuse Bayer dither scale 3 (16 colors lost the eyes).
 - **Desk phones removed** (user: not enough of an aesthetic addition for the effort). `scene/phones.js` was deleted;
   the last version (curved handset with earpiece/mouthpiece blocks) is in commit 96ed0b6 if they ever come back.
+
+## Change round 11 (2026-11-11): welcome page, editions, clock wallpaper, LED grids
+- **Welcome page** (desktops/laptops; replaces the old chooser, still `#chooser` + `showChooser()` in main.js): a slideshow
+  of six stills captured from the 3D facility (`public/welcome/*.webp`, 1920 wide, ~525 kB total: overlook, core, banks,
+  catwalk, hall, command) with a slow zoom/drift each (`SLIDES` ox/oy/dx/dy), 7 s per slide, 1.8 s crossfade, captions
+  bottom right ("01 / 06", title, line), progress ticks bottom left. Left column: "Visitor Orientation", "Welcome to NMS
+  FYI.", professional copy (Noah's professional home presented as a 1980s computing facility; LAMPLIGHT OS gives access
+  to background, projects, résumé, contact), "Select an access level", two cards: Full Site (Graphics-intensive) / Lite
+  Site (Graphics-friendly), each with a body line, the old "Best for systems with/without dedicated graphics." and an
+  Enter button. Content zooms with `innerHeight / 820` (1..1.7). Only static images: no GPU cost. Images after the first
+  load once it's in; a slide waits if its image isn't downloaded. Leaving clears the timer and drops the images.
+  Mobile devices still skip straight to the mobile desktop.
+  **Recapturing stills:** dev server, `?skip&up&debug`, `window.orbit` (dev only, debug.js), set `orbit.enableDamping =
+  false`, pose with `orbit.target.set(...)` + `camera.position.set(...)` + `orbit.update()`, then inside a double rAF
+  `renderer.domElement.toBlob(...)` (the drawing buffer is only valid right after a frame) and POST it to a tiny local
+  receiver; convert with ffmpeg (`scale=1920:-2`, libwebp quality 74). Poses used: overlook [0,1.65,2.55]->[0,0.2,-40],
+  core [0,-2.6,-29]->[0,-0.6,-40.5], banks [-8.5,-3.3,-5]->[-15.5,-2.2,-17], catwalk [11.5,0.65,-6]->[14.5,-0.6,-24],
+  hall [0,-3.9,-2.5]->[0,-0.8,-30], command [3.6,2.3,7.4]->[-0.6,1,0].
+- **Editions** (`EDITIONS` in desktopModel.js, shown on the logon build line): full = Server Edition, Build 1987.4127;
+  lite = **Professional Edition, Build 1987.4131**; mobile = **Mobile Edition, Build 1987.4118**. The 3D monitor drawing
+  stays Server Edition.
+- **Account tagline** is now **"System Administrator"**.
+- **Wallpaper** (`src/os/wallpaper.js`, `DesertWallpaper`; the old static dusk canvas in art.js is gone): an animated
+  pixel desert drawn into a 216 px tall buffer (width follows the screen's aspect, 120..560, so phones get a portrait
+  scene), scaled up with `image-rendering: pixelated`, ordered (Bayer 4x4) dither, color step 9. Follows the visitor's
+  local clock: sky/horizon keyframes (`SKY`), light on the sand (`LIGHT`, tint + face contrast), sun on an arc 06:00 to
+  18:00, crescent moon 18:30 to 07:00 (both set behind the dunes), stars twinkle (sharp flickers and soft shimmer) from
+  dusk to ~05:55, washed out near the moon. Same three dune layers and colors as the old scene; they creep over the
+  day, faces turned toward the sun (or moon) brighten, ripples drift on the near dune, and wind lifts sand off three
+  crests chosen per hour (seeded, crossfading over each hour's last 15 min). ~12 fps only while the desktop is open,
+  logged in and the tab visible. The 3D monitor has its own instance, re-rendered when its clock redraws (per minute).
+  `?time=HH:MM` previews another time of day.
+- **Camera app maximize (production only):** `.win.win-cameras` (700 px width) and `.win.max` weigh the same, and the
+  build loads os.css first, so the width won and Maximize filled only the left part. Now `.win.win-cameras:not(.max)`.
+  Maximized, the 4:3 picture is letterboxed (it used to stretch to the window's shape).
+- **Even LED grids** on every server: wall banks 4 × 8 at 0.2 m pitch both ways; supercomputer towers, cabinets and face
+  panel also equal pitch. Positions that used to be left out are now **dead indicators** (`leds.grid(..., { dead:
+  'lens' }, fill)`): a smoky lens (`LENS` 0.05) that never lights, about one in six. LED capacity 9000 (~6.4k used).
+- **Floating blocks removed** (user): the two bus ducts per side behind the supercomputer floated between the cabinet
+  ring and the wall towers without touching either.
 
 ## Change round 10 (2026-11-10): one account, logon scanlines, gate text
 - **One account:** the visitor "You" account and the unavailable admin account were merged into a single account,

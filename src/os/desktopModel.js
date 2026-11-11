@@ -7,12 +7,18 @@
 export const OS_NAME = 'LAMPLIGHT OS';
 // A mature late-80s system running a whole facility wouldn't still be on 1.0 (user: estimate it).
 export const OS_VERSION = 'Version 3.2';
-export const OS_EDITION = 'Server Edition';
-export const OS_BUILD = 'Build 1987.4127';
+// Each version of the site is its own edition (user request), with builds a little apart.
+export const EDITIONS = {
+  full: { edition: 'Server Edition', build: 'Build 1987.4127' },
+  light: { edition: 'Professional Edition', build: 'Build 1987.4131' },
+  mobile: { edition: 'Mobile Edition', build: 'Build 1987.4118' },
+};
+export const OS_EDITION = EDITIONS.full.edition; // the 3D terminal runs the Server Edition
+export const OS_BUILD = EDITIONS.full.build;
 // The one account on the logon screen: the site owner (user request: "remove the second account but
 // make the main account's name Noah Schafrath and make the profile picture my headshot").
 export const USER_NAME = 'Noah Schafrath';
-export const USER_TAGLINE = 'Mainframe Administrator';
+export const USER_TAGLINE = 'System Administrator';
 export const USER_PORTRAIT = '/os/user-portrait.png'; // 80x80, 28-color Bayer-dithered take on the headshot (see CLAUDE.md)
 
 /**

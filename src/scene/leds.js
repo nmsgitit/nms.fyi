@@ -10,9 +10,11 @@ const _p = new THREE.Vector3();
 const _s = new THREE.Vector3();
 const _z = new THREE.Vector3(0, 0, 1);
 const _c = new THREE.Color();
+// A dead (never lit) indicator still shows its smoky lens, so a panel reads as a full, even grid.
+const LENS = new THREE.Color(0.05, 0.048, 0.044);
 
 export class LedField {
-  constructor(capacity = 6000) {
+  constructor(capacity = 9000) {
     this.capacity = capacity;
     this.items = []; // {pos, normal, size, color: Color, group, blink, phase, delay}
     this.groups = new Map(); // name -> {level, onAt, cascade}
@@ -31,7 +33,7 @@ export class LedField {
    * @param normal [x,y,z] facing direction
    * @param opts   { size, color (hex), group, blink (0 = steady, else Hz), delay (s offset within group cascade) }
    */
-  add(pos, normal, { size = 0.025, color = 0xffffff, group = 'default', blink = 0, delay = 0, intensity = 1 } = {}) {
+  add(pos, normal, { size = 0.025, color = 0xffffff, group = 'default', blink = 0, delay = 0, intensity = 1, dead = false } = {}) {
     if (this.items.length >= this.capacity) return;
     this.items.push({
       pos: new THREE.Vector3(...pos),
@@ -42,24 +44,29 @@ export class LedField {
       blink,
       phase: this.rand() * Math.PI * 2,
       delay,
+      dead,
     });
     if (!this.groups.has(group)) this.groups.set(group, { level: 0, target: 0, onAt: Infinity, cascade: 0 });
   }
 
-  /** A rectangular grid of LEDs on a plane. origin = center of grid. right/up = in-plane axes. */
+  /**
+   * A rectangular grid of LEDs on a plane. origin = center of grid. right/up = in-plane axes.
+   * fill < 1 leaves positions out, or with opts.dead === 'lens' keeps them as dead (unlit) lenses.
+   */
   grid(origin, right, up, normal, cols, rows, pitchX, pitchY, opts = {}, fill = 1) {
     const o = new THREE.Vector3(...origin);
     const r = new THREE.Vector3(...right);
     const u = new THREE.Vector3(...up);
     for (let j = 0; j < rows; j++) {
       for (let i = 0; i < cols; i++) {
-        if (this.rand() > fill) continue;
+        const missing = this.rand() > fill;
+        if (missing && opts.dead !== 'lens') continue;
         const p = o.clone()
           .addScaledVector(r, (i - (cols - 1) / 2) * pitchX)
           .addScaledVector(u, (j - (rows - 1) / 2) * pitchY);
         const pick = typeof opts.color === 'function' ? opts.color(this.rand()) : opts.color;
         const blink = typeof opts.blink === 'function' ? opts.blink(this.rand()) : opts.blink;
-        this.add([p.x, p.y, p.z], normal, { ...opts, color: pick, blink });
+        this.add([p.x, p.y, p.z], normal, { ...opts, color: pick, blink, dead: missing });
       }
     }
   }
@@ -75,7 +82,7 @@ export class LedField {
       _s.setScalar(it.size);
       _m.compose(_p, _q, _s);
       mesh.setMatrixAt(i, _m);
-      mesh.setColorAt(i, _c.setRGB(0, 0, 0));
+      mesh.setColorAt(i, it.dead ? LENS : _c.setRGB(0, 0, 0));
     });
     mesh.instanceColor.setUsage(THREE.DynamicDrawUsage);
     mesh.frustumCulled = false;
@@ -116,6 +123,7 @@ export class LedField {
     const col = this.mesh.instanceColor.array;
     for (let i = 0; i < this.items.length; i++) {
       const it = this.items[i];
+      if (it.dead) continue; // keeps its lens color
       const g = this.groups.get(it.group);
       let k = 0;
       if (g.target > 0) {

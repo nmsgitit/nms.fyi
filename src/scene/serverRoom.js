@@ -68,8 +68,10 @@ function bank(b, m, leds, x, y, z, facing, group, delayBase) {
   // vent band near the base
   b.box(m.taupeDark, w - 0.22, 0.16, 0.02, fxp, y + 0.2, fzp, [0, rotY, 0]);
   const right = [fz, 0, -fx];
-  leds.grid([fxp + fx * 0.012, y + h / 2 + 0.1, fzp + fz * 0.012], right, [0, 1, 0], facing, 3, 6, 0.24, 0.32,
-    { size: 0.045, color: ledColor, blink: ledBlink, group, delay: delayBase, intensity: 1.5 }, 0.85);
+  // Every bank has the same even grid (4 × 8, equal spacing both ways); about one in six positions is a
+  // dead indicator that never lights (its lens still shows), for realism.
+  leds.grid([fxp + fx * 0.012, y + h / 2 + 0.1, fzp + fz * 0.012], right, [0, 1, 0], facing, 4, 8, 0.2, 0.2,
+    { size: 0.04, color: ledColor, blink: ledBlink, group, delay: delayBase, intensity: 1.5, dead: 'lens' }, 0.84);
 }
 
 export function buildServerRoom(m) {

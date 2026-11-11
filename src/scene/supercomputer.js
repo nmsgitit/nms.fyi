@@ -6,7 +6,7 @@
 // It stands at the far end of the half-circle bay with its back half set INTO the curved wall
 // (user request: integrated into the wall's structure, in clear view from the desk): a section of
 // tall memory towers built into the wall behind it, framed by pilasters and a fascia, with
-// conduits from the core's ceiling collar and bus ducts from the cabinet ring running into it.
+// conduits from the core's ceiling collar running into it.
 import * as THREE from 'three';
 import { SERVER, CORE } from './layout.js';
 import { PALETTE } from './palette.js';
@@ -28,7 +28,7 @@ function rod(b, mat, r, p0, p1, seg = 12) {
   b.add(g, mat, mid.toArray());
 }
 
-/** The wall section the machine is built into (towers, pilasters, fascia, conduits, ducts). */
+/** The wall section the machine is built into (towers, pilasters, fascia, conduits). */
 function buildWallSection(b, m, leds) {
   const R = SERVER.apseR, C = SERVER.ceilY;
   const a0 = Math.PI / 2 - SUPER_HALF_A, a1 = Math.PI / 2 + SUPER_HALF_A;
@@ -53,8 +53,8 @@ function buildWallSection(b, m, leds) {
     const fx = x + nx * 0.401, fz = z + nz * 0.401;
     b.box(m.grille, 0.66, h - 1.2, 0.02, fx, y0 + h / 2 + 0.2, fz, [0, Math.atan2(nx, nz), 0]);
     b.box(m.taupeDark, 0.66, 0.3, 0.02, fx, y0 + 0.35, fz, [0, Math.atan2(nx, nz), 0]); // vent band
-    leds.grid([fx + nx * 0.012, y0 + h / 2 + 0.2, fz + nz * 0.012], [nz, 0, -nx], [0, 1, 0], [nx, 0, nz], 3, Math.floor((h - 1.6) / 0.3), 0.18, 0.3,
-      { size: 0.04, color: (q) => (q < 0.12 ? PALETTE.ledAmber : PALETTE.ledCyan), blink: (q) => (q < 0.3 ? 0.5 + q * 4 : 0), group: 'core', delay: 0.15 + Math.abs(i - (n - 1) / 2) / n, intensity: 1.6 }, 0.85);
+    leds.grid([fx + nx * 0.012, y0 + h / 2 + 0.2, fz + nz * 0.012], [nz, 0, -nx], [0, 1, 0], [nx, 0, nz], 3, Math.floor((h - 1.6) / 0.18), 0.18, 0.18,
+      { size: 0.04, color: (q) => (q < 0.12 ? PALETTE.ledAmber : PALETTE.ledCyan), blink: (q) => (q < 0.3 ? 0.5 + q * 4 : 0), group: 'core', delay: 0.15 + Math.abs(i - (n - 1) / 2) / n, intensity: 1.6, dead: 'lens' }, 0.85);
   }
   // Pilasters framing the section, floor to ceiling, clear of the pedestal (at 65° they cut into
   // its lower step; at 60° their front corners are ~0.8 m outside it).
@@ -79,17 +79,8 @@ function buildWallSection(b, m, leds) {
     const dx = wx - CORE.x, dz = wz - CORE.z, d = Math.hypot(dx, dz);
     rod(b, m.steel, 0.11, [CORE.x + (dx / d) * 3.3, C - 0.42, CORE.z + (dz / d) * 3.3], [wx, C - 0.42, wz]);
   }
-  // Bus ducts from the cabinet ring's flanks into the towers.
-  for (const deg of [72, 108]) {
-    const a = deg * DEG;
-    const [wx, wz] = arcPt(15.2, a);
-    const dx = wx - CORE.x, dz = wz - CORE.z, d = Math.hypot(dx, dz);
-    const sx = CORE.x + (dx / d) * 4.6, sz = CORE.z + (dz / d) * 4.6;
-    const len = Math.hypot(wx - sx, wz - sz);
-    for (const y of [F + 3.4, F + 4.0]) {
-      b.rbox(m.taupeDark, len, 0.36, 0.5, 0.06, (sx + wx) / 2, y, (sz + wz) / 2, [0, -Math.atan2(wz - sz, wx - sx), 0]);
-    }
-  }
+  // (The two bus ducts per side that used to be here were removed: they floated between the cabinet ring and the
+  // towers without touching either, reading as stray blocks.)
 }
 
 function sectorShape(r0, r1, a0, a1) {
@@ -148,8 +139,8 @@ export function buildSupercomputer(b, m, leds) {
     const nx = Math.sin(ac), nz = Math.cos(ac);
     const r = 4.07;
     b.box(m.grille, 0.34, 3.0, 0.03, cx + nx * r, base + 2.35, cz + nz * r, [0, ac, 0]);
-    leds.grid([cx + nx * (r + 0.02), base + 2.35, cz + nz * (r + 0.02)], [nz, 0, -nx], [0, 1, 0], [nx, 0, nz], 2, 12, 0.14, 0.23,
-      { size: 0.03, color: (q) => (q < 0.15 ? PALETTE.ledAmber : PALETTE.ledCyan), blink: (q) => (q < 0.3 ? 0.5 + q * 4 : 0), group: 'core', delay: k / 16, intensity: 1.7 }, 0.9);
+    leds.grid([cx + nx * (r + 0.02), base + 2.35, cz + nz * (r + 0.02)], [nz, 0, -nx], [0, 1, 0], [nx, 0, nz], 2, 18, 0.14, 0.14,
+      { size: 0.03, color: (q) => (q < 0.15 ? PALETTE.ledAmber : PALETTE.ledCyan), blink: (q) => (q < 0.3 ? 0.5 + q * 4 : 0), group: 'core', delay: k / 16, intensity: 1.7, dead: 'lens' }, 0.88);
     // Taupe cap band on top of each cabinet.
     b.add(new THREE.ExtrudeGeometry(sectorShape(2.65, 4.05, a0, a1), { depth: 0.08, bevelEnabled: false, curveSegments: 8 }),
       m.taupe, P(0, base + ringH + 0.04, 0), [-Math.PI / 2, 0, 0]);
@@ -182,8 +173,8 @@ export function buildSupercomputer(b, m, leds) {
   const fz = 2.02;
   b.rbox(m.beigeLight, 1.9, 2.5, 0.5, 0.18, cx, base + 2.0, cz + fz - 0.1);
   b.rbox(m.grille, 1.5, 2.0, 0.1, 0.08, cx, base + 2.05, cz + fz + 0.17);
-  leds.grid([cx, base + 2.05, cz + fz + 0.225], [1, 0, 0], [0, 1, 0], [0, 0, 1], 7, 9, 0.17, 0.2,
-    { size: 0.045, color: (q) => (q < 0.1 ? PALETTE.ledAmber : PALETTE.ledCyan), blink: (q) => (q < 0.45 ? 0.6 + q * 5 : 0), group: 'core', delay: 0.3, intensity: 1.9 }, 0.92);
+  leds.grid([cx, base + 2.05, cz + fz + 0.225], [1, 0, 0], [0, 1, 0], [0, 0, 1], 7, 9, 0.17, 0.17,
+    { size: 0.045, color: (q) => (q < 0.1 ? PALETTE.ledAmber : PALETTE.ledCyan), blink: (q) => (q < 0.45 ? 0.6 + q * 5 : 0), group: 'core', delay: 0.3, intensity: 1.9, dead: 'lens' }, 0.9);
 }
 
 /** Lights that pick out the supercomputer first (reveal stage 2a). */
